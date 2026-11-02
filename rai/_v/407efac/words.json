@@ -1,0 +1,796 @@
+{
+    "words": [
+        {
+            "id": "s1",
+            "w": "fire",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 1
+        },
+        {
+            "id": "s2",
+            "w": "love",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 2
+        },
+        {
+            "id": "s3",
+            "w": "sky",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 3
+        },
+        {
+            "id": "s4",
+            "w": "switzerland",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 4
+        },
+        {
+            "id": "s5",
+            "w": "pizza",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 5
+        },
+        {
+            "id": "s6",
+            "w": "dog",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 6
+        },
+        {
+            "id": "s7",
+            "w": "river",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 7
+        },
+        {
+            "id": "s8",
+            "w": "volcano",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 8
+        },
+        {
+            "id": "s9",
+            "w": "water",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 9
+        },
+        {
+            "id": "s10",
+            "w": "peace",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 10
+        },
+        {
+            "id": "s11",
+            "w": "correct",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 11
+        },
+        {
+            "id": "s12",
+            "w": "magic",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 12
+        },
+        {
+            "id": "s13",
+            "w": "poem",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 13
+        },
+        {
+            "id": "s14",
+            "w": "stinky",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 14
+        },
+        {
+            "id": "s15",
+            "w": "moss",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 15
+        },
+        {
+            "id": "s16",
+            "w": "thunder",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 16
+        },
+        {
+            "id": "s17",
+            "w": "fern",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 17
+        },
+        {
+            "id": "s18",
+            "w": "owl",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 18
+        },
+        {
+            "id": "s19",
+            "w": "glacier",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 19
+        },
+        {
+            "id": "s20",
+            "w": "ember",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 20
+        },
+        {
+            "id": "s21",
+            "w": "tide",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 21
+        },
+        {
+            "id": "s22",
+            "w": "canyon",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 22
+        },
+        {
+            "id": "s23",
+            "w": "mushroom",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 23
+        },
+        {
+            "id": "s24",
+            "w": "lichen",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 24
+        },
+        {
+            "id": "s25",
+            "w": "snow",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 25
+        },
+        {
+            "id": "s26",
+            "w": "ash",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 26
+        },
+        {
+            "id": "s27",
+            "w": "storm",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 27
+        },
+        {
+            "id": "s28",
+            "w": "meadow",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 28
+        },
+        {
+            "id": "s29",
+            "w": "heron",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 29
+        },
+        {
+            "id": "s30",
+            "w": "pebble",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 30
+        },
+        {
+            "id": "s31",
+            "w": "comet",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 31
+        },
+        {
+            "id": "s32",
+            "w": "desert",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 32
+        },
+        {
+            "id": "s33",
+            "w": "fog",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 33
+        },
+        {
+            "id": "s34",
+            "w": "cave",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 34
+        },
+        {
+            "id": "s35",
+            "w": "otter",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 35
+        },
+        {
+            "id": "s36",
+            "w": "bamboo",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 36
+        },
+        {
+            "id": "s37",
+            "w": "mud",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 37
+        },
+        {
+            "id": "s38",
+            "w": "lava",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 38
+        },
+        {
+            "id": "s39",
+            "w": "basalt",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 39
+        },
+        {
+            "id": "s40",
+            "w": "geyser",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 40
+        },
+        {
+            "id": "s41",
+            "w": "dune",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 41
+        },
+        {
+            "id": "s42",
+            "w": "orchid",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 42
+        },
+        {
+            "id": "s43",
+            "w": "wolf",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 43
+        },
+        {
+            "id": "s44",
+            "w": "moon",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 44
+        },
+        {
+            "id": "s45",
+            "w": "cloud",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 45
+        },
+        {
+            "id": "s46",
+            "w": "rain",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 46
+        },
+        {
+            "id": "s47",
+            "w": "root",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 47
+        },
+        {
+            "id": "s48",
+            "w": "seed",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 48
+        },
+        {
+            "id": "s49",
+            "w": "wind",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 49
+        },
+        {
+            "id": "s50",
+            "w": "crow",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 50
+        },
+        {
+            "id": "s51",
+            "w": "salt",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 51
+        },
+        {
+            "id": "s52",
+            "w": "sunrise",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 52
+        },
+        {
+            "id": "s53",
+            "w": "llama",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 53
+        },
+        {
+            "id": "s54",
+            "w": "herring",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 54
+        },
+        {
+            "id": "s55",
+            "w": "walrus",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 55
+        },
+        {
+            "id": "s56",
+            "w": "bucket",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 56
+        },
+        {
+            "id": "s57",
+            "w": "trousers",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 57
+        },
+        {
+            "id": "s58",
+            "w": "shrubbery",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 58
+        },
+        {
+            "id": "s59",
+            "w": "nobody",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 59
+        },
+        {
+            "id": "s60",
+            "w": "cheese",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 60
+        },
+        {
+            "id": "s61",
+            "w": "spoon",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 61
+        },
+        {
+            "id": "s62",
+            "w": "umbrella",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 62
+        },
+        {
+            "id": "s63",
+            "w": "goat",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 63
+        },
+        {
+            "id": "s64",
+            "w": "snail",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 64
+        },
+        {
+            "id": "s65",
+            "w": "hedgehog",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 65
+        },
+        {
+            "id": "s66",
+            "w": "toast",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 66
+        },
+        {
+            "id": "s67",
+            "w": "sausage",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 67
+        },
+        {
+            "id": "s68",
+            "w": "biscuit",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 68
+        },
+        {
+            "id": "s69",
+            "w": "trombone",
+            "to": null,
+            "side": null,
+            "name": "",
+            "trip": "",
+            "t": 69
+        },
+        {
+            "id": "s70",
+            "w": "sleeping",
+            "to": "s8",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 70
+        },
+        {
+            "id": "s71",
+            "w": "slowly",
+            "to": "s70",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 71
+        },
+        {
+            "id": "s72",
+            "w": "hot",
+            "to": "s9",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 72
+        },
+        {
+            "id": "s73",
+            "w": "cold",
+            "to": "s1",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 73
+        },
+        {
+            "id": "s74",
+            "w": "blue",
+            "to": "s3",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 74
+        },
+        {
+            "id": "s75",
+            "w": "endless",
+            "to": "s7",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 75
+        },
+        {
+            "id": "s76",
+            "w": "singing",
+            "to": "s7",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 76
+        },
+        {
+            "id": "s77",
+            "w": "tiny",
+            "to": "s6",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 77
+        },
+        {
+            "id": "s78",
+            "w": "wet",
+            "to": "s6",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 78
+        },
+        {
+            "id": "s79",
+            "w": "very",
+            "to": "s14",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 79
+        },
+        {
+            "id": "s80",
+            "w": "tonight",
+            "to": "s5",
+            "side": "after",
+            "name": "",
+            "trip": "",
+            "t": 80
+        },
+        {
+            "id": "s81",
+            "w": "inner",
+            "to": "s10",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 81
+        },
+        {
+            "id": "s82",
+            "w": "hour",
+            "to": "s12",
+            "side": "after",
+            "name": "",
+            "trip": "",
+            "t": 82
+        },
+        {
+            "id": "s83",
+            "w": "morning",
+            "to": "s13",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 83
+        },
+        {
+            "id": "s84",
+            "w": "sleepy",
+            "to": "s4",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 84
+        },
+        {
+            "id": "s85",
+            "w": "politically",
+            "to": "s11",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 85
+        },
+        {
+            "id": "s86",
+            "w": "frozen",
+            "to": "s5",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 86
+        },
+        {
+            "id": "s87",
+            "w": "gently",
+            "to": "s74",
+            "side": "before",
+            "name": "",
+            "trip": "",
+            "t": 87
+        },
+        {
+            "id": "5e423744c9fe",
+            "w": "socks",
+            "to": "s78",
+            "side": "after",
+            "name": "",
+            "trip": "",
+            "t": 1792056392304
+        }
+    ]
+}

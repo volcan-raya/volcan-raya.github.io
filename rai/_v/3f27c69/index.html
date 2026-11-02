@@ -1,0 +1,840 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Under Pressure</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a pixel-art night sky with star trails and a dark, snowy volcano glowing at the top (after a photo of Villarrica). Words fly out as trails of overlapping boxes.
+   Right: real volcanoes that set the eruption's strength, plus a speed control. Two modes: words and voice. */
+:root {
+  --sky: #14181b;
+  --line: #f2f2f2;
+  --dim: #9aa3a9;
+  --faint: #3a4247;
+  --panel: rgba(16, 19, 22, .86);
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--sky); color: var(--line); font-family: var(--mono); font-size: 13px; overflow: hidden; }
+canvas { position: fixed; inset: 0; display: block; touch-action: none; image-rendering: pixelated; }
+
+.bar { position: fixed; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; pointer-events: none; color: var(--dim); font-size: 12px; z-index: 2; }
+.bar > * { pointer-events: auto; }
+.top { top: env(safe-area-inset-top, 0px); }
+.bottom { bottom: env(safe-area-inset-bottom, 0px); flex-wrap: wrap; }
+h1 { margin: 0; font-size: 13px; font-weight: 500; color: var(--line); letter-spacing: .04em; }
+
+button, input, select { font: inherit; color: var(--line); background: var(--sky); border: 1px solid var(--line); border-radius: 0; }
+button { cursor: pointer; padding: 6px 10px; }
+button:hover { background: var(--line); color: var(--sky); }
+button:disabled { opacity: .35; cursor: default; background: var(--sky); color: var(--line); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 1px solid var(--line); outline-offset: 3px; }
+.seg { display: flex; }
+.seg button + button { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--line); color: var(--sky); }
+.who { border-color: var(--faint); color: var(--dim); }
+
+#idPanel { position: fixed; z-index: 3; top: calc(52px + env(safe-area-inset-top, 0px)); right: 16px; width: min(280px, calc(100vw - 32px)); background: var(--sky); border: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+#idPanel p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--dim); }
+#idPanel input { padding: 7px 8px; width: 100%; box-sizing: border-box; }
+#idPanel label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--dim); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* the two slots that open on a caught word: they touch its left and right edges */
+.slot { position: fixed; z-index: 1; height: 28px; box-sizing: border-box; width: 12ch; padding: 0 8px; border-style: dashed; background: var(--sky); }
+.slot::placeholder { color: var(--dim); }
+.slot:focus-visible { outline: none; border-style: solid; }
+
+/* real volcanoes */
+#volcanoes { position: fixed; z-index: 2; right: 16px; top: calc(64px + env(safe-area-inset-top, 0px)); width: 210px; background: var(--panel); border: 1px solid var(--faint); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+#volcanoes .label { margin: 0 0 2px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+#vlist { display: flex; flex-direction: column; gap: 4px; }
+#vlist button { display: flex; justify-content: space-between; gap: 8px; text-align: left; border-color: var(--faint); padding: 5px 8px; }
+#vlist button small { color: var(--dim); font-size: 11px; }
+#vlist button[aria-pressed="true"] { background: var(--line); color: var(--sky); border-color: var(--line); }
+#vlist button[aria-pressed="true"] small { color: #4a4f55; }
+#vnote { margin: 2px 0 0; font-size: 11px; line-height: 1.5; color: var(--dim); }
+.int { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 12px; }
+.int input { accent-color: #f2f2f2; flex: 1; min-width: 0; }
+.int span { min-width: 4ch; text-align: right; color: var(--line); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  #volcanoes { top: auto; bottom: calc(44px + env(safe-area-inset-bottom, 0px)); left: 16px; right: 16px; width: auto; }
+  #vlist { flex-direction: row; overflow-x: auto; }
+  #vlist button { flex: none; }
+  #count, #mem { display: none; }
+}
+
+#voice { position: fixed; z-index: 2; left: 16px; top: calc(64px + env(safe-area-inset-top, 0px)); width: min(440px, calc(100vw - 280px)); box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 760px) { #voice { width: auto; right: 16px; } }
+#voice form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+#ventText { flex: 1 1 200px; min-width: 0; padding: 6px 8px; }
+.meter { height: 8px; border: 1px solid var(--line); }
+.meter span { display: block; height: 100%; width: 0; background: var(--line); }
+.heard { margin: 0; min-height: 1.4em; color: var(--dim); font-size: 12px; overflow-wrap: anywhere; }
+</style>
+
+<canvas id="c"></canvas>
+
+<header class="bar top">
+  <h1>under pressure</h1>
+  <div class="seg" role="group" aria-label="Mode">
+    <button data-mode="words" aria-pressed="true">words</button>
+    <button data-mode="voice" aria-pressed="false">voice</button>
+  </div>
+  <button class="who" id="who" aria-expanded="false">anonymous</button>
+</header>
+
+<div id="idPanel" hidden>
+  <p>Stay anonymous, or take a name and lock it with a secret code. Others see your name with a signature made from the code. The code never leaves this browser.</p>
+  <label for="nm">name<input id="nm" maxlength="20" autocomplete="off"></label>
+  <label for="cd">secret code<input id="cd" type="password" maxlength="40" autocomplete="off"></label>
+  <span id="preview">anonymous</span>
+  <div class="row">
+    <button id="keep">keep this name</button>
+    <button id="anon">stay anonymous</button>
+  </div>
+</div>
+
+<aside id="volcanoes" aria-label="Volcano">
+  <p class="label">volcano</p>
+  <div id="vlist"></div>
+  <label class="int" for="speed">speed <input type="range" id="speed" min="25" max="200" value="100"><span id="speedVal">1×</span></label>
+  <p id="vnote"></p>
+</aside>
+
+<input class="slot" id="inBefore" placeholder="before" maxlength="24" autocomplete="off" aria-label="Add a word before" hidden>
+<input class="slot" id="inAfter" placeholder="after" maxlength="24" autocomplete="off" aria-label="Add a word after" hidden>
+
+<div id="voice" hidden>
+  <div class="seg" role="group" aria-label="Voice input">
+    <button data-vm="real" aria-pressed="false">real</button>
+    <button data-vm="debug" aria-pressed="true">debug</button>
+  </div>
+  <div id="real" hidden>
+    <div class="row">
+      <button id="mic">start venting</button>
+      <select id="lang" aria-label="Language you speak">
+        <option value="en-US">english</option>
+        <option value="es-ES">español</option>
+        <option value="fr-FR">français</option>
+      </select>
+    </div>
+    <div class="meter" aria-hidden="true"><span id="level"></span></div>
+    <p class="heard" id="heard">Speak a sentence. Said calmly, it flows down the slope. Shouted, it explodes.</p>
+  </div>
+  <form id="debug">
+    <input id="ventText" placeholder="type what you would say" maxlength="200" autocomplete="off" aria-label="Sentence to vent">
+    <label class="int" for="intensity">intensity <input type="range" id="intensity" min="0" max="100" value="25"><span id="intVal">25</span></label>
+    <button>vent</button>
+  </form>
+</div>
+
+<footer class="bar bottom">
+  <span id="count"></span>
+  <span id="note">catch a flying word · add one before or after</span>
+  <span id="mem"></span>
+</footer>
+
+<script>
+// ================= basics =================
+const BOX_H = 28, PAD = 10, SP = 17;    // SP: distance between words in a trail (boxes overlap)
+const FONT = "13px 'DM Mono', Menlo, monospace";
+const SLOW = .65;
+const WORD_RE = /^[\p{L}\p{N}'’-]{1,24}$/u;
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = devicePixelRatio || 1; W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + "px"; cv.style.height = H + "px";
+  buildScene();
+}
+const textWidth = t => { ctx.font = FONT; return Math.ceil(ctx.measureText(t).width) + PAD * 2; };
+
+// ================= identity: name + secret code (tripcode) =================
+let me = { name: "", trip: "" };
+try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name && s.trip) me = s; } catch {}
+const ALPH = "abcdefghjkmnpqrstuvwxyz23456789";
+async function tripcode(name, code) {
+  const data = new TextEncoder().encode(name + "#" + code);
+  let bytes;
+  try { bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", data)); }
+  catch { let h = 2166136261; for (const b of data) h = Math.imul(h ^ b, 16777619); bytes = new Uint8Array(new Uint32Array([h, h * 31, h * 17]).buffer); }
+  return [...bytes.slice(0, 6)].map(b => ALPH[b % ALPH.length]).join("");
+}
+const signature = (name, trip) => name ? `${name} ◆${trip}` : "anonymous";
+const whoBtn = document.getElementById("who"), idPanel = document.getElementById("idPanel");
+const nm = document.getElementById("nm"), cd = document.getElementById("cd"), preview = document.getElementById("preview");
+const showWho = () => { whoBtn.textContent = signature(me.name, me.trip); };
+showWho();
+function closeId() { idPanel.hidden = true; whoBtn.setAttribute("aria-expanded", "false"); }
+whoBtn.addEventListener("click", () => {
+  idPanel.hidden = !idPanel.hidden; whoBtn.setAttribute("aria-expanded", String(!idPanel.hidden));
+  if (!idPanel.hidden) { nm.value = me.name; cd.value = ""; updatePreview(); nm.focus(); }
+});
+async function updatePreview() {
+  const n = nm.value.trim();
+  preview.textContent = n && cd.value ? signature(n, await tripcode(n, cd.value)) : n ? `${n} ◆ needs a code` : "anonymous";
+  document.getElementById("keep").disabled = !(n && cd.value);
+}
+nm.addEventListener("input", updatePreview); cd.addEventListener("input", updatePreview);
+document.getElementById("keep").addEventListener("click", async () => {
+  const n = nm.value.trim(); if (!n || !cd.value) return;
+  me = { name: n, trip: await tripcode(n, cd.value) };
+  try { localStorage.setItem("volcano-id", JSON.stringify(me)); } catch {}
+  closeId(); showWho();
+});
+document.getElementById("anon").addEventListener("click", () => {
+  me = { name: "", trip: "" };
+  try { localStorage.removeItem("volcano-id"); } catch {}
+  closeId(); showWho();
+});
+
+// ================= vocabulary: words.json + api.php =================
+// Each word: { id, w, to, side, name, trip, t }. "to" is the word it was added to, "side" is "before" or "after".
+// Reading: api.php (shared, can write) → words.json (read-only) → built-in starters. New words go to api.php,
+// or stay in this browser when there is no api.php (GitHub Pages, opening the file locally).
+const STARTERS = ["hello", "here", "fire", "someone", "listen", "ash", "you", "still", "awake", "echo", "far", "warm"]
+  .map((w, i) => ({ id: "s" + (i + 1), w, to: null, side: null, name: "", trip: "", t: i + 1 }));
+const LOCAL_KEY = "word-volcano-local";
+const words = new Map();
+const mine = new Set();
+let memMode = "starting", dirty = true;
+
+function clean(o) {
+  if (!o || typeof o.w !== "string" || !WORD_RE.test(o.w) || o.id == null) return null;
+  return {
+    id: String(o.id).slice(0, 40), w: o.w,
+    to: typeof o.to === "string" ? o.to : null,
+    side: o.side === "before" ? "before" : o.side === "after" ? "after" : null,
+    name: typeof o.name === "string" ? o.name.slice(0, 20) : "",
+    trip: typeof o.trip === "string" ? o.trip.slice(0, 8) : "",
+    t: Number(o.t) || 0,
+  };
+}
+function keepWord(w) {
+  if (!w || words.has(w.id)) return false;
+  words.set(w.id, { ...w, bw: textWidth(w.w) });
+  dirty = true;
+  return true;
+}
+function localList() { try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]"); } catch { return []; } }
+function saveLocal(w) { try { localStorage.setItem(LOCAL_KEY, JSON.stringify([...localList(), w].slice(-2000))); } catch {} }
+async function getJSON(url) {
+  const r = await fetch(url + (url.includes("?") ? "&" : "?") + "v=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error(String(r.status));
+  return r.json();
+}
+async function loadWords(first) {
+  let data = null;
+  if (first || memMode === "shared") { try { data = await getJSON("api.php"); memMode = "shared"; } catch {} }
+  if (!data && (first || memMode === "read-only")) { try { data = await getJSON("words.json"); memMode = "read-only"; } catch {} }
+  if (!data && first) memMode = "local";
+  const list = Array.isArray(data?.words) ? [...data.words] : [];
+  if (first && memMode === "local") list.push(...STARTERS);
+  if (first && memMode !== "shared") list.push(...localList());
+  const fresh = [];
+  for (const o of list) { const w = clean(o); if (keepWord(w) && !first && !mine.has(w.id)) fresh.push(w); }
+  if (first && !words.size) STARTERS.forEach(keepWord);
+  if (mode === "words") fresh.forEach(w => { reindex(); erupt(chainAround(words.get(w.id)), true); });
+  showStatus();
+}
+async function saveWord(body) {
+  if (memMode === "shared") {
+    const r = await fetch("api.php", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j || !j.word) throw new Error((j && j.error) || "the volcano didn't answer, try again");
+    return j.word;
+  }
+  const w = { ...body, id: "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t: Date.now() };
+  saveLocal(w);
+  return w;
+}
+const countEl = document.getElementById("count"), memEl = document.getElementById("mem");
+function showStatus() {
+  countEl.textContent = `${words.size.toLocaleString()} words in the vocabulary`;
+  memEl.textContent = { shared: "memory: shared", "read-only": "memory: words.json + this browser", local: "memory: this browser only" }[memMode] || "";
+}
+setInterval(() => { if (memMode === "shared" || memMode === "read-only") loadWords(false).catch(() => {}); }, 6000);
+
+// ================= chains =================
+// A chain reads left to right: the words before a word, the word, the words after it (newest branch each time).
+let idx = new Map();
+function reindex() {
+  idx = new Map();
+  for (const w of words.values()) if (w.to && w.side) {
+    const k = w.to + ":" + w.side, cur = idx.get(k);
+    if (!cur || w.t > cur.t) idx.set(k, w);
+  }
+  dirty = false;
+}
+const prevOf = w => w.side === "after" ? words.get(w.to) : idx.get(w.id + ":before");
+const nextOf = w => w.side === "before" ? words.get(w.to) : idx.get(w.id + ":after");
+function chainAround(w, max = 7) {
+  if (!w) return [];
+  const seq = [w], seen = new Set([w.id]);
+  let p = prevOf(w), n = nextOf(w);
+  while (seq.length < max && (p || n)) {
+    if (p && !seen.has(p.id)) { seq.unshift(p); seen.add(p.id); p = prevOf(p); } else p = null;
+    if (seq.length < max && n && !seen.has(n.id)) { seq.push(n); seen.add(n.id); n = nextOf(n); } else n = null;
+  }
+  return seq;
+}
+function pickWord() {
+  const list = [...words.values()].sort((a, b) => b.t - a.t);
+  if (!list.length) return null;
+  return Math.random() < .55 ? list[Math.floor(Math.random() * Math.min(20, list.length))] : list[Math.floor(Math.random() * list.length)];
+}
+
+// ================= real volcanoes =================
+// VEI = Volcanic Explosivity Index (0 gentle lava flows → 8 super-eruption). Each one sets how often
+// words come out, how high and wide they go, and how many flow down the slope instead of flying.
+const VOLCANOES = [
+  { id: "kilauea", name: "Kīlauea", vei: "0–1", place: "Hawaiʻi, 2018", note: "Effusive: lava pours out and runs down the slopes for months.", every: [1.4, 2.4], power: .55, spread: .3, flow: .6, burst: 1, shake: 0, ash: 0 },
+  { id: "stromboli", name: "Stromboli", vei: "1–2", place: "Italy, always", note: "Small bursts every few minutes, for at least 2,000 years.", every: [2.6, 4.2], power: .8, spread: .25, flow: .1, burst: 3, shake: 2, ash: 0 },
+  { id: "etna", name: "Etna", vei: "2–3", place: "Sicily, 2021", note: "Lava fountains hundreds of metres high, and flows.", every: [.7, 1.3], power: .95, spread: .45, flow: .3, burst: 1, shake: 1, ash: .2 },
+  { id: "eyja", name: "Eyjafjallajökull", vei: "4", place: "Iceland, 2010", note: "Its ash cloud closed most of Europe's airspace for days.", every: [.5, 1], power: 1.05, spread: .6, flow: .05, burst: 1, shake: 3, ash: 1 },
+  { id: "helens", name: "St. Helens", vei: "5", place: "USA, 1980", note: "The side of the mountain collapsed and the blast went sideways.", every: [.35, .7], power: 1.1, spread: .5, side: .9, flow: 0, burst: 2, shake: 6, ash: 1.2 },
+  { id: "pinatubo", name: "Pinatubo", vei: "6", place: "Philippines, 1991", note: "Ash rose about 35 km and cooled the whole planet for a year.", every: [.22, .45], power: 1.25, spread: .9, flow: 0, burst: 2, shake: 7, ash: 2 },
+  { id: "krakatoa", name: "Krakatoa", vei: "6", place: "Indonesia, 1883", note: "Probably the loudest sound in recorded history, heard 4,800 km away.", every: [.15, .35], power: 1.3, spread: 1.1, flow: 0, burst: 3, shake: 12, ash: 2 },
+  { id: "tambora", name: "Tambora", vei: "7", place: "Indonesia, 1815", note: "Caused the year without a summer, when Frankenstein was written.", every: [.1, .25], power: 1.35, spread: 1.2, flow: 0, burst: 3, shake: 10, ash: 3 },
+];
+let V = VOLCANOES[2], timeScale = 1;
+const vlist = document.getElementById("vlist"), vnote = document.getElementById("vnote");
+VOLCANOES.forEach(v => {
+  const b = document.createElement("button");
+  b.dataset.v = v.id; b.setAttribute("aria-pressed", String(v === V));
+  b.append(v.name); const s = document.createElement("small"); s.textContent = "VEI " + v.vei; b.append(s);
+  b.addEventListener("click", () => { V = v; nextErupt = Math.min(nextErupt, .3); showVolcano(); });
+  vlist.appendChild(b);
+});
+function showVolcano() {
+  vlist.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === V.id)));
+  vnote.textContent = `${V.place}. ${V.note}`;
+  try { localStorage.setItem("volcano-preset", V.id); } catch {}
+}
+try { const id = localStorage.getItem("volcano-preset"); const f = VOLCANOES.find(v => v.id === id); if (f) V = f; } catch {}
+showVolcano();
+const speed = document.getElementById("speed"), speedVal = document.getElementById("speedVal");
+speed.addEventListener("input", () => { timeScale = speed.value / 100; speedVal.textContent = (+timeScale.toFixed(2)) + "×"; });
+
+// ================= scene: pixel-art sky and volcano =================
+let P = 4, bg = null, prof = null, surfQ = null, rim = { x: 0, y: 0, half: 40 }, arcs = {};
+const crater = () => rim;
+function noise1(x, seed) {
+  return Math.sin(x * .013 + seed) * 7 + Math.sin(x * .031 + seed * 2.1) * 3.5 + Math.sin(x * .0057 + seed * .7) * 10 + Math.sin(x * .09 + seed) * 1.2;
+}
+function buildScene() {
+  P = W < 760 ? 3 : 4;
+  const gw = Math.ceil(W / P), gh = Math.ceil(H / P);
+  const cx = W / 2, rimY = H * .56, half = clamp(W * .026, 18, 40), baseHalf = Math.max(W * .7, 560);
+  rim = { x: cx, y: rimY, half };
+  // the profile: a tall cone like Villarrica, slightly concave, a little rough
+  prof = new Float32Array(W + 1);
+  for (let x = 0; x <= W; x++) {
+    const d = Math.abs(x - cx), left = x < cx;
+    let y;
+    if (d < half) y = rimY + (1 - (d / half) ** 2) * 2 * P;           // a shallow summit crater
+    else {
+      const t = (d - half) / (baseHalf - half);
+      y = rimY + (H * 1.08 - rimY) * Math.pow(clamp(t, 0, 1.6), .86);
+      y += noise1(x, left ? 1.3 : 4.1) * .45 * Math.min(1, t * 5);
+      if (!left) y -= 14 * Math.exp(-(((x - (cx + baseHalf * .38)) / 70) ** 2));   // a shoulder on the right
+    }
+    prof[x] = y;
+  }
+  surfQ = new Float32Array(gw);
+  for (let i = 0; i < gw; i++) surfQ[i] = Math.round(prof[Math.min(W, Math.round((i + .5) * P))] / P) * P;
+
+  // offscreen low-res drawing, scaled up without smoothing = pixel art
+  bg = document.createElement("canvas"); bg.width = gw; bg.height = gh;
+  const g = bg.getContext("2d");
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  // night sky: grey-blue, a little lighter near the horizon
+  const sky = ["#1a1f22", "#1f2528", "#242b2e", "#293134", "#2e373a", "#343d40", "#3a4346"];
+  for (let j = 0; j < gh; j++) {
+    const f = j / gh;
+    for (let i = 0; i < gw; i++) {
+      const b = f * (sky.length - 1) + (((i ^ j) & 3) / 4 - .4) * .9;
+      g.fillStyle = sky[clamp(Math.round(b), 0, sky.length - 1)]; g.fillRect(i, j, 1, 1);
+    }
+  }
+  // star trails: short streaks, all at the same angle (long exposure)
+  const slope = .42;
+  for (let k = 0; k < gw * gh * .0012; k++) {
+    const i0 = rnd() * gw, j0 = rnd() * gh * .85, len = 2 + Math.floor(rnd() * 8), b = rnd();
+    g.fillStyle = b > .85 ? "#e4e9ec" : b > .5 ? "#9aa4ab" : "#5c666c";
+    for (let s = 0; s < len; s++) g.fillRect(Math.floor(i0 + s), Math.floor(j0 + s * slope), 1, 1);
+  }
+  // the orange glow rising from the summit, drifting up and left
+  const sx = cx / P, sy = rimY / P;
+  const gl = document.createElement("canvas"); gl.width = gw; gl.height = gh;
+  const gg = gl.getContext("2d");
+  for (const [ox, oy, r, a] of [[0, -4, 26, .5], [-14, -22, 40, .32], [-30, -40, 50, .2], [-44, -58, 56, .1]]) {
+    const R = r * (W < 760 ? .8 : 1);
+    const grd = gg.createRadialGradient(sx + ox, sy + oy, 0, sx + ox, sy + oy, R);
+    grd.addColorStop(0, `rgba(255,120,30,${a})`); grd.addColorStop(.5, `rgba(214,82,20,${a * .45})`); grd.addColorStop(1, "rgba(160,50,10,0)");
+    gg.fillStyle = grd; gg.fillRect(sx + ox - R, sy + oy - R, R * 2, R * 2);
+  }
+  // quantise the glow into a few flat steps so it stays pixel art
+  const img = gg.getImageData(0, 0, gw, gh), px = img.data;
+  for (let n = 0; n < px.length; n += 4) px[n + 3] = Math.round(px[n + 3] / 24) * 24;
+  gg.putImageData(img, 0, 0);
+  g.drawImage(gl, 0, 0);
+
+  // the cone: dark rock, embers near the top, snow in gullies lower down, lava rivers from the summit
+  const rock = ["#060708", "#09090b", "#0c0d0f", "#101113", "#141518"];
+  const snowLit = ["#7d868e", "#a3acb3", "#c4cbd0", "#dde2e5"], snowShade = ["#4d555c", "#68717a", "#868f97"];
+  const lava = new Set();
+  for (const [a0, len] of [[-.16, .22], [.05, .3], [.2, .14], [-.4, .1]]) {
+    let u = a0, j = Math.round(rimY / P) + 1;
+    for (let s = 0; s < (H - rimY) * len / P; s++, j++) {
+      u += (rnd() - .5) * .05;
+      const i = Math.round(cx / P + u * (j - rimY / P));
+      lava.add(i + "," + j); if (s < (H - rimY) * len / P * .6) lava.add((i + 1) + "," + j);
+    }
+  }
+  for (let i = 0; i < gw; i++) {
+    const x = (i + .5) * P, left = x < cx, top = Math.round(surfQ[i] / P);
+    for (let j = Math.max(0, top); j < gh; j++) {
+      const y = j * P, depth = j - top, hf = clamp((y - rimY) / (H - rimY), 0, 1);
+      const u = (x - cx) / Math.max(8, y - rimY + 30);                   // constant along lines from the summit
+      let col = rock[clamp(Math.round(3.2 + (left ? .6 : 0) - hf * 2.6 + ((i & 1) * 2 + (j & 1)) / 4 - .375), 0, 4)];
+      if (depth === 0) col = left ? "#1c1d21" : "#121316";
+      // snow streaks in the gullies, more of it lower down and on the lit left side
+      // patches stretched down the slope: noise sampled across the cone (u) and down it (hf)
+      const gully = .65 * vnoise(u * 9, hf * 3.2) + .35 * vnoise(u * 26 + 40, hf * 9);
+      const need = .74 - hf * .28 + (left ? 0 : .06);
+      if (hf > .28 && gully > need) {
+        const e = clamp((gully - need) * 5, 0, .99);
+        col = (left ? snowLit : snowShade)[Math.floor(e * (left ? 4 : 3))];
+        if (((i + j) & 1) && e < .2) col = rock[2];
+      }
+      // embers scattered around the summit
+      const nearTop = Math.hypot((x - cx) / 2.4, y - rimY) / (H * .16);
+      if (nearTop < 1 && rnd() > .55 + nearTop * .45) col = rnd() > .7 ? "#ff9a3c" : rnd() > .4 ? "#c4461a" : "#7a2a10";
+      if (lava.has(i + "," + j)) col = hf < .08 ? "#ffd08a" : rnd() > .35 ? "#ff9a3c" : "#e2561c";
+      if (depth === 0 && Math.abs(x - cx) < half + 4 * P) col = "#ff7a1f";
+      g.fillStyle = col; g.fillRect(i, j, 1, 1);
+    }
+  }
+  // dark trees in the foreground
+  g.fillStyle = "#070908";
+  for (const [fx, fr] of [[.33, .09], [.47, .07], [.74, .06], [.06, .05]]) {
+    const ci = fx * gw, rr = fr * gw, base = gh;
+    for (let i = Math.floor(ci - rr); i < ci + rr; i++) {
+      const d = Math.abs(i - ci) / rr, hgt = (1 - d * d) * rr * .55 + Math.sin(i * 1.7) * 2 + Math.sin(i * .6) * 3;
+      if (hgt > 0) g.fillRect(i, Math.round(base - hgt), 1, Math.ceil(hgt));
+    }
+  }
+  // arc-length tables for words sliding down each side
+  for (const dir of [-1, 1]) {
+    const pts = []; let l = 0, ppx = null, ppy = null;
+    for (let x = cx + dir * half; x >= 0 && x <= W; x += dir * 3) {
+      const y = smoothProf(x);
+      if (ppx !== null) l += Math.hypot(x - ppx, y - ppy);
+      pts.push({ x, y, l }); ppx = x; ppy = y;
+      if (y > H + 10) break;
+    }
+    arcs[dir] = pts;
+  }
+}
+function vnoise(x, y) {
+  const h = (i, j) => { let n = Math.imul(i, 374761393) + Math.imul(j, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967295; };
+  const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  return lerp(lerp(h(i, j), h(i + 1, j), sx), lerp(h(i, j + 1), h(i + 1, j + 1), sx), sy);
+}
+function smoothProf(x) { let s = 0, n = 0; for (let k = -9; k <= 9; k += 3) { const xi = clamp(Math.round(x + k), 0, W); s += prof[xi]; n++; } return s / n; }
+const ground = x => Math.min(surfQ[clamp(Math.floor(x / P), 0, surfQ.length - 1)], H - 2);
+function arcAt(dir, s) {
+  const pts = arcs[dir]; if (!pts || pts.length < 2) return null;
+  if (s >= pts[pts.length - 1].l) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (pts[m].l < s) lo = m; else hi = m; }
+  const a = pts[lo], b = pts[hi], f = (s - a.l) / ((b.l - a.l) || 1);
+  let ang = Math.atan2(b.y - a.y, b.x - a.x);
+  if (ang > Math.PI / 2) ang -= Math.PI; else if (ang < -Math.PI / 2) ang += Math.PI;   // text never upside down
+  return { x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f), ang, L: pts[pts.length - 1].l };
+}
+function arcLenAtX(dir, x) {
+  const pts = arcs[dir]; if (!pts) return 0;
+  for (const p of pts) if ((x - p.x) * dir <= 0) return p.l;
+  return pts[pts.length - 1].l;
+}
+
+// ================= eruptions =================
+// A trail: the last word leads, the words before it follow along its path, overlapping.
+let trails = [], slides = [], flows = [], bits = [], splats = [], nextErupt = 1, shake = 0;
+function erupt(seq, fresh = false) {
+  if (!seq.length) return;
+  const c = crater();
+  if (!fresh && seq.length > 1 && Math.random() < V.flow) { slideWords(seq.map(w => w.w), .15); return; }
+  const lift = Math.sqrt(H) * 30 * SLOW * V.power;
+  trails.push({
+    items: seq.map(w => ({ word: w })), lone: seq.length === 1,
+    x: c.x + rand(-c.half * .4, c.half * .4), y: c.y + 2 * P,
+    vx: (rand(-1, 1) * V.spread + (V.side || 0) * rand(.4, 1)) * Math.min(W, 900) * .38 * SLOW,
+    vy: -lift * rand(.8, 1), path: [], head: 0, landed: false, extra: 0, frozen: false, done: new Set(),
+  });
+  const t = trails[trails.length - 1]; t.path.push({ x: t.x, y: t.y, l: 0 });
+  sparkle(c, fresh ? 16 : 6 + V.burst * 2, V.power - .5);
+  shake = Math.max(shake, V.shake);
+  for (let i = 0; i < V.ash * 6; i++) bits.push({ x: c.x + rand(-c.half, c.half), y: c.y, vx: rand(-30, 30), vy: rand(-120, -40) * V.power, life: rand(2, 4.5), ash: true, g: -.02 });
+}
+function sparkle(c, n, power) {
+  for (let i = 0; i < n; i++) bits.push({ x: c.x + rand(-c.half, c.half) * .5, y: c.y + P, vx: rand(-80, 80) * (1 + power), vy: rand(-340, -120) * SLOW * (1 + power), life: rand(.5, 1.3), hot: true, g: .6 });
+}
+function splat(x, y, bw, lone) {
+  for (let i = 0; i < 14; i++) bits.push({ x: x + rand(-bw / 2, bw / 2), y, vx: rand(-90, 90), vy: rand(-170, -40), life: rand(.4, .9), g: 1, white: lone });
+  splats.push({ x, y, w: bw, life: 1.2, lone });
+}
+function pathPoint(t, l) {
+  const p = t.path; if (l <= 0) return p[0];
+  let lo = 0, hi = p.length - 1;
+  if (l >= p[hi].l) return p[hi];
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (p[m].l < l) lo = m; else hi = m; }
+  const a = p[lo], b = p[hi], f = (l - a.l) / ((b.l - a.l) || 1);
+  return { x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f) };
+}
+function updateTrails(dt, g) {
+  for (const t of trails) {
+    if (t.frozen) continue;
+    const n = t.items.length;
+    if (!t.landed) {
+      t.vy += g * dt; t.x += t.vx * dt; t.y += t.vy * dt;
+      const last = t.path[t.path.length - 1], d = Math.hypot(t.x - last.x, t.y - last.y);
+      if (d > 2) { t.path.push({ x: t.x, y: t.y, l: last.l + d }); t.head = last.l + d; }
+      if (t.vy > 0 && t.y + BOX_H / 2 >= ground(t.x)) {
+        t.landed = true; t.speed = Math.max(220, Math.hypot(t.vx, t.vy));
+        const lead = t.items[n - 1]; t.done.add(n - 1);
+        splat(t.x, ground(t.x), lead.word.bw, t.lone);
+      }
+      if (t.x < -400 || t.x > W + 400) t.gone = true;
+    } else {
+      t.extra += t.speed * dt;
+      for (let k = 1; k < n; k++) {
+        const i = n - 1 - k;
+        if (!t.done.has(i) && t.head + t.extra - k * SP >= t.head) { t.done.add(i); const p = pathPoint(t, t.head); splat(p.x, ground(p.x), t.items[i].word.bw, false); }
+      }
+      if (t.done.size >= n) t.gone = true;
+    }
+  }
+  trails = trails.filter(t => !t.gone);
+}
+
+// ================= sliding words: calm lava (voice mode, and effusive volcanoes) =================
+const slideSpeed = I => 40 + 90 * I;
+function slideWords(list, I) {
+  const dir = Math.random() < .5 ? -1 : 1;
+  const seq = dir > 0 ? list.slice().reverse() : list;     // flowing right, the last word leaves first so it still reads left to right
+  const flow = { age: 0 }; flows.push(flow);
+  let prev = null;
+  for (const t of seq) {
+    const v = { t, bw: textWidth(t), I, dir, alpha: 1, flow, state: "slide", heat: .5 + I, delay: prev ? Infinity : 0, after: prev };
+    v.s = v.bw / 2; slides.push(v); prev = v;
+  }
+}
+function vent(text, I) {
+  I = clamp(I, 0, 1);
+  const list = text.trim().split(/\s+/).filter(Boolean).slice(0, 40).map(t => t.slice(0, 30));
+  if (!list.length) return;
+  const c = crater();
+  if (I < .35) { slideWords(list, I); sparkle(c, 4, 0); return; }
+  const lift = Math.sqrt(H) * 30 * SLOW * lerp(.45, 1.5, I) * (.7 + .3 * V.power);
+  let delay = 0;
+  for (const t of list) {
+    slides.push({ t, bw: textWidth(t), I, dir: 1, alpha: 1, heat: .55 + I * .9, delay, state: "fly",
+      x: c.x + rand(-c.half, c.half) * .5, y: c.y, vx: rand(-1, 1) * lerp(.25, 1, I) * Math.min(W, 900) * .4 * SLOW, vy: -lift * rand(.75, 1) });
+    delay += lerp(.25, .015, I);
+  }
+  shake = Math.max(shake, Math.max(0, I - .55) * 16);
+  sparkle(c, Math.round(4 + I * 40), I);
+}
+function updateSlides(dt, g) {
+  for (const f of flows) f.age += dt;
+  for (const v of slides) {
+    if (v.after && v.delay === Infinity) {
+      const edge = v.after.s - v.after.bw / 2;
+      if (v.after.delay === Infinity || edge < v.bw) continue;
+      v.delay = 0; v.s = edge - v.bw / 2;
+    }
+    if (v.delay > 0) { v.delay -= dt; continue; }
+    v.heat -= dt * (v.state === "fly" ? .3 : .1);
+    if (v.state === "fly") {
+      v.vy += g * dt; v.x += v.vx * dt; v.y += v.vy * dt;
+      const c = crater();
+      if (v.vy > 0 && v.y + BOX_H / 2 >= ground(v.x)) {
+        const d = Math.abs(v.x - c.x), dir = v.x < c.x ? -1 : 1;
+        if (v.y < H - 4 && arcs[dir]) Object.assign(v, { state: "slide", dir, s: d < c.half ? v.bw / 2 : arcLenAtX(dir, v.x), flow: v.flow || { age: 3 } });
+        else { splat(v.x, ground(v.x), v.bw, false); v.alpha = 0; }
+      }
+      if (v.x < -300 || v.x > W + 300) v.alpha = 0;
+    } else {
+      v.s += slideSpeed(v.I) * (.3 + .7 * Math.exp(-v.flow.age / 7)) * dt;
+      const p = arcAt(v.dir, v.s);
+      if (!p || p.y > H + 10) v.alpha = 0;
+      else if (v.s > p.L * .5) v.alpha = 1 - (v.s - p.L * .5) / (p.L * .4);
+    }
+  }
+  slides = slides.filter(v => v.alpha > 0);
+  flows = flows.filter(f => slides.some(v => v.flow === f));
+}
+
+// ================= catching and adding =================
+const inBefore = document.getElementById("inBefore"), inAfter = document.getElementById("inAfter"), note = document.getElementById("note");
+const WORDS_HINT = "catch a flying word · add one before or after";
+const VOICE_HINT = "calm sentences flow · loud ones explode · vents are not saved";
+let caught = null, busy = false, hover = null;
+function catchItem(trail, item) {
+  release();
+  trail.frozen = true; caught = { trail, item };
+  inBefore.value = ""; inAfter.value = "";
+  inBefore.hidden = inAfter.hidden = false;
+  const w = item.word;
+  note.textContent = (w.id.startsWith("s") && !w.to ? "from the volcano" : `thrown by ${signature(w.name, w.trip)}`) + " · type before or after, then Enter · Esc to let go";
+  inAfter.focus({ preventScroll: true });
+}
+function release() {
+  if (caught) caught.trail.frozen = false;
+  caught = null;
+  inBefore.hidden = inAfter.hidden = true;
+  note.textContent = mode === "words" ? WORDS_HINT : VOICE_HINT;
+}
+async function submit(side, input) {
+  if (!caught || busy) return;
+  const text = input.value.trim().split(/\s+/)[0] || "";
+  if (!WORD_RE.test(text)) { note.textContent = "one word: letters, numbers, - or '"; return; }
+  busy = true;
+  try {
+    const saved = clean(await saveWord({ w: text, to: caught.item.word.id, side, name: me.name, trip: me.trip }));
+    if (!saved) throw new Error("the volcano didn't answer, try again");
+    mine.add(saved.id); keepWord(saved); reindex();
+    release();
+    erupt(chainAround(words.get(saved.id)), true);
+    showStatus();
+  } catch (e) { note.textContent = e.message; }
+  busy = false;
+}
+for (const [el, side] of [[inBefore, "before"], [inAfter, "after"]]) {
+  el.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submit(side, el); } });
+}
+addEventListener("keydown", e => { if (e.key === "Escape") { release(); closeId(); } });
+
+function hit(px, py) {
+  for (let i = trails.length - 1; i >= 0; i--) {
+    const t = trails[i];
+    for (let k = t.items.length - 1; k >= 0; k--) {           // front (leader) first
+      const it = t.items[k];
+      if (!it.vis) continue;
+      if (px >= it.bx - 2 && px <= it.bx + it.word.bw + 2 && py >= it.by - 2 && py <= it.by + BOX_H + 2) return { t, it };
+    }
+  }
+  return null;
+}
+cv.addEventListener("pointermove", e => {
+  if (mode !== "words") return;
+  const h = hit(e.clientX, e.clientY); hover = h ? h.it : null;
+  cv.style.cursor = h ? "pointer" : "default";
+});
+cv.addEventListener("pointerdown", e => {
+  if (!idPanel.hidden) closeId();
+  if (mode !== "words") return;
+  const h = hit(e.clientX, e.clientY);
+  if (h) catchItem(h.t, h.it); else release();
+});
+
+// ================= voice mode =================
+const voiceEl = document.getElementById("voice"), realEl = document.getElementById("real"), debugEl = document.getElementById("debug");
+const ventText = document.getElementById("ventText"), intensity = document.getElementById("intensity"), intVal = document.getElementById("intVal");
+const micBtn = document.getElementById("mic"), langSel = document.getElementById("lang"), heard = document.getElementById("heard"), levelEl = document.getElementById("level");
+intensity.addEventListener("input", () => { intVal.textContent = intensity.value; });
+debugEl.addEventListener("submit", e => { e.preventDefault(); vent(ventText.value, intensity.value / 100); ventText.value = ""; });
+document.querySelectorAll("[data-vm]").forEach(b => b.addEventListener("click", () => {
+  const real = b.dataset.vm === "real";
+  document.querySelectorAll("[data-vm]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  realEl.hidden = !real; debugEl.hidden = real;
+  if (!real) stopMic();
+}));
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, audio = null, listening = false, level = 0, peak = 0;
+micBtn.addEventListener("click", () => { listening ? stopMic() : startMic(); });
+langSel.addEventListener("change", () => { if (listening) { stopMic(); startMic(); } });
+async function startMic() {
+  if (!SR) { heard.textContent = "This browser can't turn speech into text. Use Chrome on your Mac, or debug mode."; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ac = new AudioContext(), an = ac.createAnalyser(); an.fftSize = 1024;
+    ac.createMediaStreamSource(stream).connect(an);
+    audio = { ac, an, stream, buf: new Float32Array(an.fftSize) };
+  } catch { heard.textContent = "The microphone isn't available here. Allow it in the browser, or use debug mode."; return; }
+  rec = new SR(); rec.lang = langSel.value; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) { const I = peak; vent(r[0].transcript, I); heard.textContent = `“${r[0].transcript.trim()}” · intensity ${Math.round(I * 100)}`; peak = 0; }
+      else interim += r[0].transcript;
+    }
+    if (interim) heard.textContent = interim + "…";
+  };
+  rec.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { heard.textContent = "Speech recognition was blocked. Use debug mode."; stopMic(); } };
+  rec.onend = () => { if (listening) { try { rec.start(); } catch {} } };
+  listening = true; peak = 0;
+  try { rec.start(); } catch {}
+  micBtn.textContent = "stop";
+  heard.textContent = "Listening…";
+}
+function stopMic() {
+  listening = false;
+  try { rec && rec.stop(); } catch {}
+  if (audio) { audio.stream.getTracks().forEach(t => t.stop()); audio.ac.close(); audio = null; }
+  level = 0; levelEl.style.width = "0%"; micBtn.textContent = "start venting";
+}
+function readLevel() {
+  if (!audio) return;
+  audio.an.getFloatTimeDomainData(audio.buf);
+  let s = 0; for (const v of audio.buf) s += v * v;
+  const db = 20 * Math.log10(Math.sqrt(s / audio.buf.length) + 1e-8);
+  const l = clamp((db + 55) / 45, 0, 1);       // about -55 dB (quiet room) → 0, -10 dB (shouting) → 1
+  level = level * .8 + l * .2;
+  peak = Math.max(peak, level);
+  levelEl.style.width = (level * 100).toFixed(1) + "%";
+}
+
+// ================= modes =================
+let mode = "words";
+document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  voiceEl.hidden = mode !== "voice";
+  release();
+  if (mode === "voice") trails = []; else stopMic();
+  note.textContent = mode === "words" ? WORDS_HINT : VOICE_HINT;
+}));
+
+// ================= drawing =================
+// Words take the lava's colours. heat 1 = bright orange (lone words keep it until they splat),
+// lower heat = cooling ember, further back in a trail. "caught" = white-hot.
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], t))).join(",")})`; };
+function drawBox(x, y, w, text, heat, alpha = 1, bold = false) {
+  ctx.globalAlpha = alpha;
+  const caught = heat === "caught", h = caught ? 1 : clamp(heat, 0, 1);
+  ctx.fillStyle = caught ? "#ffe9c2" : mix("#2a0d05", "#ff7a1f", h * h); ctx.fillRect(x, y, w, BOX_H);
+  ctx.strokeStyle = caught ? "#ffffff" : mix("#6e2610", "#ffd08a", h); ctx.lineWidth = bold ? 2 : 1;
+  ctx.strokeRect(x + .5, y + .5, w - 1, BOX_H - 1);
+  ctx.fillStyle = caught || h > .62 ? "#1a0703" : mix("#b8471a", "#ffb066", h);
+  ctx.font = FONT; ctx.fillText(text, x + w / 2, y + BOX_H / 2 + 1);
+  ctx.globalAlpha = 1;
+}
+
+let last = 0;
+function frame(t) {
+  const realDt = Math.min(.05, (t - last) / 1000 || 0); last = t;
+  const dt = realDt * timeScale;
+  const g = Math.sqrt(H) * 22 * SLOW * SLOW;
+  if (dirty) reindex();
+  readLevel();
+
+  if (mode === "words") {
+    nextErupt -= dt;
+    if (nextErupt <= 0) {
+      for (let b = 0; b < V.burst; b++) { const w = pickWord(); if (w) erupt(chainAround(w, 1 + Math.floor(Math.random() * 7))); }
+      nextErupt = rand(V.every[0], V.every[1]);
+    }
+  }
+  updateTrails(dt, g);
+  updateSlides(dt, g);
+  for (const b of bits) { b.vy += g * b.g * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; }
+  bits = bits.filter(b => b.life > 0);
+  for (const s of splats) s.life -= dt;
+  splats = splats.filter(s => s.life > 0);
+  shake = Math.max(0, shake - realDt * 20);
+
+  // background
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#14181b"; ctx.fillRect(0, 0, W, H);
+  if (shake > 0) ctx.translate(Math.round(rand(-shake, shake) / P) * P, Math.round(rand(-shake, shake) / P) * P);
+  ctx.drawImage(bg, 0, 0, bg.width * P, bg.height * P);
+
+  // lava in the crater, flickering pixels
+  const c = crater();
+  for (let x = c.x - c.half + P; x < c.x + c.half - P; x += P) {
+    const y = Math.round(prof[Math.round(x)] / P) * P;
+    const f = Math.sin(x * .3 + t / 180) + Math.sin(x * .11 - t / 260);
+    ctx.fillStyle = f > .8 ? "#ffd08a" : f > -.2 ? "#ff9a3c" : "#e2561c";
+    ctx.fillRect(x, y, P, P);
+    if (f > 1.2) { ctx.fillStyle = "#ff7a1f"; ctx.fillRect(x, y - P, P, P); }
+  }
+
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  // splats: a flattened box that fades
+  for (const s of splats) {
+    ctx.globalAlpha = clamp(s.life / 1.2, 0, 1);
+    ctx.fillStyle = s.lone ? "#ff9a3c" : "#c4461a";
+    const h = P, w = s.w * (1 + (1.2 - s.life) * .5);
+    ctx.fillRect(Math.round((s.x - w / 2) / P) * P, Math.round((s.y - h) / P) * P, Math.round(w / P) * P, h);
+  }
+  ctx.globalAlpha = 1;
+  for (const b of bits) {
+    const a = clamp(b.life, 0, 1);
+    ctx.fillStyle = b.ash ? `rgba(120,118,130,${a * .6})` : b.hot ? `rgba(255,${Math.round(110 + 100 * a)},50,${a})` : b.white ? `rgba(255,170,90,${a})` : `rgba(196,70,26,${a})`;
+    const s = b.ash ? P * 2 : P;
+    ctx.fillRect(Math.round(b.x / P) * P, Math.round(b.y / P) * P, s, s);
+  }
+
+  // trails: draw back to front so the leading word is on top
+  for (const tr of trails) {
+    const n = tr.items.length, headL = tr.landed ? tr.head + tr.extra : tr.head;
+    for (const it of tr.items) it.vis = false;
+    for (let k = n - 1; k >= 0; k--) {
+      const i = n - 1 - k, it = tr.items[i];
+      if (tr.done.has(i) && !tr.frozen) continue;
+      const l = headL - k * SP;
+      if (l < 0 || (tr.landed && l > tr.head)) continue;
+      const p = k === 0 && !tr.landed ? { x: tr.x, y: tr.y } : pathPoint(tr, l);
+      it.bx = Math.round(p.x - it.word.bw / 2); it.by = Math.round(p.y - BOX_H / 2); it.vis = true;
+      const isCaught = caught && caught.item === it;
+      drawBox(it.bx, it.by, it.word.bw, it.word.w, isCaught ? "caught" : tr.lone ? 1 : .88 - k * .15,
+        isCaught || tr.lone ? 1 : Math.max(.35, 1 - k * .12), hover === it);
+    }
+  }
+
+  // sliding and vented words
+  for (const v of slides) {
+    if (v.delay > 0) continue;
+    const style = clamp(v.heat, .15, 1);
+    if (v.state === "fly") drawBox(Math.round(v.x - v.bw / 2), Math.round(v.y - BOX_H / 2), v.bw, v.t, style, v.alpha);
+    else {
+      const p = arcAt(v.dir, v.s); if (!p) continue;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ang);
+      drawBox(-v.bw / 2, -BOX_H, v.bw, v.t, style, clamp(v.alpha, 0, 1));
+      ctx.restore();
+    }
+  }
+
+  // keep the two slots touching the caught word
+  if (caught && caught.item.vis) {
+    const it = caught.item;
+    inBefore.style.left = Math.round(it.bx - inBefore.offsetWidth) + "px"; inBefore.style.top = it.by + "px";
+    inAfter.style.left = Math.round(it.bx + it.word.bw) + "px"; inAfter.style.top = it.by + "px";
+  }
+  requestAnimationFrame(frame);
+}
+
+addEventListener("resize", resize);
+resize();
+document.fonts?.ready.then(() => { for (const w of words.values()) w.bw = textWidth(w.w); });
+loadWords(true).catch(() => { memMode = "local"; STARTERS.forEach(keepWord); showStatus(); });
+requestAnimationFrame(frame);
+</script>
+
+<script src="../../../site.js" defer></script>
+<script src="../../../nav.js" data-path="rai/index.html" data-version="3f27c69" defer></script>
+</body></html>

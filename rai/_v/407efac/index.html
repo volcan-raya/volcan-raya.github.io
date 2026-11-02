@@ -1,0 +1,335 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0;padding:0}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Word Volcano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400&display=swap">
+<style>
+/* Layout: full-window night with the volcano rising from the bottom centre; panels float over it. Single dark world by choice. */
+:root {
+  --night: #0b0706;
+  --basalt: #16100e;
+  --lava: #ff6a2b;
+  --ember: #ffd27a;
+  --ash: #9a908b;
+  --smoke: #e9e1dc;
+  --words: "Young Serif", "Iowan Old Style", Georgia, serif;
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--night); color: var(--smoke); font-family: var(--mono); overflow: hidden; }
+canvas { position: fixed; inset: 0; display: block; touch-action: none; }
+
+.bar { position: fixed; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 16px; pointer-events: none; font-size: 12px; color: var(--ash); }
+.bar > * { pointer-events: auto; }
+.top { top: env(safe-area-inset-top, 0px); }
+.bottom { bottom: env(safe-area-inset-bottom, 0px); align-items: flex-end; }
+h1 { margin: 0; font-family: var(--words); font-weight: 400; font-size: 22px; color: var(--smoke); }
+.hint { margin: 4px 0 0; }
+
+button { font: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+.chip { font-size: 12px; color: var(--smoke); background: rgba(22,16,14,.8); border: 1px solid #3a2a24; border-radius: 999px; padding: 8px 14px; }
+.chip:hover { border-color: var(--ash); }
+
+.panel { position: fixed; background: rgba(16,11,9,.94); border: 1px solid #3a2a24; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+#idPanel { top: calc(56px + env(safe-area-inset-top, 0px)); right: 16px; width: min(300px, calc(100vw - 32px)); }
+#idPanel p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--ash); }
+label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); display: flex; flex-direction: column; gap: 6px; }
+input { font: inherit; font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--smoke); background: #0e0907; border: 1px solid #3a2a24; border-radius: 8px; padding: 9px 10px; min-width: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.solid { background: var(--lava); color: #1a0a04; border: 0; border-radius: 999px; padding: 9px 16px; font-size: 13px; }
+.solid:disabled { opacity: .4; cursor: default; }
+.ghost { background: transparent; color: var(--ash); border: 1px solid #3a2a24; border-radius: 999px; padding: 9px 16px; font-size: 13px; }
+.sig { font-family: var(--words); font-size: 16px; color: var(--ember); }
+
+#catch { left: 50%; top: 12%; transform: translateX(-50%); width: min(440px, calc(100vw - 32px)); align-items: center; text-align: center; gap: 12px; }
+#lineage { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--words); }
+#lineage li { opacity: 0; animation: rise 3.4s ease forwards; animation-delay: calc(var(--i) * 160ms); font-size: 15px; color: var(--ash); }
+#lineage li small { font-family: var(--mono); font-size: 10px; margin-left: 6px; color: #6e625c; }
+@keyframes rise { 0% { opacity: 0; transform: translateY(8px); } 18% { opacity: .95; transform: none; } 100% { opacity: .32; } }
+.caught { margin: 0; font-family: var(--words); font-size: clamp(34px, 8vw, 48px); line-height: 1.1; color: var(--ember); text-shadow: 0 0 24px rgba(255,106,43,.55); overflow-wrap: anywhere; }
+.meta { margin: 0; font-size: 12px; color: var(--ash); }
+#kids { margin: 0; font-family: var(--words); font-size: 14px; color: var(--ash); opacity: 0; animation: rise 3.4s ease .6s forwards; }
+#throw { display: flex; gap: 8px; width: 100%; }
+#throw input { flex: 1; font-family: var(--words); font-size: 18px; }
+#msg { margin: 0; font-size: 12px; color: var(--lava); min-height: 1em; }
+@media (prefers-reduced-motion: reduce) { #lineage li, #kids { animation: none; opacity: .6; } }
+</style>
+
+<canvas id="c"></canvas>
+
+<div class="bar top">
+  <div>
+    <h1>Word Volcano</h1>
+    <p class="hint">catch a word · throw one back</p>
+  </div>
+  <button class="chip" id="who" aria-expanded="false">anonymous</button>
+</div>
+
+<div class="panel" id="idPanel" hidden>
+  <p>Stay anonymous, or take a name and lock it with a secret code. Others see your name with a signature made from the code, so nobody can wear your name without it. The code never leaves this browser.</p>
+  <label for="nm">name<input id="nm" maxlength="20" autocomplete="off"></label>
+  <label for="cd">secret code<input id="cd" type="password" maxlength="40" autocomplete="off"></label>
+  <span class="sig" id="preview">anonymous</span>
+  <div class="row">
+    <button class="solid" id="keep">keep this name</button>
+    <button class="ghost" id="anon">stay anonymous</button>
+  </div>
+</div>
+
+<div class="panel" id="catch" hidden>
+  <ol id="lineage"></ol>
+  <p class="caught" id="caughtWord"></p>
+  <p class="meta" id="caughtMeta"></p>
+  <p id="kids"></p>
+  <form id="throw">
+    <input id="reply" placeholder="one word back" maxlength="24" autocomplete="off" aria-label="Your word">
+    <button class="solid" id="throwBtn">throw</button>
+  </form>
+  <p id="msg"></p>
+  <button class="ghost" id="release">let it fall</button>
+</div>
+
+<div class="bar bottom">
+  <span id="count">waking the volcano…</span>
+  <span id="mem"></span>
+</div>
+
+<script>
+// ---------- words ----------
+// The volcano's first breath, used while its memory is still empty. Never written to the shared store.
+const FIRST = ["hello", "here", "fire", "someone", "listen", "ash", "you", "still", "awake", "echo", "far", "warm"];
+const words = new Map();               // id -> {id, w, parent, name, trip, t}
+FIRST.forEach((w, i) => words.set("first-" + i, { id: "first-" + i, w, parent: null, name: "", trip: "", t: i, first: true }));
+const byTime = () => [...words.values()].sort((a, b) => b.t - a.t);
+const signature = (name, trip) => name ? `${name} ◆${trip}` : "anonymous";
+
+// ---------- identity: name + secret code (tripcode) ----------
+let me = { name: "", trip: "" };
+try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name && s.trip) me = s; } catch {}
+const ALPH = "abcdefghjkmnpqrstuvwxyz23456789";
+async function tripcode(name, code) {
+  const data = new TextEncoder().encode(name + "#" + code);
+  let bytes;
+  try { bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", data)); }
+  catch { let h = 2166136261; for (const b of data) h = Math.imul(h ^ b, 16777619); bytes = new Uint8Array(new Uint32Array([h, h * 31, h * 17]).buffer); }
+  return [...bytes.slice(0, 6)].map(b => ALPH[b % ALPH.length]).join("");
+}
+const whoBtn = document.getElementById("who"), idPanel = document.getElementById("idPanel");
+const nm = document.getElementById("nm"), cd = document.getElementById("cd"), preview = document.getElementById("preview");
+function showWho() { whoBtn.textContent = signature(me.name, me.trip); }
+showWho();
+whoBtn.addEventListener("click", () => {
+  idPanel.hidden = !idPanel.hidden; whoBtn.setAttribute("aria-expanded", String(!idPanel.hidden));
+  if (!idPanel.hidden) { nm.value = me.name; cd.value = ""; updatePreview(); nm.focus(); }
+});
+async function updatePreview() {
+  const n = nm.value.trim();
+  preview.textContent = n && cd.value ? signature(n, await tripcode(n, cd.value)) : n ? `${n} ◆ needs a code` : "anonymous";
+  document.getElementById("keep").disabled = !(n && cd.value);
+}
+nm.addEventListener("input", updatePreview); cd.addEventListener("input", updatePreview);
+document.getElementById("keep").addEventListener("click", async () => {
+  const n = nm.value.trim(); if (!n || !cd.value) return;
+  me = { name: n, trip: await tripcode(n, cd.value) };
+  try { localStorage.setItem("volcano-id", JSON.stringify(me)); } catch {}
+  idPanel.hidden = true; showWho();
+});
+document.getElementById("anon").addEventListener("click", () => {
+  me = { name: "", trip: "" };
+  try { localStorage.removeItem("volcano-id"); } catch {}
+  idPanel.hidden = true; showWho();
+});
+
+// ---------- shared memory ----------
+let db = null, canThrow = true, initial = true;
+const mine = new Set();
+const countEl = document.getElementById("count"), memEl = document.getElementById("mem");
+function showCount() {
+  const n = [...words.values()].filter(w => !w.first).length;
+  countEl.textContent = n ? `${n.toLocaleString()} word${n === 1 ? "" : "s"} in the volcano` : "the volcano is waiting for its first word";
+}
+(async () => {
+  const [d, user] = await Promise.all([window.claude?.use?.("db") ?? null, window.claude?.use?.("user") ?? null]);
+  db = d;
+  if (user) { try { const ok = await user.can("data.write"); if (ok === false) canThrow = false; } catch {} }
+  if (!db) { memEl.textContent = "memory: this tab only"; showCount(); return; }
+  memEl.textContent = canThrow ? "memory: shared" : "memory: shared · watching only";
+  db.collection("words").orderBy("t", "desc").limit(800).onSnapshot(snap => {
+    for (const ch of snap.docChanges()) {
+      const d = ch.doc.data(); if (!d || typeof d.w !== "string") continue;
+      const w = { id: ch.doc.id, w: d.w.slice(0, 24), parent: typeof d.parent === "string" ? d.parent : null,
+        name: typeof d.name === "string" ? d.name.slice(0, 20) : "", trip: typeof d.trip === "string" ? d.trip.slice(0, 8) : "", t: Number(d.t) || 0 };
+      if (ch.type === "removed") { words.delete(w.id); continue; }
+      const isNew = !words.has(w.id);
+      words.set(w.id, w);
+      if (ch.type === "added" && isNew && !initial && !mine.has(w.id)) erupt(w, true);
+    }
+    initial = false; showCount();
+  }, () => { memEl.textContent = "memory: lost connection"; });
+})();
+
+// ---------- canvas ----------
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+let W = 0, H = 0;
+function resize() {
+  const d = devicePixelRatio || 1; W = innerWidth; H = innerHeight;
+  cv.width = W * d; cv.height = H * d; cv.style.width = W + "px"; cv.style.height = H + "px";
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+addEventListener("resize", resize); resize();
+const crater = () => ({ x: W / 2, y: H * .74, half: Math.min(64, W * .08) });
+
+let flying = [], embers = [], rumble = 0, nextErupt = 1, caught = null, hover = null;
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function pickWord() {
+  const list = byTime();
+  const real = list.filter(w => !w.first);
+  const pool = real.length >= 6 ? real : list;
+  return Math.random() < .55 ? pool[Math.floor(Math.random() * Math.min(20, pool.length))] : pool[Math.floor(Math.random() * pool.length)];
+}
+function erupt(word, fresh = false) {
+  const c = crater(), lift = Math.sqrt(H) * 30;
+  flying.push({ word, x: c.x + rand(-c.half * .6, c.half * .6), y: c.y, vx: rand(-.38, .38) * Math.min(W, 900), vy: -rand(.82, 1) * lift, heat: 1, size: fresh ? 30 : rand(19, 25), fresh });
+  rumble = Math.min(1, rumble + (fresh ? .9 : .35));
+  for (let i = 0; i < (fresh ? 40 : 14); i++) embers.push({ x: c.x + rand(-c.half, c.half) * .5, y: c.y, vx: rand(-90, 90), vy: rand(-380, -120), life: rand(.6, 1.5) });
+}
+
+function heatColour(h, a = 1) {
+  // ember yellow -> lava orange -> cooled ash
+  const stops = [[154, 144, 139], [255, 106, 43], [255, 210, 122]];
+  const t = Math.max(0, Math.min(1, h)) * 2, i = Math.min(1, Math.floor(t)), f = t - i;
+  const c = stops[i].map((v, k) => Math.round(v + (stops[i + 1][k] - v) * f));
+  return `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+}
+
+// ---------- catching ----------
+const catchEl = document.getElementById("catch"), lineageEl = document.getElementById("lineage");
+const reply = document.getElementById("reply"), msg = document.getElementById("msg");
+function hitTest(x, y) {
+  for (let i = flying.length - 1; i >= 0; i--) {
+    const f = flying[i]; ctx.font = `${f.size}px ${getComputedStyle(document.body).getPropertyValue("--words")}`;
+    const w = ctx.measureText(f.word.w).width / 2 + 10, h = f.size * .7 + 8;
+    if (Math.abs(x - f.x) < w && Math.abs(y - f.y) < h) return i;
+  }
+  return -1;
+}
+cv.addEventListener("pointermove", e => { hover = caught ? -1 : hitTest(e.clientX, e.clientY); cv.style.cursor = hover >= 0 ? "pointer" : "default"; });
+cv.addEventListener("pointerdown", e => {
+  if (!idPanel.hidden) { idPanel.hidden = true; whoBtn.setAttribute("aria-expanded", "false"); }
+  if (caught) return;
+  const i = hitTest(e.clientX, e.clientY); if (i < 0) return;
+  catchWord(flying.splice(i, 1)[0].word);
+});
+function catchWord(w) {
+  caught = w;
+  const chain = []; let p = w.parent ? words.get(w.parent) : null;
+  while (p && chain.length < 7) { chain.unshift(p); p = p.parent ? words.get(p.parent) : null; }
+  lineageEl.replaceChildren(...chain.map((a, i) => {
+    const li = document.createElement("li"); li.style.setProperty("--i", i);
+    li.textContent = a.w;
+    const s = document.createElement("small"); s.textContent = a.first ? "the volcano" : signature(a.name, a.trip); li.appendChild(s);
+    return li;
+  }));
+  document.getElementById("caughtWord").textContent = w.w;
+  const parent = w.parent && words.get(w.parent);
+  document.getElementById("caughtMeta").textContent = w.first ? "from the volcano's first breath" :
+    `thrown by ${signature(w.name, w.trip)}${parent ? ` · answering “${parent.w}”` : ""}`;
+  const kids = [...words.values()].filter(k => k.parent === w.id).slice(0, 8).map(k => k.w);
+  const kidsEl = document.getElementById("kids");
+  kidsEl.textContent = kids.length ? "already answered with " + kids.join(" · ") : "";
+  kidsEl.style.animation = "none"; void kidsEl.offsetWidth; kidsEl.style.animation = "";
+  msg.textContent = canThrow ? "" : "You can catch words here, but throwing one needs the owner to invite you.";
+  reply.disabled = !canThrow; document.getElementById("throwBtn").disabled = !canThrow;
+  reply.value = ""; catchEl.hidden = false; if (canThrow) reply.focus();
+}
+function release() { caught = null; catchEl.hidden = true; }
+document.getElementById("release").addEventListener("click", release);
+addEventListener("keydown", e => { if (e.key === "Escape") { release(); idPanel.hidden = true; } });
+
+document.getElementById("throw").addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = reply.value.trim().split(/\s+/)[0] || "";
+  if (!/^[\p{L}\p{N}'’-]{1,24}$/u.test(text)) { msg.textContent = "One word only: letters, numbers, hyphens or apostrophes."; return; }
+  const body = { w: text, parent: caught.id, name: me.name, trip: me.trip, t: Date.now() };
+  let id = "local-" + Date.now();
+  if (db) {
+    const ref = db.collection("words").doc(); id = ref.id; mine.add(id);
+    try { await ref.set(body); }
+    catch (err) {
+      mine.delete(id);
+      msg.textContent = err && err.code === "invalid_argument" ? "Your word didn't go in: only people the owner invites can throw words." :
+        err && err.code === "quota_exceeded" ? "The volcano is full. Its owner needs to clear old words." : "The volcano didn't answer. Try throwing again.";
+      if (err && err.code === "invalid_argument") { canThrow = false; reply.disabled = true; }
+      return;
+    }
+  }
+  const w = { id, ...body }; words.set(id, w); showCount();
+  release(); erupt(w, true);
+});
+
+// ---------- loop ----------
+let last = 0;
+function frame(t) {
+  const dt = Math.min(.05, (t - last) / 1000 || 0); last = t;
+  const g = Math.sqrt(H) * 22;
+  nextErupt -= dt;
+  if (nextErupt <= 0) { const w = pickWord(); if (w) erupt(w); nextErupt = rand(.5, 1.3); }
+  for (const f of flying) { f.vy += g * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.heat -= dt * .28; }
+  flying = flying.filter(f => f.y < H + 40 && f.x > -200 && f.x < W + 200);
+  for (const e of embers) { e.vy += g * .6 * dt; e.x += e.vx * dt; e.y += e.vy * dt; e.life -= dt; }
+  embers = embers.filter(e => e.life > 0);
+  rumble = Math.max(0, rumble - dt * .8);
+
+  const c = crater();
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#0b0706"); sky.addColorStop(1, "#1d0e09");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+  // glow behind the cone
+  const pulse = .35 + .15 * Math.sin(t / 700) + rumble * .5;
+  const glow = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, Math.min(W, H) * .6);
+  glow.addColorStop(0, `rgba(255,106,43,${.28 * pulse})`); glow.addColorStop(1, "rgba(255,106,43,0)");
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  // the cone
+  const shake = rumble * 2.5 * Math.sin(t / 30), base = Math.min(W * .48, 620);
+  ctx.beginPath();
+  ctx.moveTo(c.x - base, H);
+  ctx.quadraticCurveTo(c.x - c.half * 2.2, c.y + (H - c.y) * .35, c.x - c.half + shake, c.y);
+  ctx.lineTo(c.x + c.half + shake, c.y);
+  ctx.quadraticCurveTo(c.x + c.half * 2.2, c.y + (H - c.y) * .35, c.x + base, H);
+  ctx.closePath();
+  ctx.fillStyle = "#16100e"; ctx.fill();
+  ctx.strokeStyle = "rgba(255,106,43,.25)"; ctx.lineWidth = 1; ctx.stroke();
+  const lip = ctx.createRadialGradient(c.x + shake, c.y, 0, c.x + shake, c.y, c.half * 1.3);
+  lip.addColorStop(0, `rgba(255,200,110,${.6 * pulse + .3})`); lip.addColorStop(.5, `rgba(255,106,43,${.5 * pulse})`); lip.addColorStop(1, "rgba(255,106,43,0)");
+  ctx.fillStyle = lip; ctx.beginPath(); ctx.ellipse(c.x + shake, c.y, c.half * 1.3, c.half * .35, 0, 0, 7); ctx.fill();
+
+  for (const e of embers) { ctx.fillStyle = heatColour(e.life, Math.min(1, e.life)); ctx.fillRect(e.x, e.y, 2, 2); }
+
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const face = getComputedStyle(document.body).getPropertyValue("--words");
+  flying.forEach((f, i) => {
+    ctx.font = `${f.size}px ${face}`;
+    ctx.shadowColor = heatColour(f.heat, .8); ctx.shadowBlur = 18 * Math.max(0, f.heat);
+    ctx.fillStyle = heatColour(f.heat);
+    ctx.fillText(f.word.w, f.x, f.y);
+    if (i === hover) {
+      ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(233,225,220,.5)";
+      const w = ctx.measureText(f.word.w).width;
+      ctx.beginPath(); ctx.moveTo(f.x - w / 2, f.y + f.size * .6); ctx.lineTo(f.x + w / 2, f.y + f.size * .6); ctx.stroke();
+    }
+  });
+  ctx.shadowBlur = 0;
+  requestAnimationFrame(frame);
+}
+showCount();
+requestAnimationFrame(frame);
+</script>
+
+<script src="../../../site.js" defer></script>
+<script src="../../../nav.js" data-path="rai/index.html" data-version="407efac" defer></script>
+</body></html>

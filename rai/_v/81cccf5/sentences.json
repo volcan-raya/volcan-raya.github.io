@@ -1,0 +1,204 @@
+{
+    "sentences": [
+        {
+            "id": "q1",
+            "s": "And now for something completely different.",
+            "t": 1
+        },
+        {
+            "id": "q2",
+            "s": "Nobody expects the Spanish Inquisition!",
+            "t": 2
+        },
+        {
+            "id": "q3",
+            "s": "'Tis but a scratch.",
+            "t": 3
+        },
+        {
+            "id": "q4",
+            "s": "It's just a flesh wound.",
+            "t": 4
+        },
+        {
+            "id": "q5",
+            "s": "We are the knights who say Ni!",
+            "t": 5
+        },
+        {
+            "id": "q6",
+            "s": "Always look on the bright side of life.",
+            "t": 6
+        },
+        {
+            "id": "q7",
+            "s": "He's not the Messiah, he's a very naughty boy!",
+            "t": 7
+        },
+        {
+            "id": "q8",
+            "s": "What have the Romans ever done for us?",
+            "t": 8
+        },
+        {
+            "id": "q9",
+            "s": "This parrot is no more! It has ceased to be!",
+            "t": 9
+        },
+        {
+            "id": "q10",
+            "s": "He's pining for the fjords.",
+            "t": 10
+        },
+        {
+            "id": "q11",
+            "s": "It's not pining, it's passed on!",
+            "t": 11
+        },
+        {
+            "id": "q12",
+            "s": "Your mother was a hamster and your father smelt of elderberries.",
+            "t": 12
+        },
+        {
+            "id": "q13",
+            "s": "I fart in your general direction.",
+            "t": 13
+        },
+        {
+            "id": "q14",
+            "s": "Run away! Run away!",
+            "t": 14
+        },
+        {
+            "id": "q15",
+            "s": "Help, help, I'm being repressed!",
+            "t": 15
+        },
+        {
+            "id": "q16",
+            "s": "Strange women lying in ponds distributing swords is no basis for a system of government.",
+            "t": 16
+        },
+        {
+            "id": "q17",
+            "s": "I'm not dead yet.",
+            "t": 17
+        },
+        {
+            "id": "q18",
+            "s": "What is the airspeed velocity of an unladen swallow?",
+            "t": 18
+        },
+        {
+            "id": "q19",
+            "s": "Is that an African swallow or a European swallow?",
+            "t": 19
+        },
+        {
+            "id": "q20",
+            "s": "It's only a model.",
+            "t": 20
+        },
+        {
+            "id": "q21",
+            "s": "On second thought, let's not go to Camelot. It is a silly place.",
+            "t": 21
+        },
+        {
+            "id": "q22",
+            "s": "Bring out your dead!",
+            "t": 22
+        },
+        {
+            "id": "q23",
+            "s": "I'm a lumberjack and I'm okay.",
+            "t": 23
+        },
+        {
+            "id": "q24",
+            "s": "She turned me into a newt! ... I got better.",
+            "t": 24
+        },
+        {
+            "id": "q25",
+            "s": "Nudge, nudge, wink, wink, say no more!",
+            "t": 25
+        },
+        {
+            "id": "q26",
+            "s": "Now go away, or I shall taunt you a second time!",
+            "t": 26
+        },
+        {
+            "id": "q27",
+            "s": "Come and see the violence inherent in the system!",
+            "t": 27
+        },
+        {
+            "id": "q28",
+            "s": "Blessed are the cheesemakers.",
+            "t": 28
+        },
+        {
+            "id": "q29",
+            "s": "Remember, you're all individuals!",
+            "t": 29
+        },
+        {
+            "id": "q30",
+            "s": "Yes, we're all individuals!",
+            "t": 30
+        },
+        {
+            "id": "q31",
+            "s": "Well, it's not much of a cheese shop, is it?",
+            "t": 31
+        },
+        {
+            "id": "q32",
+            "s": "An argument isn't just contradiction.",
+            "t": 32
+        },
+        {
+            "id": "q33",
+            "s": "Spam, spam, spam, spam, lovely spam, wonderful spam.",
+            "t": 33
+        },
+        {
+            "id": "q34",
+            "s": "Look, that rabbit's got a vicious streak a mile wide!",
+            "t": 34
+        },
+        {
+            "id": "q35",
+            "s": "I wish to complain about this parrot.",
+            "t": 35
+        },
+        {
+            "id": "q36",
+            "s": "Always look on the bright side of death.",
+            "t": 36
+        },
+        {
+            "id": "ebfb8ca4daff",
+            "s": "hungryyyyyyyy",
+            "t": 1792052306947
+        },
+        {
+            "id": "ae9547e70444",
+            "s": "I'm hungryyyyyyyy",
+            "t": 1792054003625
+        },
+        {
+            "id": "43095d5662d9",
+            "s": "i'm tiredddddddd",
+            "t": 1792054016285
+        },
+        {
+            "id": "691087776e88",
+            "s": "j'ai faiiiiiiiiiim",
+            "t": 1792076800630
+        }
+    ]
+}

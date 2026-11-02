@@ -1,0 +1,1310 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>notification soup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* v09: the volcano stops being depicted. A white shape of four lines, on a flat white earth, in one field of sky; the sky carries the
+   energy, blue to red-orange as the pressure builds. Inside, one gradient, red-orange to white, and the notes as red
+   dots. The white is a skin one pixel thin, and past it you are straight in the orange: one cut, no easing. Looking down from above whitens the inside. You orbit, tilt and zoom; an eruption sends words away on wide waves.
+   Each post is one medium: an image, a text or a voice. The type is a placeholder (Inter Tight) for LL Unica77:
+   to change it, change FONTS in the script. DEV switches between it and a mono, JetBrains Mono (Ghostty's own). */
+:root {
+  --red: #c81600;
+  --line: #f2f2f2;
+  --dim: #8e8e93;
+  --type: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: #050506; color: var(--line); font: 13px/1.4 var(--type); overflow: hidden; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+
+/* the scene: the field (soup, wall, or the volcano outside) and, over it, the badges. The tremor moves both, never the controls */
+#view { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+#field, #marks { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#marks { z-index: 1; }
+
+/* the badges are drawn; these buttons only carry them for the keyboard and screen readers (the ring is drawn too) */
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* the title, top left, over everything but the panels. The type is the placeholder above */
+#title { position: fixed; z-index: 5; top: 12px; left: calc(16px + env(safe-area-inset-left, 0px)); right: 16px; margin: 0; pointer-events: none;
+  color: #000; font: 400 12px/1.5 "DM Mono", ui-monospace, Menlo, monospace; }
+#title span { display: block; }
+:root[data-font="mono"] #title { letter-spacing: 0; }
+
+/* the only control: + */
+#plus { position: fixed; z-index: 5; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: #000; display: grid; place-items: center; cursor: pointer;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .35); -webkit-tap-highlight-color: transparent; }
+#plus svg { width: 22px; height: 22px; }
+#plus:focus-visible { outline: 1.5px solid #fff; outline-offset: 3px; }
+body.composing #plus, body.chatting #plus { display: none; }
+
+/* the composer, after Telegram's input bar: a round button, a dark rounded field, the mic in a dark circle */
+.bar { display: flex; align-items: flex-end; gap: 8px; margin: 0; }
+.round { flex: none; width: 44px; height: 44px; padding: 0; border: 1px solid rgba(255, 255, 255, .09); border-radius: 22px; background: #1c1c1d;
+  color: #fff; display: grid; place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .2s, box-shadow .1s; }
+.round svg { width: 22px; height: 22px; }
+.round:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .7); outline-offset: 2px; }
+.msgfield:focus { border-color: rgba(255, 255, 255, .22); }   /* like Telegram: the caret is enough */
+.you.named { width: auto; max-width: 8.5rem; padding: 0 14px; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 500 14px/42px var(--type); }
+.mic.on { background: var(--red); border-color: var(--red); color: #000; }
+.send { background: var(--red); border-color: var(--red); color: #fff; }
+.msgfield { flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 18px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 22px;
+  background: #1c1c1d; color: #fff; font: 400 17px var(--type); outline: none; caret-color: #5e8bff; }
+.msgfield::placeholder { color: #7d7d82; }
+.fieldwrap { position: relative; flex: 1; min-width: 0; display: flex; }
+.fieldwrap.with-clip .msgfield { padding-right: 46px; }
+.clip { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 18px; background: none; color: #8e8e93; display: grid; place-items: center; cursor: pointer; }
+.clip svg { width: 22px; height: 22px; }
+.clip:hover, .clip:focus-visible { color: #fff; }
+.clip:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .7); }
+/* a picture about to be sent */
+.att { position: relative; align-self: flex-start; margin: 0 0 8px 52px; padding: 6px; border-radius: 14px; background: #1c1c1d; border: 1px solid rgba(255, 255, 255, .09); }
+.att img, .msg .photo { display: block; width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
+.att button { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: #2c2c2e; color: #fff; font: 600 14px/24px var(--type); cursor: pointer; }
+.msg .photo { width: auto; height: auto; max-width: 220px; max-height: 260px; margin-bottom: 6px; border-radius: 14px; }
+#composer { position: fixed; z-index: 6; left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px)); max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; }
+
+/* name + secret code */
+#idPanel { position: fixed; z-index: 8; left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  width: min(340px, calc(100% - 16px)); box-sizing: border-box; padding: 16px; border-radius: 20px; background: rgba(28, 28, 29, .97);
+  border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 16px 50px rgba(0, 0, 0, .5); display: flex; flex-direction: column; gap: 12px; }
+body.chatting #idPanel { left: auto; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+#idPanel p { margin: 0; font-size: 13px; line-height: 1.45; color: #aeaeb2; }
+#idPanel label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--dim); }
+#idPanel input, #idPanel select { height: 38px; box-sizing: border-box; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 12px; background: #000; font-size: 16px; }
+#preview { font-size: 13px; color: #fff; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { padding: 8px 14px; border: 0; border-radius: 999px; background: #2c2c2e; font-size: 13px; cursor: pointer; }
+.pill.go { background: var(--red); color: #fff; }
+.pill:disabled { opacity: .4; cursor: default; }
+
+/* a note opened: the conversation */
+#chat { position: fixed; z-index: 7; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: min(400px, calc(100% - 32px)); max-height: min(70%, 680px); display: flex; flex-direction: column; overflow: hidden;
+  background: #0e0e0f; border: 1px solid rgba(255, 255, 255, .08); border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, .55); }
+#chat header { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 18px; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+#cTitle { flex: 1; min-width: 0; font: 600 15px/1.2 var(--type); }
+#cTitle small { display: block; margin-top: 2px; font: 400 12px var(--type); color: var(--dim); }
+#chat header .round { width: 34px; height: 34px; }
+#chat header .round svg { width: 16px; height: 16px; }
+#listen[aria-pressed="true"] { background: #fff; color: #000; }
+#cLog { list-style: none; margin: 0; padding: 14px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overscroll-behavior: contain; }
+.msg { max-width: 84%; align-self: flex-start; }
+.msg .body { margin: 0; padding: 8px 13px 9px; border-radius: 18px 18px 18px 6px; background: #262628; font: 400 15px/1.35 var(--type); overflow-wrap: anywhere; }
+.msg.op .body { background: #3b0d0a; font-size: 17px; }
+.msg.mine { align-self: flex-end; }
+.msg.mine .body { background: #a51d14; border-radius: 18px 18px 6px 18px; }
+.voice { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border: 0; border-radius: 22px; background: #3b0d0a; color: #fff; cursor: pointer; }
+.voice svg { width: 26px; height: 26px; }
+.voice span { display: block; width: 110px; height: 2px; background: rgba(255, 255, 255, .55); }
+.voice[aria-pressed="true"] { background: #fff; color: #000; }
+.voice[aria-pressed="true"] span { background: #000; }
+.msg .meta { margin: 4px 10px 0; font-size: 11px; color: var(--dim); }
+.msg.mine .meta { text-align: right; }
+#chat .bar { padding: 8px; border-top: 1px solid rgba(255, 255, 255, .06); }
+@media (max-width: 600px) {
+  #chat { left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: 80%; }
+  body.chatting #idPanel { left: calc(8px + env(safe-area-inset-left, 0px)); right: auto; }
+}
+
+/* DEV: the noisy tools, shown with the "dev" square in the site bar */
+#dev { position: fixed; z-index: 9; top: 12px; right: calc(10px + env(safe-area-inset-right, 0px)); width: min(260px, calc(100% - 20px)); box-sizing: border-box;
+  max-height: calc(100% - 50px); overflow: auto; padding: 14px; border: 1px solid rgba(176, 38, 255, .55); border-radius: 14px; background: rgba(10, 10, 12, .9);
+  font-size: 12px; display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: start; }
+#dev .full { grid-column: 1 / -1; }
+#dev .k { color: var(--dim); }
+#dev button.t { padding: 0; border: 0; background: none; color: #fff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .35); }
+#dev .seg { display: flex; gap: 14px; }
+#dev .seg button[aria-pressed="true"] { color: #B026FF; text-decoration-color: #B026FF; }
+#tube { position: relative; width: 12px; height: 150px; grid-row: span 6; cursor: ns-resize; touch-action: none; border: 1px solid rgba(255, 255, 255, .5);
+  background: repeating-linear-gradient(to top, transparent 0 calc(10% - 1px), rgba(255, 255, 255, .16) calc(10% - 1px) 10%); }
+#tube:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
+#pFill { position: absolute; left: 2px; right: 2px; bottom: 2px; height: 0; background: linear-gradient(to top, #5a0a05, #ff3b30 60%, #ffb3a8); }
+#pBoom { justify-self: start; padding: 6px 12px; border: 1px solid var(--red); border-radius: 999px; background: none; color: #ffb3a8; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+#pBoom:disabled { opacity: .35; cursor: default; }
+#dev input[type=range] { width: 100%; margin: 0; accent-color: #B026FF; }
+.meter { height: 4px; background: rgba(255, 255, 255, .12); }
+.meter span { display: block; height: 100%; width: 0; background: #fff; }
+</style>
+
+<div id="view">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <canvas id="marks" role="img" aria-label="the notes, red dots inside the volcano; pull back to see the volcano"></canvas>
+</div>
+
+<div id="notes" class="sr" role="list" aria-label="the notes"></div>
+
+<button id="plus" type="button" aria-label="vent: write or say something"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button>
+<div id="composer" hidden></div>
+
+<section id="chat" role="dialog" aria-labelledby="cTitle" hidden>
+  <header>
+    <div id="cTitle"></div>
+    <button id="listen" class="round" type="button" aria-pressed="false" aria-label="listen to them" title="listen to them"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z" fill="currentColor"/></svg></button>
+    <button id="cClose" class="round" type="button" aria-label="close" title="close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </header>
+  <ol id="cLog"></ol>
+</section>
+
+<div id="idPanel" role="dialog" aria-label="Your name" hidden>
+  <p>Stay anonymous, or take a name and lock it with a secret code. Others see your name with a signature made from the code. The code never leaves this browser.</p>
+  <label for="nm">name<input id="nm" maxlength="20" autocomplete="off"></label>
+  <label for="cd">secret code<input id="cd" type="password" maxlength="40" autocomplete="off"></label>
+  <span id="preview">anonymous</span>
+  <div class="row">
+    <button id="keep" class="pill go" type="button">keep this name</button>
+    <button id="anon" class="pill" type="button">stay anonymous</button>
+  </div>
+  <label for="lang">you speak<select id="lang">
+    <option value="en-US">english</option>
+    <option value="es-ES">español</option>
+    <option value="fr-FR">français</option>
+  </select></label>
+</div>
+
+<h1 id="title"><span>&lt;!--notification soup--&gt;</span><span>&lt;link rel="stylesheet" href="ecal.css"&gt;</span></h1>
+
+<aside id="dev" aria-label="DEV" data-dev hidden>
+  <div id="tube" role="slider" tabindex="0" aria-label="Pressure: drag to set it" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="pFill"></span></div>
+  <button id="pBoom" type="button">erupt</button>
+  <span><span class="k">pressure </span><span id="pVal">0%</span></span>
+  <span><span class="k">here </span><span id="here">…</span></span>
+  <span><span class="k">notes </span><span id="count"></span></span>
+  <span><span class="k">memory </span><span id="mem"></span></span>
+  <span><span class="k">fps </span><span id="fps"></span></span>
+  <label class="full"><span class="k">camera </span><span id="camVal"></span><input type="range" id="camera" min="0" max="4.5" step="0.001" value="0"></label>
+  <span class="full"><span class="k">name </span><button class="t" id="devWho" type="button"></button></span>
+  <span class="full"><button class="t" id="devUnread" type="button">reset seen / unseen</button></span>
+  <div class="full seg" role="group" aria-label="Voice input">
+    <button class="t" type="button" data-vm="real" aria-pressed="true">real</button>
+    <button class="t" type="button" data-vm="debug" aria-pressed="false">debug</button>
+  </div>
+  <div class="full meter" id="meter" aria-hidden="true"><span id="level"></span></div>
+  <div class="full seg" role="group" aria-label="Type">
+    <span class="k">type</span>
+    <button class="t" type="button" data-font="sans" aria-pressed="false">sans</button>
+    <button class="t" type="button" data-font="mono" aria-pressed="false">mono</button>
+  </div>
+  <div class="full seg" role="group" aria-label="Grid">
+    <span class="k">grid</span>
+    <button class="t" type="button" data-grid="off" aria-pressed="false">off</button>
+    <button class="t" type="button" data-grid="square" aria-pressed="false">square</button>
+    <button class="t" type="button" data-grid="round" aria-pressed="false">round</button>
+    <button class="t" type="button" data-grid="checks" aria-pressed="false">checks</button>
+  </div>
+  <div class="full seg" role="group" aria-label="Grid colour">
+    <span class="k">ink</span>
+    <button class="t" type="button" data-ink="hot" aria-pressed="false">red-orange</button>
+    <button class="t" type="button" data-ink="sky" aria-pressed="false">sky</button>
+    <button class="t" type="button" data-ink="black" aria-pressed="false">black</button>
+  </div>
+  <label class="full"><span class="k">cells from the axis to the foot </span><span id="cellsVal"></span><input type="range" id="cells" min="1" max="32" step="1"></label>
+  <label class="full" id="intBox" hidden><span class="k">intensity of typed notes </span><span id="intVal">25</span><input type="range" id="intensity" min="0" max="100" value="25"></label>
+</aside>
+
+<script src="../shared/notification.js"></script>
+<script>window.playhtmlReady = new Promise(r => { window.__playhtmlResolve = r; });</script>
+<script type="module">
+  // who is here at the same time is counted with playhtml (https://playhtml.fun): presence clears when a person leaves
+  try {
+    const { playhtml } = await import("https://unpkg.com/playhtml@2.15.0");
+    await playhtml.init({ room: "langues" });   // a fixed room, so everyone meets whatever form of the address they typed
+    window.__playhtmlResolve(playhtml);
+  } catch (e) { console.warn("playhtml unavailable", e); window.__playhtmlResolve(null); }
+</script>
+
+<script>
+// ================= basics =================
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const u = clamp((x - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); };
+const $ = id => document.getElementById(id);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const view = $("view"), field = $("field"), marks = $("marks"), mctx = marks.getContext("2d"), notesEl = $("notes");
+let W = 0, H = 0, MDPR = 1, sized = "";
+function resize() {
+  const box = document.body.getBoundingClientRect();
+  W = Math.round(box.width) || innerWidth; H = Math.round(box.height) || innerHeight; sized = W + "x" + H;
+  MDPR = Math.min(2, devicePixelRatio || 1);
+  marks.width = Math.round(W * MDPR); marks.height = Math.round(H * MDPR);
+  lens(); sizeField();
+}
+// the notes live next to v05, one folder up: so does what was uploaded with them
+const UP = "../";
+const imgSrc = s => !s ? s : /^data:/.test(s) ? s : UP + s;
+
+// ================= who is here =================
+const hereEl = $("here");
+const hereText = n => n === 0 ? "no one else" : n === 1 ? "one other" : `${n} others`;
+(async () => {
+  const ph = await window.playhtmlReady;
+  let pr = null;
+  try { pr = ph && ph.presence; } catch {}
+  if (!pr) { hereEl.textContent = "can't tell"; return; }
+  pr.setMyPresence("here", { t: Date.now() });
+  const show = () => { let n = 0; for (const [, e] of pr.getPresences()) if (!e.isMe && e.here) n++; hereEl.textContent = hereText(n); };
+  pr.onPresenceChange("here", show);
+  setInterval(show, 2000);   // also notices people who leave
+  show();
+})();
+
+// ================= identity: name + secret code (tripcode) =================
+let me = { name: "", trip: "" };
+try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name && s.trip) me = s; } catch {}
+const ALPH = "abcdefghjkmnpqrstuvwxyz23456789";
+async function tripcode(name, code) {
+  const data = new TextEncoder().encode(name + "#" + code);
+  let bytes;
+  try { bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", data)); }
+  catch { let h = 2166136261; for (const b of data) h = Math.imul(h ^ b, 16777619); bytes = new Uint8Array(new Uint32Array([h, h * 31, h * 17]).buffer); }
+  return [...bytes.slice(0, 6)].map(b => ALPH[b % ALPH.length]).join("");
+}
+const signature = (name, trip) => name ? `${name} ◆${trip}` : "anonymous";
+const idPanel = $("idPanel"), nm = $("nm"), cd = $("cd"), preview = $("preview"), langSel = $("lang");
+const ICON_YOU = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5c1.2-3.6 4-5.4 7-5.4s5.8 1.8 7 5.4"/></svg>';
+function showWho() {
+  for (const b of document.querySelectorAll(".you")) {
+    b.classList.toggle("named", !!me.name);
+    if (me.name) b.textContent = me.name; else b.innerHTML = ICON_YOU;
+    b.title = signature(me.name, me.trip);
+  }
+  $("devWho").textContent = signature(me.name, me.trip);
+}
+let idFrom = null;
+function openId(from) {
+  idFrom = from; idPanel.hidden = false;
+  document.querySelectorAll(".you").forEach(b => b.setAttribute("aria-expanded", "true"));
+  nm.value = me.name; cd.value = ""; updatePreview(); nm.focus({ preventScroll: true });
+}
+function closeId() {
+  if (idPanel.hidden) return;
+  idPanel.hidden = true;
+  document.querySelectorAll(".you").forEach(b => b.setAttribute("aria-expanded", "false"));
+  if (idFrom && idFrom.isConnected) idFrom.focus({ preventScroll: true });
+  idFrom = null;
+}
+async function updatePreview() {
+  const n = nm.value.trim();
+  preview.textContent = n && cd.value ? signature(n, await tripcode(n, cd.value)) : n ? `${n} ◆ needs a code` : "anonymous";
+  $("keep").disabled = !(n && cd.value);
+}
+nm.addEventListener("input", updatePreview); cd.addEventListener("input", updatePreview);
+$("keep").addEventListener("click", async () => {
+  const n = nm.value.trim(); if (!n || !cd.value) return;
+  me = { name: n, trip: await tripcode(n, cd.value) };
+  try { localStorage.setItem("volcano-id", JSON.stringify(me)); } catch {}
+  closeId(); showWho();
+});
+$("anon").addEventListener("click", () => {
+  me = { name: "", trip: "" };
+  try { localStorage.removeItem("volcano-id"); } catch {}
+  closeId(); showWho();
+});
+// the language speech is heard in
+let lang = store.get("volcano-lang", null) || ({ es: "es-ES", fr: "fr-FR" }[(navigator.language || "en").slice(0, 2)] || "en-US");
+langSel.value = lang;
+langSel.addEventListener("change", () => { lang = langSel.value; store.set("volcano-lang", lang); if (listening) { const c = micComp; stopMic(); startMic(c); } });
+
+async function getJSON(url) {
+  const r = await fetch(url + (url.includes("?") ? "&" : "?") + "v=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error(String(r.status));
+  return r.json();
+}
+
+// ================= notes: the same as v05's, kept in ../sentences.json =================
+// Reading: ../api.php?kind=sentences (shared, can write) → ../sentences.json (read-only) → a few built-in notes.
+// New notes go to ../api.php, or stay in this browser when there is no api.php. A reply is a sentence with "re": <the note's id>.
+// The keys in this browser are v05's too, so what was read there is read here.
+const SENT_STARTERS = ["my landlord has ignored the leak in my ceiling for three weeks", "the 7:42 train was cancelled again", "deadline tomorrow, motivation somewhere in another country", "I said I'm fine eleven times today", "je déteste les lundis", "estoy harta de que me interrumpan", "my phone is at 3% and so am I", "why is adulthood mostly paperwork"];
+const SENT_LOCAL_KEY = "lapilli-sentences-local";
+// the type: one family, for everything drawn on the canvas too
+const FONTS = { sans: "'Inter Tight', 'Helvetica Neue', Arial, sans-serif", mono: "'JetBrains Mono', Menlo, ui-monospace, monospace" };
+let TYPE = FONTS.sans;
+// a post is one thing: a picture, a voice or a text. The notes are shared with the older versions, so what each one
+// shows is decided here. A comment is always its words.
+const mediumOf = volcanoNote.mediumOf;
+const noteLabel = s => ({ image: "a picture", voice: "a voice" })[mediumOf(s)] || shortNote(s.s);
+let sentences = [], replies = new Map(), sentMode = "none", sentLoaded = false, knownIds = new Set();
+async function loadSentences() {
+  let data = null;
+  try { data = await getJSON(UP + "api.php?kind=sentences"); sentMode = "shared"; } catch {}
+  if (!data) { try { data = await getJSON(UP + "sentences.json"); sentMode = "read-only"; } catch {} }
+  const seen = new Set(), out = [];
+  const add = o => {
+    if (!o || typeof o.s !== "string" || (!o.s.trim() && !o.img) || seen.has(String(o.id))) return;
+    seen.add(String(o.id));
+    out.push({ id: String(o.id), s: o.s.trim().slice(0, 240), t: Number(o.t) || 0,
+      name: typeof o.name === "string" ? o.name.slice(0, 20) : "", trip: typeof o.trip === "string" ? o.trip.slice(0, 8) : "",
+      i: Number.isFinite(o.i) ? clamp(o.i, 0, 1) : null, re: typeof o.re === "string" ? o.re : null,
+      medium: ["voice", "text", "image"].includes(o.medium) ? o.medium : "text",
+      img: typeof o.img === "string" && /^(perref\/|uploads\/|data:image\/)/.test(o.img) ? o.img : null });
+  };
+  (Array.isArray(data?.sentences) ? data.sentences : []).forEach(add);
+  if (sentMode !== "shared") { try { JSON.parse(localStorage.getItem(SENT_LOCAL_KEY) || "[]").forEach(add); } catch {} }
+  if (!out.some(s => !s.re)) SENT_STARTERS.forEach((t, i) => add({ id: "q" + (i + 1), s: t }));
+  if (sentLoaded) {                            // notes and replies from other people add to the pressure too
+    const fresh = out.filter(s => !knownIds.has(s.id));
+    addPressure(PER_NOTE * fresh.reduce((a, s) => a + (s.re ? .5 : 1), 0));
+  }
+  knownIds = new Set(out.map(s => s.id));
+  sentences = out.filter(s => !s.re);
+  replies = new Map();
+  for (const r of out.filter(s => s.re).sort((a, b) => a.t - b.t)) addReply(r);
+  sentLoaded = true;
+  syncBadges(); showStatus();
+  if (picked) renderChat();
+}
+function addReply(r) { if (!replies.has(r.re)) replies.set(r.re, []); replies.get(r.re).push(r); }
+// medium: how it was made, "voice", "text" or "image" (img: a small jpeg as a data URL)
+async function saveSentence(text, I, re = null, medium = "text", img = null) {
+  const t = String(text || "").trim().replace(/\s+/g, " ").slice(0, 240);
+  if ((!t && !img) || t.split(" ").length > 40) return;
+  if (re) { medium = null; img = null; }       // replies are just words
+  const i = I == null ? null : Math.round(clamp(I, 0, 1) * 100) / 100;
+  const o = { id: "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), s: t, t: Date.now(), name: me.name, trip: me.trip, i, re, medium, img };
+  let saved = null;
+  if (sentMode === "shared") {
+    try {
+      const r = await fetch(UP + "api.php?kind=sentences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ s: t, name: me.name, trip: me.trip, i, re, medium, img }) });
+      const j = await r.json();
+      if (r.ok && j && j.sentence) saved = { ...o, ...j.sentence };
+    } catch {}
+  }
+  if (!saved) {
+    try { const l = JSON.parse(localStorage.getItem(SENT_LOCAL_KEY) || "[]"); l.push(o); localStorage.setItem(SENT_LOCAL_KEY, JSON.stringify(l.slice(-300))); } catch {}
+    saved = o;
+  }
+  keepMine(saved.id); knownIds.add(saved.id);
+  if (re) { addReply(saved); addPressure(PER_NOTE * .5); return saved; }
+  if (!sentences.some(x => x.id === saved.id)) sentences.push(saved);
+  syncBadges(saved.id); showStatus();
+  addPressure(PER_NOTE * (.6 + .8 * (i ?? .5)));   // louder notes push harder
+  return saved;
+}
+const MINE_KEY = "up-mine";                    // what this browser wrote, to show it as yours in a chat
+let mineIds = new Set();
+try { mineIds = new Set(JSON.parse(localStorage.getItem(MINE_KEY) || "[]")); } catch {}
+function keepMine(id) { mineIds.add(id); try { localStorage.setItem(MINE_KEY, JSON.stringify([...mineIds].slice(-500))); } catch {} }
+function showStatus() {
+  $("count").textContent = sentences.length.toLocaleString();
+  $("mem").textContent = { shared: "shared", "read-only": "sentences.json + this browser" }[sentMode] || "this browser only";
+}
+
+// ================= the volcano and the camera =================
+// The world, in the volcano's own units: y up, the plain at y = 0, the volcano's axis at x = z = 0. Its profile is v04's,
+// after Villarrica: a shallow summit crater, then slopes that are steep at the top and ease out, slightly concave
+// (h = H·(1 − t^0.86)), a little rough, with a shoulder on the right.
+// The world, in the volcano's own units: y up, the base at y = 0, the axis at x = z = 0. The volcano is a plain truncated
+// cone, standing on nothing. The camera orbits a point on the axis, inside it, and always looks at that point:
+//   yaw and pitch  where it is around that point
+//   s              how far back it is
+//     0 … 1        in the chamber, up to its wall
+//     1 … S_OUT    in the rock of the wall
+//     S_OUT … S_MAX  outside, each step back the same share further, until the volcano is small
+const VOL = { H: 5.2, Rb: 8.4, Rt: 2.1, eye: 2, Rc: 4.6, Rin: 0, Rout: 0 };
+// The earth is flat: an endless white plane at y = 0, past every edge of the screen, and it can't be seen from below.
+const SLOPE = (VOL.Rb - VOL.Rt) / VOL.H;
+// from the orbit's middle, how far the surface is along a ray at this height (dy) and horizontal reach (dh)
+function surfaceFrom(dh, dy) {
+  const side = (VOL.Rb - SLOPE * VOL.eye) / (dh + SLOPE * dy);
+  const cap = dy > 0 ? (VOL.H - VOL.eye) / dy : dy < 0 ? -VOL.eye / dy : Infinity;
+  return Math.min(side > 0 ? side : Infinity, cap);
+}
+const S_WALL = 1, S_OUT = 1.3, S_MAX = 4.5, Z0 = -1.2, FAR = 115;
+function camZ(s) {
+  if (s <= S_WALL) return lerp(Z0, -VOL.Rin, s / S_WALL);
+  if (s <= S_OUT) return lerp(-VOL.Rin, -VOL.Rout, (s - S_WALL) / (S_OUT - S_WALL));
+  return -VOL.Rout * Math.pow(FAR / VOL.Rout, (s - S_OUT) / (S_MAX - S_OUT));
+}
+// the lens: outside it goes long, the eye further back by the same share as the lens grows, so the size stays and the
+// perspective flattens: at eye level the volcano is four straight lines, not the curves of a close round base
+const EYE_LINE = .56, TELE = 90;
+let F = 1, PX = 0, PY = 0;
+function lens() { F = Math.max(H * .95, W * .68); PX = W / 2; PY = H * EYE_LINE; }
+const P_MIN = -20 * Math.PI / 180, P_MAX = 75 * Math.PI / 180;
+// in the chamber you can look up from below; leaving, the camera comes level on its way through the wall and stays above the earth
+const pitchFloor = s => P_MIN * (1 - smooth(.9, 1.3, s));
+let travel = 0, aim = 0, glide = false, cam = null, yaw = 0, yawAim = 0, pitch = 0, pitchAim = 0;
+function camera() {
+  const tilted = Math.max(pitch, pitchFloor(travel));
+  const ca = Math.cos(yaw), sa = Math.sin(yaw), cp = Math.cos(tilted), sp = Math.sin(tilted);
+  VOL.Rout = surfaceFrom(cp, sp); VOL.Rin = Math.max(VOL.Rout - 1, -Z0 + .4);
+  const D = -camZ(travel), T = TELE ** smooth(S_OUT, S_OUT + 1, travel), far = D * T;
+  const f = [sa * cp, -sp, ca * cp];
+  // past the skin (travel below S_OUT) you are inside, all at once
+  const inside = travel < S_OUT ? 1 : 0;
+  // how white the inside is: by how much the camera looks down from above
+  const white = .6 * smooth(0, P_MAX, tilted);
+  cam = { in: travel < S_OUT, inside, white, x: -f[0] * far, y: VOL.eye - f[1] * far, z: -f[2] * far, f, rt: [ca, 0, -sa], up: [sa * sp, cp, ca * sp],
+    F: F * T, D, s: travel, wall: clamp((travel - S_WALL) / (S_OUT - S_WALL), 0, 1), out: travel >= S_OUT };
+  // how much of the chamber is still seen
+  cam.soup = 1 - smooth(.3, .6, cam.wall);
+  return cam;
+}
+function project(x, y, z) {
+  const px = x - cam.x, py = y - cam.y, pz = z - cam.z, { f, rt, up } = cam;
+  const d = f[0] * px + f[1] * py + f[2] * pz; if (d <= 1e-3) return null;
+  const k = cam.F / d;
+  return { x: PX + (rt[0] * px + rt[2] * pz) * k, y: PY - (up[0] * px + up[1] * py + up[2] * pz) * k, k, d };
+}
+// the world point at a screen point, d ahead of the camera
+function unproject(sx, sy, d) {
+  const lx = (sx - PX) / cam.F * d, ly = -(sy - PY) / cam.F * d, { f, rt, up } = cam;
+  return [0, 1, 2].map(i => [cam.x, cam.y, cam.z][i] + f[i] * d + rt[i] * lx + up[i] * ly);
+}
+// moving: everything eases towards the aim; the + glides there more slowly
+function goTo(s, slow = false) { aim = clamp(s, 0, S_MAX); glide = slow; if (slow && reduce.matches) travel = aim; }
+function push(ds) { aim = clamp(aim + ds, 0, S_MAX); glide = false; }
+function updateTravel(dt) {
+  yaw += (yawAim - yaw) * (1 - Math.exp(-dt * 12));
+  pitchAim = Math.max(pitchAim, pitchFloor(travel));
+  pitch += (pitchAim - pitch) * (1 - Math.exp(-dt * 12));
+  const rate = glide ? 2.4 : 7;
+  travel += (aim - travel) * (1 - Math.exp(-dt * rate));
+  if (Math.abs(aim - travel) < 1e-4) { travel = aim; glide = false; }
+}
+
+// ================= the field: one continuous picture =================
+// Every pixel's ray is tested against the cone and the earth: white if it hits, sky if not. No light, no noise. The only
+// marks are the grid's, measured in pixels on whatever surface they lie, so they stay one thin line at any distance. Going in
+// is going through a skin with no thickness: from outside there is only the white, which fills the view as the eye reaches
+// it, and the moment the eye is past it the chamber is there, whole: a straight cut, nothing eases in. No mask, no black.
+let FIELD_SCALE = 1, gl = null, uni = {}, ctx2 = null;
+const FRAG = `precision highp float;
+uniform vec2 uPP; uniform float uFade, uFadeLen; uniform float uF, uIn, uWhite, uMode, uCell, uSpokes, uThin; uniform vec3 uEye, uFwd, uRight, uUp, uSky, uInk;
+const float VH = ${VOL.H.toFixed(3)}, RB = ${VOL.Rb.toFixed(3)}, RT = ${VOL.Rt.toFixed(3)}, VE = ${VOL.eye.toFixed(3)}, M = ${SLOPE.toFixed(6)};
+const float TAU = 6.2831853;
+const vec3 HOT = vec3(1., .2706, 0.), PALE = vec3(1., .93, .82);
+vec3 ray(vec2 q) { return normalize(uFwd * uF + uRight * q.x + uUp * q.y); }
+float chord = 0.;                                 // how long the ray runs inside the cone: at the cone's outline it comes to nothing
+// the nearest surface along a ray: where (P), facing what (N), how far from the eye (T). false if it's sky
+bool hits(vec3 rd, out vec3 P, out vec3 N, out float T) {
+  // from the point of the ray nearest the axis, so the far eye of the long lens loses no precision
+  float t0 = dot(vec3(0., VE, 0.) - uEye, rd), best = 1e9, lo = -t0; vec3 p = uEye + rd * t0;
+  if (abs(rd.y) > 1e-5) {
+    float t = (VH - p.y) / rd.y; vec2 h = p.xz + rd.xz * t;
+    if (t > lo && dot(h, h) < RT * RT) { best = t; N = vec3(0., 1., 0.); }
+  }
+  float k = RB - M * p.y, a = dot(rd.xz, rd.xz) - M * M * rd.y * rd.y;
+  float b = 2. * (dot(p.xz, rd.xz) + M * rd.y * k), c = dot(p.xz, p.xz) - k * k, disc = b * b - 4. * a * c;
+  if (disc >= 0. && abs(a) >= 1e-6) {
+    float s = sqrt(disc), t1 = (-b - s) / (2. * a), t2 = (-b + s) / (2. * a);
+    for (int i = 0; i < 2; i++) {
+      float t = i == 0 ? t1 : t2, y = p.y + rd.y * t;
+      if (t > lo && t < best && y > 0. && y < VH) { vec3 h = p + rd * t; best = t; N = normalize(vec3(h.x, M * length(h.xz), h.z)); chord = abs(t2 - t1); }
+    }
+  }
+  // the earth
+  if (rd.y < 0.) {
+    float t = -p.y / rd.y;
+    if (t > lo && t < best) { best = t; N = vec3(0., 1., 0.); }
+  }
+  if (best > 1e8) return false;
+  P = p + rd * best; T = best + t0;
+  return true;
+}
+// how much of a value a pixel spans on this surface: its gradient g, slid along the ray into the surface's plane
+float spanOf(vec3 g, vec3 N, vec3 rd, float px) { return length(g - N * dot(g, rd) / dot(N, rd)) * px + 1e-7; }
+// a line at u = at; and lines at every multiple of a step, which fade away before they are close enough to clot
+float lineAt(float u, float at, float span) { return clamp(uThin + .5 - abs(u - at) / span, 0., 1.); }
+float lines(float u, float step, float span) {
+  return clamp(uThin + .5 - abs(fract(u / step + .5) - .5) * step / span, 0., 1.) * smoothstep(3., 7., step / span);
+}
+float wave(float u, float step, float span) {     // +1 and −1 in turn, step long each, with a soft edge one pixel wide
+  return clamp((abs(fract(u / (2. * step)) - .5) - .25) * 2. * step / span + .5, 0., 1.) * 2. - 1.;
+}
+// how much of this point is ink
+float ink(vec3 P, vec3 N, vec3 rd, float T) {
+  float px = T / uF, a = 0., r = length(P.xz);
+  float sx = spanOf(vec3(1., 0., 0.), N, rd, px), sy = spanOf(vec3(0., 1., 0.), N, rd, px), sz = spanOf(vec3(0., 0., 1.), N, rd, px);
+  float sr = spanOf(vec3(P.x, 0., P.z) / max(r, 1e-4), N, rd, px), sa = spanOf(vec3(-P.z, 0., P.x) / max(r * r, 1e-4), N, rd, px);
+  if (uMode > 2.5)                               // checks: the same cells, every other one inked
+    return (.5 + .5 * wave(P.x, uCell, sx) * wave(P.z, uCell, sz)) * smoothstep(3., 7., uCell / max(sx, sz));
+  if (uMode > 1.5) a = max(lines(atan(P.z, P.x), TAU / uSpokes, sa), lines(r, uCell, sr));   // round: rings and meridians, the earth as a map seen from the pole
+  else a = max(lines(P.x, uCell, sx), lines(P.z, uCell, sz));                                // square: one flat sheet of lines, laid over everything from above
+  // and whatever the size, the volcano's two circles and outline, so the shape holds
+  if (abs(N.y) < .99) a = max(a, max(max(lineAt(P.y, 0., sy), lineAt(P.y, VH, sy)), lineAt(chord * chord / (8. * r * px), 0., 1.)));
+  else a = max(a, lineAt(r, P.y > 1. ? RT : RB, sr));
+  return a;
+}
+vec3 shade(vec2 q) {
+  vec3 rd = ray(q), P, N; float T;
+  if (!hits(rd, P, N, T)) return uSky;
+  return uMode < .5 ? vec3(1.) : mix(vec3(1.), uInk, ink(P, N, rd, T));
+}
+// the chamber: one orange, leaning towards white up the view without getting there, and all of it whiter as the camera looks
+// down from above. The last bit is under one level of 8-bit, only so the long gradient doesn't band
+float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+vec3 chamber(vec2 q) {
+  vec3 c = mix(HOT, PALE, .5 * smoothstep(0., 1., 1. - (uFade - q.y) / uFadeLen));
+  return mix(c, vec3(1.), uWhite) + (hash(gl_FragCoord.xy) - .5) / 255.;
+}
+void main() {
+  vec2 q = gl_FragCoord.xy - uPP;
+  vec3 col;
+  if (uIn > .5) {
+    col = chamber(q);
+  } else col = (shade(q + vec2(-.125, -.375)) + shade(q + vec2(.375, -.125)) + shade(q + vec2(.125, .375)) + shade(q + vec2(-.375, .125))) * .25;   // four rays a pixel, so the edges are clean with no stroke
+  gl_FragColor = vec4(col, 1.);
+}`;
+function initField() {
+  try { gl = field.getContext("webgl", { antialias: false, depth: false, alpha: false, powerPreference: "high-performance" }); } catch {}
+  if (gl) {
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; };
+    const vs = sh(gl.VERTEX_SHADER, "attribute vec2 a; void main() { gl_Position = vec4(a, 0., 1.); }"), fs = sh(gl.FRAGMENT_SHADER, FRAG);
+    const prog = vs && fs && gl.createProgram();
+    if (prog) { gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog); }
+    if (!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) gl = null;
+    else {
+      gl.useProgram(prog);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const a = gl.getAttribLocation(prog, "a"); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+      for (const n of ["uPP", "uFade", "uFadeLen", "uF", "uIn", "uWhite", "uEye", "uFwd", "uRight", "uUp", "uSky", "uMode", "uCell", "uSpokes", "uThin", "uInk"]) uni[n] = gl.getUniformLocation(prog, n);
+    }
+  }
+  if (!gl) ctx2 = field.getContext("2d");      // no WebGL: the same shapes, flat
+}
+function sizeField() {
+  FIELD_SCALE = MDPR;
+  field.width = Math.max(2, Math.round(W * FIELD_SCALE)); field.height = Math.max(2, Math.round(H * FIELD_SCALE));
+  if (gl) gl.viewport(0, 0, field.width, field.height);
+}
+// the grid, on the earth and the volcano. Its size is a whole number of cells from the axis to the foot, so the foot's
+// circle always touches the lines; at multiples of 4 the crater's does too. Changed in DEV, kept in this browser
+const GRID_DEFAULT = { kind: "square", ink: "hot", cells: 4 };
+const grid = { ...GRID_DEFAULT, ...(store.get("volcano-v09-grid2", null) || {}) };
+const GRID_MODES = { off: 0, square: 1, round: 2, checks: 3 };
+// the sky: blue to red-orange the way a real one goes, through a pale blue, a pale gold and an orange. Blue and orange are
+// opposites on the colour wheel: this path passes near the neutral on the green side, so it never reaches violet
+const SKY_COLD = "#1f6fff", SKY_HOT = "#FF4500";
+const linOf = c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4, gamOf = c => { c = clamp(c, 0, 1); return c <= .0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - .055; };
+function labOf(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => linOf(parseInt(hex.slice(i, i + 2), 16) / 255));
+  const l = Math.cbrt(.4122 * r + .5364 * g + .0514 * b), m = Math.cbrt(.2119 * r + .6807 * g + .1074 * b), s = Math.cbrt(.0883 * r + .2817 * g + .63 * b);
+  return [.2105 * l + .7936 * m - .0041 * s, 1.978 * l - 2.4286 * m + .4506 * s, .0259 * l + .7828 * m - .8087 * s];
+}
+const SKY_STOPS = [SKY_COLD, "#7fb2e0", "#f0cc8a", "#ffa64d", SKY_HOT].map(labOf);
+function skyAt(p) {
+  const u = clamp(p, 0, 1) * (SKY_STOPS.length - 1), i = Math.min(Math.floor(u), SKY_STOPS.length - 2);
+  const [L, A, B] = [0, 1, 2].map(k => lerp(SKY_STOPS[i][k], SKY_STOPS[i + 1][k], u - i));
+  const l = (L + .3963 * A + .2158 * B) ** 3, m = (L - .1056 * A - .0639 * B) ** 3, s = (L - .0895 * A - 1.2915 * B) ** 3;
+  return [gamOf(4.0767 * l - 3.3077 * m + .2310 * s), gamOf(-1.2684 * l + 2.6098 * m - .3413 * s), gamOf(-.0042 * l - .7034 * m + 1.7076 * s)];
+}
+function drawField() {
+  const sc = FIELD_SCALE, sky = skyAt(glow);
+  if (gl) {
+    gl.uniform2f(uni.uPP, PX * sc, (H - PY) * sc); gl.uniform1f(uni.uFade, PY * sc); gl.uniform1f(uni.uFadeLen, H * .8 * sc); gl.uniform1f(uni.uF, cam.F * sc);
+    gl.uniform1f(uni.uIn, cam.in ? 1 : 0); gl.uniform1f(uni.uWhite, cam.white);
+    gl.uniform3f(uni.uEye, cam.x, cam.y, cam.z); gl.uniform3fv(uni.uFwd, cam.f); gl.uniform3fv(uni.uRight, cam.rt); gl.uniform3fv(uni.uUp, cam.up);
+    gl.uniform3fv(uni.uSky, sky);
+    gl.uniform1f(uni.uMode, GRID_MODES[grid.kind]); gl.uniform1f(uni.uCell, VOL.Rb / grid.cells); gl.uniform1f(uni.uSpokes, grid.cells * 6);
+    gl.uniform1f(uni.uThin, Math.max(.5, .4 * sc)); gl.uniform3fv(uni.uInk, { hot: [1, .2706, 0], sky, black: [0, 0, 0] }[grid.ink]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    return;
+  }
+  const c = ctx2; c.setTransform(sc, 0, 0, sc, 0, 0);
+  const chamber = () => { const g = c.createLinearGradient(0, 0, 0, H), w = Math.round(cam.white * 100) + "%"; [["#ff9a68", 0], ["#FF4500", .8], ["#FF4500", 1]].forEach(([k, at]) => g.addColorStop(at, `color-mix(in srgb, #fff ${w}, ${k})`)); c.fillStyle = g; c.fillRect(0, 0, W, H); };
+  if (cam.in) { chamber(); return; }
+  c.fillStyle = `rgb(${sky.map(v => Math.round(v * 255)).join(",")})`; c.fillRect(0, 0, W, H);
+  c.fillStyle = "#fff"; const horizon = PY + cam.f[1] / cam.up[1] * cam.F;   // the earth, from the horizon down
+  c.fillRect(0, horizon, W, H - horizon);
+  const k = project(0, VOL.eye, 0).k, top = project(0, VOL.H, 0).y, base = project(0, 0, 0).y;
+  c.fillStyle = "#fff"; c.beginPath(); c.moveTo(PX - VOL.Rb * k, base); c.lineTo(PX - VOL.Rt * k, top); c.lineTo(PX + VOL.Rt * k, top); c.lineTo(PX + VOL.Rb * k, base); c.fill();
+}
+
+// ================= the badges =================
+// One per note, all of them the same real size: a disc of radius BR, in the chamber. The number is how many messages its
+// conversation has; once opened it is "read" and its red fades to black, until new replies come in. Seen through the
+// red, the far ones are smaller, darker and softer, the near ones big and sharp. They drift slowly round homes of their own.
+const BR = .028;
+const badges = new Map();
+let readMap = store.get("volcano-read", {}) || {};
+const countOf = s => 1 + (replies.get(s.id)?.length || 0);
+const shortNote = s => !s ? "a picture" : s.length > 40 ? s.slice(0, 38).trimEnd() + "…" : s;
+function hashStr(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return h >>> 0; }
+function seeded(a) { return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+let birth = null;
+function placeHome(b) {                        // the same place on every visit, seeded by the note's id
+  const r = seeded(hashStr(b.s.id));
+  const z = lerp(-VOL.Rc * .92, VOL.Rc * .9, r());
+  // spread as wide as the view is from where you start, so they fill it at every depth, but always inside the chamber
+  const hw = Math.min(.3 + Math.abs(z - Z0) * .62, Math.max(.3, Math.sqrt(Math.max(0, VOL.Rc ** 2 - z * z)) * .9));
+  const hh = Math.min(hw * .6, 1.2);
+  b.hx = (r() * 2 - 1) * hw; b.hy = VOL.eye + (r() * 1.8 - .8) * hh; b.hz = z;
+}
+function makeBadge(s) {
+  const btn = document.createElement("button"); btn.type = "button"; btn.setAttribute("role", "listitem");
+  const b = { s, btn, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, hx: 0, hy: 0, hz: 0, n: 0, read: false, readT: 0, shown: false,
+    ph: rand(0, 6.28), sp: rand(.6, 1.25), hold: false, focus: false, ring: 0, sx: 0, sy: 0, R: 0, d: 0 };
+  btn.addEventListener("click", () => openChat(b));
+  btn.addEventListener("focus", () => { b.focus = b.hold = true; }); btn.addEventListener("blur", () => { b.focus = false; b.hold = hovered === b; });
+  notesEl.append(btn);
+  return b;
+}
+function setCount(b) {
+  const n = countOf(b.s);
+  if (n !== b.n) { b.n = n; b.btn.textContent = `${n} ${n === 1 ? "message" : "messages"}: ${noteLabel(b.s)}`; }
+  b.read = (readMap[b.s.id] || 0) >= n;
+  if (!b.shown) { b.readT = b.read ? 1 : 0; b.shown = true; }   // already read last time: black at once
+}
+// where you dropped a badge in the soup (this browser only): its home from then on
+let placed = store.get("volcano-v09-placed", {}) || {};
+function syncBadges(freshId) {
+  const byId = new Map(sentences.map(s => [s.id, s]));
+  for (const [id, b] of badges) if (!byId.has(id)) { b.btn.remove(); badges.delete(id); }
+  for (const s of sentences) {
+    let b = badges.get(s.id);
+    if (!b) {
+      b = makeBadge(s); badges.set(s.id, b); b.s = s; placeHome(b);
+      const p = placed[s.id]; if (Array.isArray(p) && p.length === 3 && p.every(Number.isFinite)) [b.hx, b.hy, b.hz] = p;   // where it was dropped
+      if (s.id === freshId && birth) { b.x = birth.x; b.y = birth.y; b.z = birth.z; birth = null; }   // what you just wrote appears close to you, then sinks in
+      else { b.x = b.hx; b.y = b.hy; b.z = b.hz; }
+    }
+    b.s = s; setCount(b);
+  }
+  if (picked && !badges.has(picked.s.id)) closeChat();
+}
+function markRead(b) { readMap[b.s.id] = countOf(b.s); store.set("volcano-read", readMap); setCount(b); }
+// slow, wide drift round its home and a gentle bob, as if suspended in something thick
+const driftOf = (b, t, calm) => [(Math.sin(t * .035 * b.sp + b.ph) * .2 + Math.sin(t * .011 + b.ph * 2) * .08) * calm,
+  (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .1 + Math.sin(t * .9 * b.sp + b.ph) * .01) * calm, Math.sin(t * .021 * b.sp + b.ph * 2.2) * .3 * calm];
+function updateBadges(dt, t) {
+  const calm = reduce.matches ? .5 : 1, exy = 1 - Math.exp(-dt / 1.1), ez = 1 - Math.exp(-dt / 1.6);
+  for (const b of badges.values()) {
+    b.readT = clamp(b.readT + (b.read ? dt : -dt) / 2, 0, 1);   // two seconds, as in v05
+    if (b.hold) { const k = Math.exp(-dt * 8); b.vx *= k; b.vy *= k; b.vz *= k; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; continue; }
+    const [dx, dy, dz] = driftOf(b, t, calm), tx = b.hx + dx, ty = b.hy + dy, tz = b.hz + dz;
+    // v06's exponential settling stays fluid at different frame rates; eruption impulses decay independently.
+    b.x += (tx - b.x) * exy; b.y += (ty - b.y) * exy; b.z += (tz - b.z) * ez;
+    const damping = Math.exp(-dt * 1.3), impulse = (1 - damping) / 1.3;
+    b.x += b.vx * impulse; b.y += b.vy * impulse; b.z += b.vz * impulse;
+    b.vx *= damping; b.vy *= damping; b.vz *= damping;
+  }
+}
+// where each badge is on the screen, far to near, so the near ones are drawn over the far ones
+const NEAR = .14;
+let vis = [];
+function projectBadges() {
+  vis = [];
+  if (cam.inside <= 0) return;
+  for (const b of badges.values()) {
+    const p = project(b.x, b.y, b.z);
+    if (!p || p.d < NEAR) continue;
+    const R = BR * p.k;
+    if (p.x + R < -40 || p.x - R > W + 40 || p.y + R < -40 || p.y - R > H + 40) continue;
+    b.sx = p.x; b.sy = p.y; b.R = R; b.d = p.d; b.seen = cam.inside;
+    vis.push(b);
+  }
+  vis.sort((a, c) => c.d - a.d);
+}
+// the one under a point: of all the discs that cover it, the closest; or else, so that even a speck can be picked,
+// the one whose middle is nearest, within a finger's reach
+function hitAt(x, y) {
+  let best = null, near = null, nd = Infinity;
+  for (const b of vis) {
+    if (smooth(NEAR, .4, b.d) < .1) continue;   // passing the camera, it is all but gone
+    const d = Math.hypot(x - b.sx, y - b.sy);
+    if (d <= b.R + 1 && b.R >= 3 && (!best || b.d < best.d)) best = b;
+    if (d <= Math.max(b.R, 10) + 3 && d < nd) { near = b; nd = d; }
+  }
+  return best || near;
+}
+
+// ================= what grows out of a badge under the pointer: its medium =================
+// what a notification plays under the pointer is in ../shared/notification.js
+
+// ================= drawing the inside =================
+// red, or black once read: the deep red holds on the orange, where the interface's red would vanish
+const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];
+function badgeColour(b) {
+  const e = b.readT * b.readT * (3 - 2 * b.readT);
+  return [lerp(DOT[0], DOT_READ[0], e), lerp(DOT[1], DOT_READ[1], e), lerp(DOT[2], DOT_READ[2], e)];
+}
+let hovered = null, lastDraw = 0;
+function drawInside(x) {
+  const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000; lastDraw = now;
+  for (const b of vis) volcanoNote.draw(x, b, { rgb: badgeColour(b), alpha: smooth(NEAR, .4, b.d) * b.seen, type: TYPE, since: b === hovered ? now / 1000 - b.sigT0 : null, dt, imgSrc });
+  x.globalAlpha = 1;
+  // what it is, next to the one the keyboard is on
+  const pk = [...badges.values()].find(b => b.focus);
+  if (pk && vis.includes(pk) && pk.seen > .5) {
+    x.font = `400 13px ${TYPE}`; x.textBaseline = "middle"; x.fillStyle = "#fff";
+    const txt = noteLabel(pk.s), w = x.measureText(txt).width, flip = pk.sx + pk.R + 10 + w > W - 12;
+    x.textAlign = flip ? "right" : "left";
+    x.fillText(txt, flip ? pk.sx - pk.R - 10 : pk.sx + pk.R + 10, pk.sy);
+  }
+}
+// The pressure as a colour, the sky's: it follows the pressure as it builds, but after an eruption it cools slowly, back
+// through violet to blue, rather than going out at once.
+let glow = 0, cooling = false;
+function coolGlow(dt) {
+  if (phase !== "build") { cooling = true; glow += (1 - glow) * (1 - Math.exp(-dt * 5)); return; }
+  if (cooling && pressure < glow) { glow = Math.max(pressure, glow - dt / 12); if (glow <= pressure + .002) cooling = false; }
+  else { glow += (pressure - glow) * (1 - Math.exp(-dt * 5)); cooling = false; }
+}
+// An eruption, seen from outside: words leave the crater on wide waves, and keep going until they are out of the
+// picture. They never land. Only what was written flies: text posts and comments; a picture or a voice stays what it is.
+const FW = .3, FLY_MIN = 11;
+let LFONT = `500 100px ${TYPE}`;
+let flyers = [];
+function spill() {
+  const pool = [...sentences.filter(s => mediumOf(s) === "text").map(s => s.s), ...[...replies.values()].flat().map(r => r.s)].filter(Boolean);
+  const n = Math.min(reduce.matches ? 6 : 10, pool.length), right = Math.atan2(cam.rt[2], cam.rt[0]);   // they leave to both sides of the view, so the waves open like the arcs of the sketch
+  mctx.font = LFONT;
+  for (let k = 0; k < n; k++) {
+    const text = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    const letters = [...text].map(ch => ({ ch, w: mctx.measureText(ch).width / 100 }));
+    flyers.push({ letters, em: letters.reduce((a, L) => a + L.w, 0), a: right + (k % 2 ? Math.PI : 0) + rand(-.55, .55), rise: lerp(.25, 1.25, (k >> 1) / Math.max(1, (n >> 1) - 1)) * rand(.9, 1.1), freq: rand(.8, 1.1), ph: rand(0, 6.28),
+      amp: rand(.3, .42), speed: rand(2.2, 3), start: rand(.3, 1) * VOL.Rt, head: -k * 1.5 - rand(0, 1.2), gone: false });
+  }
+}
+// the way out: an arc up and away from the crater, and a wave across it that widens as it goes
+function pathAt(f, u) {
+  const o = f.start + u * .95, wide = f.amp * smooth(0, 3, u) + .1 * u, w = wide * .35 * Math.cos(u * f.freq * .7 + f.ph), lift = wide * Math.sin(u * f.freq + f.ph);
+  return [Math.cos(f.a) * o - Math.sin(f.a) * w, VOL.H + .1 + 2.4 * f.rise * (1 - Math.exp(-u / 5)) + u * .16 * f.rise + lift, Math.sin(f.a) * o + Math.cos(f.a) * w];
+}
+function updateFlyers(dt) {
+  for (const f of flyers) f.head += f.speed * dt * (reduce.matches ? .6 : 1);
+  flyers = flyers.filter(f => !f.gone && f.head < 400);
+}
+function drawFlyers(x) {
+  x.textAlign = "center"; x.textBaseline = "middle"; x.font = LFONT; x.fillStyle = "#000";
+  for (const f of flyers) {
+    if (f.head <= 0) continue;
+    const span = f.em * FW * 1.7 + 1, pts = [], M = 60;
+    let seen = false;
+    for (let u = Math.max(0, f.head - span); ; u = Math.min(f.head, u + .22)) {
+      const q = project(...pathAt(f, u));
+      if (q) {
+        pts.push({ x: q.x, y: q.y, k: q.k, s: 0 });
+        if (q.x > -M && q.x < W + M && q.y > -M && q.y < H + M) seen = true;
+      }
+      if (u >= f.head) break;
+    }
+    if (!seen) { if (f.head > 8) f.gone = true; continue; }
+    if (pts.length < 2) continue;
+    for (let i = 1; i < pts.length; i++) pts[i].s = pts[i - 1].s + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    const S = pts[pts.length - 1].s;
+    let seg = 0;
+    const at = s => {                            // the point at screen length s along the way, and its direction
+      if (s <= pts[seg].s) seg = 0;
+      while (seg < pts.length - 2 && pts[seg + 1].s < s) seg++;
+      const a = pts[seg], b = pts[seg + 1], u = clamp((s - a.s) / ((b.s - a.s) || 1), 0, 1);
+      return { x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), k: lerp(a.k, b.k, u), ang: Math.atan2(b.y - a.y, b.x - a.x) };
+    };
+    // always read from left to right: a word going left has its first letter at the head
+    const back = pts[pts.length - 1].x < pts[0].x, px0 = Math.max(FW * pts[pts.length - 1].k, FLY_MIN);
+    let pos = back ? S : S - f.em * px0;
+    for (const L of f.letters) {
+      const p0 = at(clamp(pos, 0, S)), px = Math.max(FW * p0.k, FLY_MIN), adv = L.w * px, mid = back ? pos - adv / 2 : pos + adv / 2;
+      pos += back ? -adv : adv;
+      if (mid < 0) { if (back) break; continue; }
+      if (L.ch === " ") continue;
+      const p = at(clamp(mid, 0, S));
+      let ang = back ? p.ang + Math.PI : p.ang;
+      ang = clamp(Math.atan2(Math.sin(ang), Math.cos(ang)), -1.45, 1.45);
+      x.save(); x.translate(p.x, p.y); x.rotate(ang); x.scale(px / 100, px / 100); x.fillText(L.ch, 0, 0); x.restore();
+    }
+  }
+}
+const pick = (px, py) => cam.soup > .5 ? hitAt(px, py) : null;
+function drawMarks() {
+  const x = mctx;
+  x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
+  if (cam.inside > 0) {
+    drawInside(x);
+  }
+  if (cam.out) drawFlyers(x);
+  marks.style.cursor = (grab && grab.on) || (orbit && dragged) ? "grabbing" : hovered ? "pointer" : "grab";
+}
+
+
+// ================= pressure =================
+// Pressure builds with time and with every note that comes in. It isn't shown as a number: inside, the view trembles
+// more and more; outside, the sky turns. At the top it erupts: one strong shake, words leaving the crater, the dots
+// jolted; then it starts again from zero. The camera stays where it is.
+const FILL_TIME = 180, PER_NOTE = .12;        // seconds to fill with nobody writing; what one note adds
+let pressure = 0, phase = "build", phaseT = 0, shake = 0, nextSmall = 14;
+function addPressure(x) { if (phase === "build") pressure = Math.min(1, pressure + x); }
+function updatePressure(dt) {
+  phaseT += dt;
+  if (phase === "build") {
+    pressure = Math.min(1, pressure + dt / FILL_TIME);
+    if (pressure >= 1) { phase = "seal"; phaseT = 0; }
+    if (sentences.length && (nextSmall -= dt) <= 0) {   // now and then a small tremor
+      nextSmall = rand(22, 50) * lerp(1, .45, pressure);
+      shake = Math.max(shake, 2.5 * inside());
+    }
+  } else if (phase === "seal") {
+    if (phaseT > 1.4) { phase = "settle"; phaseT = 0; erupt(); }
+  } else if (phase === "settle") {
+    pressure = Math.max(0, pressure - dt * 1.5);
+    if (phaseT > 2) { phase = "build"; phaseT = 0; pressure = 0; }
+  }
+}
+const inside = () => cam ? 1 - cam.wall : 1;   // the build-up is felt in the soup; outside it is seen in the colour
+function erupt() {
+  shake = 20; spill();
+  const k = reduce.matches ? .4 : 1;
+  for (const b of badges.values()) { b.vy += rand(.35, .8) * k; b.vx += rand(-.12, .12) * k; b.vz += rand(-.12, .12) * k; }
+}
+function tremor(t) {
+  const amp = reduce.matches ? 0 : (pressure * pressure * 2.5 + (phase === "seal" ? 1.5 + phaseT * 4 : 0)) * inside() + shake;
+  if (amp < .05) { if (view.style.transform) view.style.transform = ""; return; }
+  const x = amp * (.6 * Math.sin(t * 61) + .4 * Math.sin(t * 83 + 1.3)), y = amp * (.6 * Math.sin(t * 57 + 2) + .4 * Math.sin(t * 91 + .4));
+  view.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+}
+
+// ================= moving: wheel, pinch, keys =================
+// Nothing moves by itself, except the glide into the soup when + is pressed.
+const WHEEL = .0011, PINCH = 1.7;
+const overUI = t => t instanceof Element && !!t.closest("#chat, #dev, #idPanel, #composer");
+addEventListener("wheel", e => {
+  if (overUI(e.target)) return;
+  e.preventDefault();
+  const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? H : 1;
+  push(e.deltaY * unit * (e.ctrlKey ? WHEEL * 9 : WHEEL));   // pinching on a trackpad comes as a wheel with ctrl, in small steps
+}, { passive: false });
+// Safari's trackpad pinch
+let gScale = 1;
+addEventListener("gesturestart", e => { e.preventDefault(); gScale = e.scale || 1; });
+addEventListener("gesturechange", e => {
+  e.preventDefault(); if (pointers.size) return;             // on a phone, the pointers already carry it
+  const s = e.scale || 1; push(-Math.log(s / gScale) * PINCH); gScale = s;
+});
+// touch: two fingers pinch, one finger orbits and tilts, as the mouse does. In the chamber a dot, with one finger or the
+// mouse, is picked up and dropped where you let go, at its own depth (it stays there, in this browser)
+const pointers = new Map(), YAW_K = .0035;     // radians per px
+const tilt = dy => { pitchAim = clamp(pitchAim + dy * YAW_K, P_MIN, P_MAX); };
+let pinchD = 0, dragged = false, downAt = null, grab = null, orbit = null;
+// a pointer on the scene, in its own px (the site bar pushes the page, and with it the scene, down)
+const at = e => { const r = marks.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+function dropGrab() {
+  const g = grab; grab = null; if (!g) return;
+  const b = g.b; b.hold = hovered === b || b.focus;
+  if (!g.on) return;
+  const [dx, dy, dz] = driftOf(b, performance.now() / 1000, reduce.matches ? .5 : 1);
+  placed[b.s.id] = [b.x, b.y, b.z]; store.set("volcano-v09-placed", placed);   // its home on the next visits
+  b.hx = b.x - dx; b.hy = b.y - dy; b.hz = b.z - dz;   // and now, so it drifts on from where it was dropped
+}
+marks.addEventListener("pointerdown", e => {
+  downAt = { x: e.clientX, y: e.clientY }; dragged = false;
+  if (!pointers.size && (e.pointerType === "touch" || e.button === 0) && cam.soup > .5) {
+    const [px, py] = at(e), b = hitAt(px, py);
+    if (b) { grab = { b, on: false, off: [px - b.sx, py - b.sy] }; b.hold = true; try { marks.setPointerCapture(e.pointerId); } catch {} }
+  }
+  if (e.pointerType !== "touch") {
+    if (!grab && e.button === 0) { orbit = { x: e.clientX, y: e.clientY }; try { marks.setPointerCapture(e.pointerId); } catch {} }
+    return;
+  }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  try { marks.setPointerCapture(e.pointerId); } catch {}
+  if (pointers.size === 2) { dropGrab(); const [a, b] = [...pointers.values()]; pinchD = Math.hypot(a.x - b.x, a.y - b.y); }
+});
+marks.addEventListener("pointermove", e => {
+  if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) dragged = true;
+  if (grab) {                                  // the badge under the pointer, as far off as it was
+    if (dragged) grab.on = true;
+    const b = grab.b, q = project(b.x, b.y, b.z);
+    if (grab.on && q && q.d > NEAR) { const [px, py] = at(e); [b.x, b.y, b.z] = unproject(px - grab.off[0], py - grab.off[1], q.d); b.vx = b.vy = b.vz = 0; }
+    const p = pointers.get(e.pointerId); if (p) { p.x = e.clientX; p.y = e.clientY; }
+    return;
+  }
+  if (orbit) { yawAim += (e.clientX - orbit.x) * YAW_K; tilt(e.clientY - orbit.y); orbit.x = e.clientX; orbit.y = e.clientY; return; }
+  if (e.pointerType !== "touch") {
+    const h = pick(...at(e));
+    if (h !== hovered) { if (hovered && !hovered.focus) hovered.hold = false; hovered = h; if (h) { h.hold = true; h.sigT0 = performance.now() / 1000; } }
+    return;
+  }
+  const p = pointers.get(e.pointerId); if (!p) return;
+  if (pointers.size === 2) {
+    p.x = e.clientX; p.y = e.clientY;
+    const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinchD > 0 && d > 0) push(-Math.log(d / pinchD) * PINCH);   // fingers apart: forward
+    pinchD = d;
+  } else if (pointers.size === 1) {
+    tilt(e.clientY - p.y); yawAim += (e.clientX - p.x) * YAW_K;
+    p.x = e.clientX; p.y = e.clientY;
+  }
+});
+const lift = e => { pointers.delete(e.pointerId); pinchD = 0; if (!pointers.size) { dropGrab(); orbit = null; } };
+marks.addEventListener("pointerup", lift); marks.addEventListener("pointercancel", lift);
+marks.addEventListener("pointerleave", e => { if (e.pointerType !== "touch" && hovered) { if (!hovered.focus) hovered.hold = false; hovered = null; } });
+marks.addEventListener("click", e => {          // a tap: a badge opens; anywhere else closes what is open
+  if (dragged) return;
+  const b = pick(...at(e));
+  if (b) openChat(b);
+  else { if (!idPanel.hidden) closeId(); closeChat(); closeComposer(); }
+});
+addEventListener("keydown", e => {
+  const t = e.target;
+  if (e.metaKey || e.ctrlKey || e.altKey || (t instanceof Element && t.closest("input, textarea, select, [contenteditable]"))) return;
+  if (e.key === "+" || e.key === "=") { push(-.22); e.preventDefault(); }
+  else if (e.key === "-" || e.key === "_") { push(.22); e.preventDefault(); }
+  else if (e.key === "0") { goTo(0, true); e.preventDefault(); }
+  else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { yawAim += e.key === "ArrowLeft" ? -.25 : .25; e.preventDefault(); }
+  else if (e.key === "ArrowUp" || e.key === "ArrowDown") { tilt(e.key === "ArrowUp" ? 70 : -70); e.preventDefault(); }
+});
+
+// ================= the composer =================
+const ICON_MIC = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>';
+const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+let active = null;                             // the composer the mic writes into
+const ICON_CLIP = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M17.5 11.2l-6.3 6.3a4.2 4.2 0 0 1-6-6l7.1-7.1a2.8 2.8 0 0 1 4 4l-7 7a1.4 1.4 0 0 1-2-2l6.4-6.4"/></svg>';
+// the medium of what is sent: image if a picture is attached, voice if the mic was used, text otherwise
+function makeComposer(host, placeholder, onSend, attach = false) {
+  const form = document.createElement("form"); form.className = "bar";
+  form.innerHTML = `<button type="button" class="round you" aria-label="your name" aria-expanded="false"></button>`
+    + `<div class="fieldwrap${attach ? " with-clip" : ""}"><input class="msgfield" placeholder="${placeholder}" aria-label="${placeholder}" maxlength="240" autocomplete="off" enterkeyhint="send">`
+    + (attach ? `<button type="button" class="clip" aria-label="attach a picture">${ICON_CLIP}</button><input type="file" accept="image/*" hidden>` : "") + `</div>`
+    + `<button type="button" class="round mic" aria-label="talk" aria-pressed="false">${ICON_MIC}</button>`
+    + `<button type="submit" class="round send" aria-label="send" hidden>${ICON_SEND}</button>`;
+  host.append(form);
+  const c = { form, wrap: form.querySelector(".fieldwrap"), input: form.querySelector(".msgfield"), you: form.querySelector(".you"), mic: form.querySelector(".mic"), send: form.querySelector(".send"), peak: null, spoke: false, img: null };
+  if (attach) {
+    const file = form.querySelector("input[type=file]"), att = document.createElement("div");
+    att.className = "att"; att.hidden = true;
+    att.innerHTML = '<img alt="the picture you are sending"><button type="button" aria-label="remove the picture">×</button>';
+    host.insertBefore(att, form);
+    c.att = att;
+    form.querySelector(".clip").addEventListener("click", () => file.click());
+    file.addEventListener("change", async () => {
+      const f = file.files && file.files[0]; file.value = "";
+      if (!f) return;
+      try { setPicture(c, await shrink(f)); } catch { hint(c, "that picture can't be read"); }
+    });
+    att.querySelector("button").addEventListener("click", () => { setPicture(c, null); c.input.focus({ preventScroll: true }); });
+  }
+  c.input.addEventListener("input", () => updateSend(c));
+  c.input.addEventListener("focus", () => { active = c; });
+  c.you.addEventListener("click", () => idPanel.hidden ? openId(c.you) : closeId());
+  c.mic.addEventListener("click", () => { if (listening && micComp === c) stopMic(); else startMic(c); });
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const text = c.input.value.trim(); if (!text && !c.img) return;
+    if (listening && micComp === c) stopMic();
+    const I = c.peak != null ? c.peak : dev && voiceMode === "debug" ? $("intensity").value / 100 : null;
+    const img = c.img, medium = img ? "image" : c.spoke ? "voice" : "text";
+    c.input.value = ""; c.peak = null; c.spoke = false; setPicture(c, null);
+    await onSend(text, I, medium, img);
+  });
+  return c;
+}
+// a picture, made small (160 px, a few KB) before it goes anywhere
+async function shrink(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, 160 / Math.max(img.naturalWidth, img.naturalHeight)), cv = document.createElement("canvas");
+    cv.width = Math.max(1, Math.round(img.naturalWidth * k)); cv.height = Math.max(1, Math.round(img.naturalHeight * k));
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    let q = .8, d;
+    do { d = cv.toDataURL("image/jpeg", q); q -= .15; } while (d.length > 78000 && q > .2);
+    return d;
+  } finally { URL.revokeObjectURL(url); }
+}
+function setPicture(c, data) {                  // a picture is the whole post: while there is one, nothing else can be written
+  c.img = data;
+  if (data) { if (listening && micComp === c) stopMic(); c.input.value = ""; c.spoke = false; c.peak = null; }
+  c.wrap.hidden = !!data;
+  if (c.att) {
+    c.att.hidden = !data;
+    if (data) c.att.querySelector("img").src = data;
+  }
+  updateSend(c);
+}
+function updateSend(c) {                        // as in Telegram: the mic becomes a send button once there is something to send
+  const has = !!c.input.value.trim() || !!c.img, rec = listening && micComp === c;
+  c.send.hidden = !has; c.mic.hidden = has && !rec;
+}
+const composerEl = $("composer");
+const mainComp = makeComposer(composerEl, "Message", async (text, I, medium, img) => {
+  // it appears close to you, a little above the composer, then sinks to its place in the soup
+  const r = composerEl.getBoundingClientRect(), o = marks.getBoundingClientRect(), d = .9, sx = clamp(r.left - o.left + 120, 30, W - 30), sy = r.top - o.top - 40;
+  const [bx, by, bz] = unproject(sx, sy, d); birth = { x: bx, y: by, z: bz };
+  await saveSentence(text, I, null, medium, img);
+}, true);
+let composeWhenThere = false;
+function openComposer() {                      // the one time the camera moves by itself: a glide into the soup
+  closeChat();
+  goTo(0, true); composeWhenThere = true;
+}
+function showComposer() {
+  composerEl.hidden = false; document.body.classList.add("composing");
+  mainComp.input.focus({ preventScroll: true });
+}
+function closeComposer() {
+  composeWhenThere = false;
+  if (composerEl.hidden) return;
+  if (listening && micComp === mainComp) stopMic();
+  composerEl.hidden = true; document.body.classList.remove("composing"); closeId();
+}
+$("plus").addEventListener("click", openComposer);
+
+// ================= a note, opened =================
+const chatEl = $("chat"), cTitle = $("cTitle"), cLog = $("cLog"), listenBtn = $("listen");
+let picked = null;
+const chatComp = makeComposer(chatEl, "Reply", async (text, I) => {
+  const b = picked; if (!b) return;
+  await saveSentence(text, I, b.s.id);
+  markRead(b);
+  if (picked === b) renderChat();
+});
+const when = t => { const d = new Date(t), z = n => String(n).padStart(2, "0"); return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${String(d.getFullYear()).slice(2)}, ${z(d.getHours())}:${z(d.getMinutes())}`; };
+// a voice is heard, not read. The notes keep no recording, so the stored words are spoken
+const ICON_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z" fill="currentColor"/></svg>';
+function voiceEl(s) {
+  const btn = document.createElement("button"); btn.type = "button"; btn.className = "voice"; btn.setAttribute("aria-label", "play this voice"); btn.setAttribute("aria-pressed", "false");
+  btn.innerHTML = ICON_PLAY + "<span></span>";
+  btn.addEventListener("click", () => {
+    if (!window.speechSynthesis) return;
+    const on = btn.getAttribute("aria-pressed") === "true";
+    stopListening();
+    if (on) return;
+    const u = new SpeechSynthesisUtterance(s.s); u.lang = guessLang(s.s); u.rate = .95;
+    u.onend = u.onerror = () => btn.setAttribute("aria-pressed", "false");
+    speechSynthesis.speak(u); btn.setAttribute("aria-pressed", "true");
+  });
+  return btn;
+}
+function msgEl(s, kind) {
+  const li = document.createElement("li"); li.className = "msg " + kind;
+  const medium = mediumOf(s);
+  if (medium === "image") { const im = document.createElement("img"); im.className = "photo"; im.alt = s.s || "a picture"; im.src = imgSrc(s.img); li.append(im); }
+  if (medium === "voice") li.append(voiceEl(s));
+  const meta = document.createElement("p"); meta.className = "meta";
+  meta.textContent = [mineIds.has(s.id) ? "you" : signature(s.name, s.trip), s.t > 1e11 ? when(s.t) : ""].filter(Boolean).join(" · ");
+  if (medium === "text") { const body = document.createElement("p"); body.className = "body"; body.textContent = s.s; li.append(body); }
+  li.append(meta);
+  return li;
+}
+function renderChat() {
+  if (!picked) return;
+  const s = picked.s, list = replies.get(s.id) || [], n = 1 + list.length;
+  cTitle.innerHTML = ""; cTitle.append(`${n} ${n === 1 ? "message" : "messages"}`);
+  const sm = document.createElement("small"); sm.textContent = noteLabel(s); cTitle.append(sm);
+  cLog.replaceChildren(msgEl(s, "op"), ...list.map(r => msgEl(r, mineIds.has(r.id) ? "mine" : "other")));
+  cLog.scrollTop = cLog.scrollHeight;
+}
+function openChat(b) {
+  closeComposer(); stopListening();
+  picked = b; chatEl.hidden = false; document.body.classList.add("chatting");
+  markRead(b); renderChat();
+  if (!matchMedia("(pointer: coarse)").matches) chatComp.input.focus({ preventScroll: true });
+}
+function closeChat() {
+  if (!picked && chatEl.hidden) return;
+  if (listening && micComp === chatComp) stopMic();
+  stopListening();
+  const b = picked; picked = null; chatEl.hidden = true; document.body.classList.remove("chatting"); closeId();
+  if (b && document.activeElement && chatEl.contains(document.activeElement)) b.btn.focus({ preventScroll: true });
+}
+$("cClose").addEventListener("click", closeChat);
+
+// listen to them: the conversation read aloud, each message in the language it seems to be in
+const guessLang = t => {
+  const s = " " + t.toLowerCase() + " ";
+  if (/[àâçèêëîïôûœ]|\s(je|j'|les|est|pas|une|des|du|mais|et|c'est|tu|vous)\s/.test(s)) return "fr-FR";
+  if (/[ñ¿¡áíóú]|\s(que|qué|estoy|por|para|una|los|las|el|muy|pero|mi|yo)\s/.test(s)) return "es-ES";
+  return "en-US";
+};
+function stopListening() {
+  try { speechSynthesis.cancel(); } catch {}
+  listenBtn.setAttribute("aria-pressed", "false");
+  for (const v of cLog.querySelectorAll(".voice")) v.setAttribute("aria-pressed", "false");
+}
+listenBtn.addEventListener("click", () => {
+  if (!picked || !window.speechSynthesis) return;
+  if (listenBtn.getAttribute("aria-pressed") === "true") { stopListening(); return; }
+  stopListening();
+  const all = [...(mediumOf(picked.s) === "image" ? [] : [picked.s]), ...(replies.get(picked.s.id) || [])];
+  if (!all.length) return;
+  all.forEach((m, k) => {
+    const u = new SpeechSynthesisUtterance(m.s); u.lang = guessLang(m.s); u.rate = .95;
+    if (k === all.length - 1) u.onend = u.onerror = () => listenBtn.setAttribute("aria-pressed", "false");
+    speechSynthesis.speak(u);
+  });
+  listenBtn.setAttribute("aria-pressed", "true");
+});
+
+// closing: Esc, or a click outside
+addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!idPanel.hidden) closeId(); else if (picked) closeChat(); else closeComposer();
+});
+document.addEventListener("pointerdown", e => {
+  const t = e.target, inside = el => !el.hidden && el.contains(t);
+  if (inside($("dev"))) return;
+  if (!idPanel.hidden && !inside(idPanel) && !t.closest(".you")) closeId();
+  if (t === marks) return;                     // on the scene, a tap decides (see the click on #marks): a drag closes nothing
+  if (!composerEl.hidden && !inside(composerEl) && !inside(idPanel) && t !== $("plus")) closeComposer();
+  if (!chatEl.hidden && !inside(chatEl) && !inside(idPanel)) closeChat();
+});
+
+// ================= voice: speech to text, loudness = intensity =================
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition, levelEl = $("level");
+let rec = null, audio = null, listening = false, level = 0, peak = 0, micComp = null, micBase = "";
+function hint(c, text) { const p = c.input.placeholder; c.input.value = ""; c.input.placeholder = text; setTimeout(() => { c.input.placeholder = p; }, 3200); }
+async function startMic(c) {
+  if (listening) stopMic();
+  if (!SR) { hint(c, "this browser can't turn speech into text"); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ac = new AudioContext(), an = ac.createAnalyser(); an.fftSize = 1024;
+    ac.createMediaStreamSource(stream).connect(an);
+    audio = { ac, an, stream, buf: new Float32Array(an.fftSize) };
+  } catch { hint(c, "the microphone isn't available here"); return; }
+  micComp = c; active = c; micBase = c.input.value.trim() ? c.input.value.trim() + " " : ""; peak = 0; c.peak = 0; c.spoke = true;
+  const r = rec = new SR(); r.lang = lang; r.continuous = true; r.interimResults = true;
+  r.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const x = e.results[i];
+      if (x.isFinal) micBase += x[0].transcript.trim() + " "; else interim += x[0].transcript;
+    }
+    c.input.value = (micBase + interim).slice(0, 240); updateSend(c);
+  };
+  r.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { stopMic(); hint(c, "speech recognition was blocked"); } };
+  r.onend = () => { if (listening && rec === r) { try { r.start(); } catch {} } };
+  listening = true;
+  try { r.start(); } catch {}
+  c.mic.classList.add("on"); c.mic.setAttribute("aria-pressed", "true"); c.mic.setAttribute("aria-label", "stop talking");
+  updateSend(c);
+}
+function stopMic() {
+  listening = false;
+  try { rec && rec.stop(); } catch {}
+  rec = null;
+  if (audio) { audio.stream.getTracks().forEach(t => t.stop()); audio.ac.close(); audio = null; }
+  const c = micComp; micComp = null; level = 0; levelEl.style.width = "0%";
+  if (c) {
+    c.peak = peak; c.input.value = c.input.value.trim();
+    c.mic.classList.remove("on"); c.mic.setAttribute("aria-pressed", "false"); c.mic.setAttribute("aria-label", "talk"); c.mic.style.boxShadow = "";
+    updateSend(c);
+  }
+}
+function readLevel() {
+  if (!audio) return;
+  audio.an.getFloatTimeDomainData(audio.buf);
+  let s = 0; for (const v of audio.buf) s += v * v;
+  const db = 20 * Math.log10(Math.sqrt(s / audio.buf.length) + 1e-8);
+  const l = clamp((db + 55) / 45, 0, 1);       // about -55 dB (quiet room) → 0, -10 dB (shouting) → 1
+  level = level * .8 + l * .2;
+  peak = Math.max(peak, level);
+  if (micComp) { micComp.peak = peak; micComp.mic.style.boxShadow = `0 0 0 ${(level * 9).toFixed(1)}px rgba(255, 59, 48, .3)`; }
+  levelEl.style.width = (level * 100).toFixed(1) + "%";
+}
+
+// ================= DEV =================
+const devEl = $("dev"), tube = $("tube"), pFill = $("pFill"), pVal = $("pVal"), pBoom = $("pBoom"), camIn = $("camera"), camVal = $("camVal");
+let dev = false, voiceMode = "real";
+function setDev(on) { dev = on; devEl.hidden = !on; }
+addEventListener("cabz:dev", e => setDev(!!e.detail.on));   // the "dev" square in the site bar (nav.js)
+$("devWho").addEventListener("click", e => idPanel.hidden ? openId(e.currentTarget) : closeId());
+$("devUnread").addEventListener("click", () => {   // every badge unread again, red with its number
+  readMap = {}; store.set("volcano-read", readMap);
+  for (const b of badges.values()) setCount(b);
+});
+document.querySelectorAll("[data-vm]").forEach(b => b.addEventListener("click", () => {
+  voiceMode = b.dataset.vm;
+  document.querySelectorAll("[data-vm]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  $("intBox").hidden = voiceMode !== "debug"; $("meter").hidden = voiceMode === "debug";
+}));
+$("intensity").addEventListener("input", () => { $("intVal").textContent = $("intensity").value; });
+// the type, kept in this browser. Text already in the air keeps the widths it was measured with
+function setFont(name) {
+  const f = FONTS[name] ? name : "sans", root = document.documentElement;
+  TYPE = FONTS[f]; LFONT = `500 100px ${TYPE}`;
+  root.style.setProperty("--type", TYPE); root.dataset.font = f; store.set("volcano-v09-font", f);
+  document.querySelectorAll("button[data-font]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.font === f)));
+  try { document.fonts.load(LFONT); } catch {}   // so the flying words are measured in the real type
+}
+document.querySelectorAll("button[data-font]").forEach(b => b.addEventListener("click", () => setFont(b.dataset.font)));
+setFont(store.get("volcano-v09-font", "sans"));
+function showGrid() {
+  document.querySelectorAll("[data-grid]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.grid === grid.kind)));
+  document.querySelectorAll("[data-ink]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ink === grid.ink)));
+  $("cells").value = grid.cells; $("cellsVal").textContent = grid.cells;
+  store.set("volcano-v09-grid2", grid);
+}
+document.querySelectorAll("[data-grid]").forEach(b => b.addEventListener("click", () => { grid.kind = b.dataset.grid; showGrid(); }));
+document.querySelectorAll("[data-ink]").forEach(b => b.addEventListener("click", () => { grid.ink = b.dataset.ink; showGrid(); }));
+$("cells").addEventListener("input", () => { grid.cells = +$("cells").value; showGrid(); });
+showGrid();
+camIn.max = S_MAX;
+camIn.addEventListener("input", () => { travel = aim = +camIn.value; glide = false; });
+// the pressure can be set by hand: drag the tube (or use the arrow keys on it), or press "erupt"
+const setFrom = e => { if (phase !== "build") return; const r = tube.getBoundingClientRect(); pressure = clamp((r.bottom - e.clientY) / r.height, 0, 1); };
+tube.addEventListener("pointerdown", e => { tube.setPointerCapture(e.pointerId); setFrom(e); });
+tube.addEventListener("pointermove", e => { if (tube.hasPointerCapture(e.pointerId)) setFrom(e); });
+tube.addEventListener("keydown", e => {
+  const step = { ArrowUp: .05, ArrowRight: .05, ArrowDown: -.05, ArrowLeft: -.05, PageUp: .2, PageDown: -.2 }[e.key];
+  if (step == null || phase !== "build") return;
+  e.preventDefault(); pressure = clamp(pressure + step, 0, 1);
+});
+pBoom.addEventListener("click", () => { if (phase === "build") pressure = 1; });
+let fpsAvg = 60;
+function showDev(dt) {
+  fpsAvg = lerp(fpsAvg, dt > 0 ? 1 / dt : 60, .05);
+  pFill.style.height = `calc(${(pressure * 100).toFixed(2)}% - ${(pressure * 4).toFixed(2)}px)`;
+  pVal.textContent = { build: Math.floor(pressure * 100) + "%", seal: "sealed", settle: "eruption" }[phase];
+  tube.setAttribute("aria-valuenow", String(Math.round(pressure * 100)));
+  pBoom.disabled = phase !== "build";
+  $("fps").textContent = Math.round(fpsAvg);
+  const where = cam.out ? "outside" : cam.wall > 0 ? `in the wall ${Math.round(cam.wall * 100)}%` : "in the chamber";
+  camVal.textContent = `${cam.D.toFixed(2)} from the middle · tilt ${Math.round(pitch * 180 / Math.PI)}° · ${where}`;
+  if (document.activeElement !== camIn) camIn.value = travel.toFixed(3);
+}
+
+// ================= the loop =================
+let last = 0;
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000 || 0), t = now / 1000; last = now;
+  readLevel();
+  updatePressure(dt);
+  shake *= Math.exp(-dt * 3);
+  updateTravel(dt);
+  camera();
+  if (composeWhenThere && travel < .03) { composeWhenThere = false; showComposer(); }
+  coolGlow(dt);
+  updateBadges(dt, t);
+  updateFlyers(dt);
+  projectBadges();
+  drawField();
+  drawMarks();
+  tremor(t);
+  if (dev) showDev(dt);
+  requestAnimationFrame(frame);
+}
+
+
+camera();
+initField();
+showWho(); setDev(dev);
+addEventListener("resize", resize);
+// the site bar can push the page down after it loads (it adds a padding to <html>): follow the body's size
+if (window.ResizeObserver) {
+  new ResizeObserver(() => { const b = document.body.getBoundingClientRect(); if (Math.round(b.width) + "x" + Math.round(b.height) !== sized) resize(); }).observe(document.body);
+}
+resize();
+loadSentences();
+setInterval(loadSentences, 90 * 1000);         // people elsewhere keep venting
+requestAnimationFrame(frame);
+</script>
+<script src="../../site.js" defer></script>
+<script src="../../nav.js" data-path="rai/v09/index.html" data-version="v09" defer></script>
