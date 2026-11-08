@@ -79,7 +79,17 @@
   const firstRelease = vs.findIndex((v) => v.release);
   const fork = firstRelease > 0;
   const trunk = fork ? firstRelease : vs.length;
-  const forkLanes = !fork ? "" : `<li class="fork"><svg viewBox="0 0 16 26" aria-hidden="true"><path d="M0 13H8M8 4.5V21.5M8 4.5H16M8 21.5H16"/></svg><span class="lanes">${vs.slice(trunk).map((v, i) => vDot(v, trunk + i)).join("")}</span></li>`;
+  // one lane a branch: releases with the same first number (1.00, 1.01…) go on along it, left to right
+  const lanes = [];
+  vs.slice(trunk).forEach((v, i) => {
+    const key = /^(\d+)\./.exec(v.release || "")?.[1] ?? v.release ?? v.id;
+    let lane = lanes.find((l) => l.key === key);
+    if (!lane) lanes.push((lane = { key, dots: [] }));
+    lane.dots.push(vDot(v, trunk + i));
+  });
+  const forkH = lanes.length * 17 - 8, rowY = (i) => 4.5 + i * 17;
+  const forkPath = `M0 ${forkH / 2}H8M8 ${rowY(0)}V${rowY(lanes.length - 1)}` + lanes.map((_, i) => `M8 ${rowY(i)}H16`).join("");
+  const forkLanes = !fork ? "" : `<li class="fork"><svg viewBox="0 0 16 ${forkH}" style="height:${forkH}px" aria-hidden="true"><path d="${forkPath}"/></svg><span class="lanes">${lanes.map((l) => `<span class="lane">${l.dots.join("<i></i>")}</span>`).join("")}</span></li>`;
 
   // neighbours inside the section
   let prev, next;
@@ -224,6 +234,8 @@
   .fork svg { display: block; flex: none; width: 16px; height: 26px; overflow: visible; }
   .fork path { fill: none; stroke: var(--nfg); stroke-width: 1; shape-rendering: crispEdges; }
   .lanes { display: grid; row-gap: 8px; }
+  .lane { display: flex; align-items: center; }
+  .lane i { display: block; width: 16px; height: 1px; background: var(--nfg); }
   .dot { display: block; width: 9px; height: 9px; border: 1px solid var(--nfg); border-radius: 50%; }
   /* hovering a version: the current one's fill fades, its outline stays (the cursor's round is on the hovered one) */
   ol.v:has(.dot:hover) .dot.cur { background: color-mix(in srgb, var(--nfg) 35%, transparent); }

@@ -141,6 +141,18 @@ window.CABZ = {
        "href": "rai/v10/",
        "header": "notification soup [style:blender]",
        "release": "2.00 blender"
+      },
+      {
+       "id": "v11",
+       "label": "v11",
+       "date": "2026-11-08T12:00:00+01:00",
+       "msg": "notification soup",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "rai/v11/",
+       "release": "1.01 ecal"
       }
      ],
      "cross": "ex",

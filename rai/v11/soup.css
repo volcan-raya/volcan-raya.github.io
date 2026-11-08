@@ -1,0 +1,59 @@
+/* the soup's interface: what soup.js makes. The tokens (--red, --dim, --type) are index.html's */
+
+/* the composer, after Telegram's input bar: a round button, a dark rounded field, the mic in a dark circle */
+.bar { display: flex; align-items: flex-end; gap: 8px; margin: 0; }
+.round { flex: none; width: 44px; height: 44px; padding: 0; border: 1px solid rgba(255, 255, 255, .09); border-radius: 22px; background: #1c1c1d;
+  color: #fff; display: grid; place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .2s, box-shadow .1s; }
+.round svg { width: 22px; height: 22px; }
+.round:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .7); outline-offset: 2px; }
+.msgfield:focus { border-color: rgba(255, 255, 255, .22); }   /* like Telegram: the caret is enough */
+.you.named { width: auto; max-width: 8.5rem; padding: 0 14px; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 500 14px/42px var(--type); }
+.mic.on { background: var(--red); border-color: var(--red); color: #000; }
+.send { background: var(--red); border-color: var(--red); color: #fff; }
+.msgfield { flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 18px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 22px;
+  background: #1c1c1d; color: #fff; font: 400 17px var(--type); outline: none; caret-color: #5e8bff; }
+.msgfield::placeholder { color: #7d7d82; }
+.fieldwrap { position: relative; flex: 1; min-width: 0; display: flex; }
+.fieldwrap.with-clip .msgfield { padding-right: 46px; }
+.clip { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 18px; background: none; color: #8e8e93; display: grid; place-items: center; cursor: pointer; }
+.clip svg { width: 22px; height: 22px; }
+.clip:hover, .clip:focus-visible { color: #fff; }
+.clip:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .7); }
+/* a picture about to be sent */
+.att { position: relative; align-self: flex-start; margin: 0 0 8px 52px; padding: 6px; border-radius: 14px; background: #1c1c1d; border: 1px solid rgba(255, 255, 255, .09); }
+.att img { display: block; width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
+.att button { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: #2c2c2e; color: #fff; font: 600 14px/24px var(--type); cursor: pointer; }
+#composer { position: fixed; z-index: 6; left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px)); max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; }
+
+/* name + secret code */
+#idPanel { position: fixed; z-index: 8; left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  width: min(340px, calc(100% - 16px)); box-sizing: border-box; padding: 16px; border-radius: 20px; background: rgba(28, 28, 29, .97);
+  border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 16px 50px rgba(0, 0, 0, .5); display: flex; flex-direction: column; gap: 12px; }
+#idPanel p { margin: 0; font-size: 13px; line-height: 1.45; color: #aeaeb2; }
+#idPanel label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--dim); }
+#idPanel input, #idPanel select { height: 38px; box-sizing: border-box; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 12px; background: #000; font-size: 16px; }
+#preview { font-size: 13px; color: #fff; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { padding: 8px 14px; border: 0; border-radius: 999px; background: #2c2c2e; font-size: 13px; cursor: pointer; }
+.pill.go { background: var(--red); color: #fff; }
+.pill:disabled { opacity: .4; cursor: default; }
+
+/* a note opened: only the note, huge, in the scene: over the field, under the badges, never taking the pointer.
+   Its box is set in DEV (soup.js): --fs --lh, and the margins in px from the edges, --side and --tb. The text starts
+   at the box's top left; a picture and a voice sit in its middle, the screen's */
+#big { position: absolute; inset: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .6s ease; }
+#big.on { opacity: 1; }
+#big .box { position: absolute; top: var(--tb); bottom: var(--tb); left: var(--side); right: var(--side); }
+#big.outlined .box { outline: 1px dashed #B026FF; outline-offset: -1px; }
+#big .words { position: absolute; left: 0; right: 0; top: 0; margin: 0;
+  color: var(--ink); font: 500 var(--fs)/var(--lh) var(--type); letter-spacing: -.035em; overflow-wrap: normal; hyphens: none; white-space: normal; }
+#big .pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: var(--fit); object-position: 50% 50%; display: none; }
+#big .viz { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+#big[data-kind="image"] .pic, #big[data-kind="voice"] .viz { display: block; }
+#big[data-kind="image"] .words, #big[data-kind="voice"]:not(.vwords) .words { display: none; }
+#big .sig { position: absolute; right: 0; bottom: 0; margin: 0; color: var(--ink); font: 400 var(--sig)/1.2 var(--type); white-space: pre; text-align: right; }
+
+/* the soup's rows in DEV */
+.meter { height: 4px; background: rgba(255, 255, 255, .12); }
+.meter span { display: block; height: 100%; width: 0; background: #fff; }

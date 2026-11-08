@@ -2,7 +2,7 @@
 
 Live: https://volcan-raya.github.io/ (opens rai's 1.00)
 
-- `rai/`: Rai's volcano, every version. `v09/` is 1.00 ecal, `v10/` is 2.00 blender, `v06`–`v08` and `_v/` the earlier ones.
+- `rai/`: Rai's volcano, every version. `v09/` is 1.00 ecal, `v11/` is 1.01 ecal (the same branch, going on), `v10/` is 2.00 blender, `v06`–`v08` and `_v/` the earlier ones.
 - `aya/`: Aya's iterations.
 - `nav.js`, `site.js`: the bar on top of every page.
 

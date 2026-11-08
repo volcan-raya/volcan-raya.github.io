@@ -6,7 +6,7 @@
             "t": 1790847210632,
             "i": 0.25,
             "medium": "image",
-            "img": "perref/20250118-160113.jpg"
+            "img": "perref/cff-sargans-perturbation.jpg"
         },
         {
             "id": "r001",
@@ -24,7 +24,7 @@
             "trip": "x3pfa9",
             "i": 0.44,
             "medium": "image",
-            "img": "perref/perro.jpg"
+            "img": "perref/retard-anzeigetafel.jpg"
         },
         {
             "id": "n03",
@@ -90,7 +90,7 @@
             "trip": "e2vbt6",
             "i": 0.45,
             "medium": "image",
-            "img": "perref/mvp-studiobanlieue.jpg"
+            "img": "perref/vols-annules.jpg"
         },
         {
             "id": "r005",
@@ -128,7 +128,7 @@
             "trip": "h8rmc4",
             "i": 0.54,
             "medium": "image",
-            "img": "perref/perros-absurdamelancolia-0.jpg"
+            "img": "perref/kings-cross-tout-annule.jpg"
         },
         {
             "id": "r011",
@@ -146,7 +146,7 @@
             "trip": "q9dz3s",
             "i": 0.79,
             "medium": "image",
-            "img": "perref/canis-angel-diable-sr-dech.jpg"
+            "img": "perref/boite-oeufs-par-terre.jpg"
         },
         {
             "id": "r015",
@@ -272,7 +272,7 @@
             "t": 1791222649309,
             "i": 0.26,
             "medium": "image",
-            "img": "perref/perros-absurdamelancolia-2.jpg"
+            "img": "perref/oeuf-ecrase.jpg"
         },
         {
             "id": "r027",
@@ -298,7 +298,7 @@
             "trip": "e2vbt6",
             "i": 0.23,
             "medium": "image",
-            "img": "perref/perros-absurdamelancolia-11.jpg"
+            "img": "perref/tartine-par-terre.jpg"
         },
         {
             "id": "n14",
@@ -355,7 +355,7 @@
             "trip": "e2vbt6",
             "i": 0.31,
             "medium": "image",
-            "img": "perref/canis-chasing-desert-john-divola-00.jpg"
+            "img": "perref/velo-roue-volee.jpg"
         },
         {
             "id": "n18",
@@ -365,7 +365,7 @@
             "trip": "e2vbt6",
             "i": 0.76,
             "medium": "image",
-            "img": "perref/perro-absurdamelancolia.jpg"
+            "img": "perref/velo-roue-volee-2.jpg"
         },
         {
             "id": "r032",
@@ -387,7 +387,7 @@
             "trip": "h8rmc4",
             "i": 0.75,
             "medium": "image",
-            "img": "perref/20250118-151014.jpg"
+            "img": "perref/cereales-renversees.jpg"
         },
         {
             "id": "n20",
@@ -491,8 +491,7 @@
             "name": "mara",
             "trip": "k7wq2n",
             "i": 0.66,
-            "medium": "image",
-            "img": "perref/screenshot-2026-04-14-at-14-58-55-instagram.jpg"
+            "medium": "text"
         },
         {
             "id": "n26",
@@ -653,8 +652,7 @@
             "name": "mara",
             "trip": "k7wq2n",
             "i": 0.63,
-            "medium": "image",
-            "img": "perref/20250118-160136.jpg"
+            "medium": "text"
         },
         {
             "id": "r056",
@@ -690,8 +688,7 @@
             "id": "ebfb8ca4daff",
             "s": "hungryyyyyyyy",
             "t": 1792052306947,
-            "medium": "image",
-            "img": "perref/screenshot-2025-08-07-at-09-44-05-feed-linkedin.jpg"
+            "medium": "text"
         },
         {
             "id": "ae9547e70444",
@@ -718,8 +715,7 @@
             "id": "691087776e88",
             "s": "j'ai faiiiiiiiiiim",
             "t": 1792076800630,
-            "medium": "image",
-            "img": "perref/canis-google-earth-rd.jpg"
+            "medium": "text"
         },
         {
             "id": "r059",
@@ -755,8 +751,7 @@
             "s": "my plants are dying and honestly same",
             "t": 1792217977493,
             "i": 0.21,
-            "medium": "image",
-            "img": "perref/20250118-161043.jpg"
+            "medium": "text"
         },
         {
             "id": "n34",
@@ -810,8 +805,7 @@
             "s": "I'm angry and I don't even know at what",
             "t": 1792283686657,
             "i": 0.68,
-            "medium": "image",
-            "img": "perref/canis-chasing-desert-john-divola-05.jpg"
+            "medium": "text"
         },
         {
             "id": "r064",
@@ -847,8 +841,7 @@
             "name": "lu",
             "trip": "h8rmc4",
             "i": 0.38,
-            "medium": "image",
-            "img": "perref/screenshot-2026-04-14-at-15-19-50-instagram.jpg"
+            "medium": "text"
         },
         {
             "id": "r068",
@@ -914,8 +907,7 @@
             "s": "I can't sleep because I'm worried about not sleeping",
             "t": 1792478492974,
             "i": 0.18,
-            "medium": "image",
-            "img": "perref/screenshot-2025-11-20-at-12-15-43-instagram.jpg"
+            "medium": "text"
         },
         {
             "id": "r076",

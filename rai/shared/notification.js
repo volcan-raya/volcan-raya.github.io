@@ -2,7 +2,11 @@
 // v09 (1.00) and v10 (2.00) both load this file, so a change here shows in both. Each page passes only what is its own:
 // the colour, the type, how far it has faded.
 //   <script src="../shared/notification.js"></script>
-//   volcanoNote.draw(x, b, { rgb, alpha, type, fade, since, dt, imgSrc })
+//   volcanoNote.draw(x, b, { rgb, alpha, type, fade, since, dt, imgSrc, count })
+//   count: false draws the disc without its number (default true).
+//   seen: how a read ball looks. "fill" (default): the caller's colour, as it is. "outline" / "outline-black": as it is
+//   read (b.readT 0 … 1) the fill fades away and a ring at its edge comes in, in its colour or in black; the ring is
+//   about 1.5 px on a near ball (R ≈ 21), thinner further off, never under one device pixel.
 // b needs R, sx, sy, readT, n, s (the note). since: seconds under the pointer, or null when it isn't.
 window.volcanoNote = (() => {
   "use strict";
@@ -121,11 +125,17 @@ window.volcanoNote = (() => {
     }
   }
 
-  function draw(x, b, { rgb, alpha = 1, type = "sans-serif", fade = 1, since = null, dt = 0, imgSrc = null }) {
+  function draw(x, b, { rgb, alpha = 1, type = "sans-serif", fade = 1, since = null, dt = 0, imgSrc = null, count = true, seen = "fill" }) {
     const R = b.R, ink = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`;
+    const o = seen === "fill" ? 0 : smooth(0, 1, b.readT);   // how far a ball is into its outline
+    if (o < .998) { x.globalAlpha = alpha * (1 - o); x.fillStyle = ink; x.beginPath(); x.arc(b.sx, b.sy, R, 0, TAU); x.fill(); }
+    if (o > .002) {
+      const m = x.getTransform(), px = 1 / (Math.hypot(m.a, m.b) || 1), lw = Math.max(px, 1.5 * R / 21);
+      x.globalAlpha = alpha * o; x.strokeStyle = seen === "outline-black" ? "#000" : ink; x.lineWidth = lw;
+      x.beginPath(); x.arc(b.sx, b.sy, Math.max(.01, R - lw / 2), 0, TAU); x.stroke();
+    }
     x.globalAlpha = alpha;
-    x.fillStyle = ink; x.beginPath(); x.arc(b.sx, b.sy, R, 0, TAU); x.fill();
-    const ta = (1 - b.readT) * fade * smooth(3.5, 6, R);   // the number, as on an app icon: white, and gone once read
+    const ta = count ? (1 - b.readT) * fade * smooth(3.5, 6, R) : 0;   // the number, as on an app icon: white, and gone once read
     if (ta > .02) {
       const digits = String(b.n).length, fs = 2 * R * (digits === 1 ? .56 : digits === 2 ? .46 : .36);
       x.globalAlpha = alpha * ta; x.fillStyle = "#fff";
