@@ -10,8 +10,8 @@ const R_DISC = 2.25 * VOL.Rb;                    // the disc ends on a ring
 // on the disc and the volcano, all changed in DEV and kept in this browser: whether there is a disc at all (ground), where
 // the lines go, the foot's circle, how many
 // rings from the axis to the foot (0: none), how many meridians (0: none), how thick (CSS px), in what ink
-const LINES_DEFAULT = { ground: true, disc: true, cone: true, foot: true, rings: 4, spokes: 24, width: 1, ink: "black" };
-const lines = { ...LINES_DEFAULT, ...(store.get("volcano-v11-lines", null) || {}) };
+const LINES_DEFAULT = { ground: false, disc: true, cone: true, foot: true, rings: 4, spokes: 24, width: 1, ink: "hot" };   // by default: no disc, the volcano alone, lines red-orange
+const lines = { ...LINES_DEFAULT, ...(store.get("volcano-v11-lines2", null) || {}) };
 const INKS = { black: [0, 0, 0], grey: [.55, .55, .55], hot: [1, .2706, 0], sky: null };
 
 // ================= the sky =================
@@ -111,7 +111,7 @@ function showLines() {
   document.querySelectorAll("[data-on]").forEach(b => b.setAttribute("aria-pressed", String(!!lines[b.dataset.on])));
   document.querySelectorAll("[data-ink]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ink === lines.ink)));
   for (const k of ["rings", "spokes", "width"]) { $(k).value = lines[k]; $(k + "Val").textContent = lines[k]; }
-  store.set("volcano-v11-lines", lines);
+  store.set("volcano-v11-lines2", lines);
 }
 document.querySelectorAll("[data-on]").forEach(b => b.addEventListener("click", () => { lines[b.dataset.on] = !lines[b.dataset.on]; showLines(); }));
 document.querySelectorAll("[data-ink]").forEach(b => b.addEventListener("click", () => { lines.ink = b.dataset.ink; showLines(); }));
