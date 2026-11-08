@@ -10,7 +10,7 @@ window.CABZ = {
      "id": "rai",
      "name": "la-voiex-du-volcan",
      "title": "la voiex du volcan",
-     "href": "rai/v09/",
+     "href": "rai/v11/",
      "versions": [
       {
        "id": "407efac",
