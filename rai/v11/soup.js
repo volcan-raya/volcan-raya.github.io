@@ -232,7 +232,7 @@ async function saveSentence(text, I, re = null, medium = "text", img = null) {
     saved = o;
   }
   keepMine(saved.id); knownIds.add(saved.id);
-  if (re) { addReply(saved); syncBadges(); showStatus(); VO.addPressure(VO.PER_NOTE * .5); return saved; }
+  if (re) { addReply(saved); syncBadges(saved.id); showStatus(); VO.addPressure(VO.PER_NOTE * .5); return saved; }
   if (!sentences.some(x => x.id === saved.id)) sentences.push(saved);
   syncBadges(saved.id); showStatus();
   VO.addPressure(VO.PER_NOTE * (.6 + .8 * (i ?? .5)));   // louder notes push harder
@@ -306,7 +306,7 @@ function syncBadges(freshId) {
     if (!b) {
       b = makeBadge(s); badges.set(s.id, b); b.s = s; placeHome(b);
       const p = placed[s.id]; if (Array.isArray(p) && p.length === 3 && p.every(Number.isFinite)) [b.hx, b.hy, b.hz] = p;   // where it was dropped
-      if (s.id === freshId && birth) { b.x = birth.x; b.y = birth.y; b.z = birth.z; birth = null; }   // what you just wrote appears close to you, then sinks in
+      if (s.id === freshId && birth) { b.x = birth.x; b.y = birth.y; b.z = birth.z; birth = null; }   // what you just wrote leaves the send button, then sinks in
       else { b.x = b.hx; b.y = b.hy; b.z = b.hz; }
     }
     b.s = s; setCount(b);
@@ -317,7 +317,10 @@ function syncBadges(freshId) {
   for (const [id, b] of badges) if (b.parent && !want.has(id)) { b.btn.remove(); badges.delete(id); }
   for (const [id, [r, p, i]] of want) {
     let b = badges.get(id);
-    if (!b) { b = makeBadge(r); badges.set(id, b); b.parent = p; orbitOf(b, i); b.x = p.x; b.y = p.y; b.z = p.z; }   // born from its note, then out to its orbit
+    if (!b) {                                  // born from its note, then out to its orbit; yours, from the send button
+      b = makeBadge(r); badges.set(id, b); b.parent = p; orbitOf(b, i);
+      if (id === freshId && birth) { b.x = birth.x; b.y = birth.y; b.z = birth.z; birth = null; } else { b.x = p.x; b.y = p.y; b.z = p.z; }
+    }
     b.s = r; b.parent = p; b.idx = i; setCount(b);
   }
   if (picked && !badges.has(picked.s.id)) closeNote();
@@ -481,8 +484,14 @@ function makeComposer(host, placeholder, onSend, attach = false) {
     if (listening && micComp === c) stopMic();
     const I = c.peak != null ? c.peak : dev && voiceMode === "debug" ? $("intensity").value / 100 : null;
     const img = c.img, medium = img ? "image" : c.spoke ? "voice" : "text";
+    // sending, seen: the arrow is pulled down out of the red button, then the button itself goes into the soup as the ball
+    const from = c.send.getBoundingClientRect(), wipe = !reduce.matches;
+    c.going = wipe; if (wipe) c.send.classList.add("going");
     c.input.value = ""; c.peak = null; c.spoke = false; setPicture(c, null);
-    await onSend(text, I, medium, img);
+    if (wipe) await new Promise(r => setTimeout(r, 280));
+    c.going = false; c.send.classList.remove("going"); updateSend(c);
+    if (!c.mic.hidden) { c.mic.classList.remove("back"); void c.mic.offsetWidth; c.mic.classList.add("back"); }   // and the mic comes back once the ball has left
+    await onSend(text, I, medium, img, wipe ? from : null);
   });
   return c;
 }
@@ -510,18 +519,21 @@ function setPicture(c, data) {                  // a picture is the whole post: 
   updateSend(c);
 }
 function updateSend(c) {                        // as in Telegram: the mic becomes a send button once there is something to send
-  const has = !!c.input.value.trim() || !!c.img, rec = listening && micComp === c;
+  const has = !!c.input.value.trim() || !!c.img || c.going, rec = listening && micComp === c;
   c.send.hidden = !has; c.mic.hidden = has && !rec;
 }
 const composerEl = $("composer"), coarse = matchMedia("(pointer: coarse)");
 // one bar, always at the bottom while you are in the soup: "Vent" writes a note (or adds to your own, open); with
 // someone else's note open, "Support" answers it
-const mainComp = makeComposer(composerEl, "Vent", async (text, I, medium, img) => {
+// the ball starts as the send button: where it was and as big on the screen, then sinks to its place in the soup
+function bornFrom(r, k) {
+  const o = marks.getBoundingClientRect(), R = r.width / 2, d = Math.max(NEAR * 1.5, BR * k * C.cam.F / R);
+  const [x, y, z] = C.unproject(r.left - o.left + R, r.top - o.top + r.height / 2, d); birth = { x, y, z };
+}
+const mainComp = makeComposer(composerEl, "Vent", async (text, I, medium, img, from) => {
   const b = picked;
+  if (from) bornFrom(from, b ? sat.size / 100 : 1);
   if (b) { await saveSentence(text, I, (b.parent || b).s.id); markRead(b); return; }   // a reply is just words, and joins the note's orbit
-  // it appears close to you, a little above the composer, then sinks to its place in the soup
-  const r = composerEl.getBoundingClientRect(), o = marks.getBoundingClientRect(), { W } = V.size(), d = .9, sx = clamp(r.left - o.left + 120, 30, W - 30), sy = r.top - o.top - 40;
-  const [bx, by, bz] = C.unproject(sx, sy, d); birth = { x: bx, y: by, z: bz };
   await saveSentence(text, I, null, medium, img);
 }, true);
 const clipEl = mainComp.form.querySelector(".clip");
