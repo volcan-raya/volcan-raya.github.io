@@ -13,7 +13,7 @@ const VOL = V.volcano.VOL;
 //                   the view from the side, far off. Its tilt depends on s alone, but dragging sideways still turns it round the axis; going in is going out backwards
 //   S_RAIL … S_MAX  outside, free: orbit and tilt round the axis, each step back the same share further. It stops
 //                   short of S_FAR, where the distances are counted to, before the mountain's foot comes into view
-const S_IN = 1, S_RAIL = 2.2, S_FAR = 4.5, S_MAX = 3.05, Z0 = -1.2, D_RAIL = 30, FAR = 115, DOWN = Math.PI / 2, SWING = .5;   // SWING: where on the rail the swing starts
+const S_IN = 1, S_RAIL = 2.2, S_FAR = 4.5, S_MAX = 3, Z0 = -1.2, D_RAIL = 30, FAR = 115, DOWN = Math.PI / 2, SWING = .5;   // SWING: where on the rail the swing starts
 // the lens: outside it goes long, the eye further back by the same share as the lens grows, so the size stays and the
 // perspective flattens: at eye level the volcano is four straight lines, not the curves of a close round base
 const EYE_LINE = .56, TELE = 90;
@@ -156,7 +156,7 @@ addEventListener("keydown", e => {
 
 // ================= DEV: where the camera is, the lens =================
 V.dev.tab("camera", `
-  <label class="full"><span class="k">camera </span><span id="camVal"></span><input type="range" id="camera" min="0" max="3.05" step="0.001" value="0"></label>
+  <label class="full"><span class="k">camera </span><span id="camVal"></span><input type="range" id="camera" min="0" max="3" step="0.001" value="0"></label>
   <span class="full"><button class="t" id="home" type="button">back to the soup</button></span>
   <label class="full"><span class="k">lens </span><span id="lensVal">1.00</span><input type="range" id="lens" min="0.4" max="3" step="0.01" value="1"></label>`);
 const camIn = $("camera"), camVal = $("camVal");
