@@ -401,17 +401,6 @@ function badgeColour(b) {
   return [lerp(DOT[0], DOT_READ[0], e), lerp(DOT[1], DOT_READ[1], e), lerp(DOT[2], DOT_READ[2], e)];
 }
 let hovered = null, lastDraw = 0;
-// Over a ball the hand becomes a round the ball's size, in its colour, as over the versions in the bar (nav.js): a
-// system cursor, each made once, so it never lags. Cursors can't be larger than 128 px: a nearer ball gets a 96 px round
-const rounds = new Map();
-function roundOver(b) {
-  const w = 2 * Math.round(clamp(b.R, 4, 48)), rgb = (seenLook === "fill" ? badgeColour(b) : DOT).map(v => Math.round(v / 8) * 8), key = w + "," + rgb;
-  if (!rounds.has(key)) {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${w}"><circle cx="${w / 2}" cy="${w / 2}" r="${w / 2}" fill="rgb(${rgb})"/></svg>`;
-    rounds.set(key, `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${w / 2} ${w / 2}, pointer`);
-  }
-  return rounds.get(key);
-}
 function drawInside(x) {
   const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W } = V.size(); lastDraw = now;
   for (const b of vis) volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: smooth(NEAR, .4, b.d) * b.seen, type: TYPE, since: b === hovered ? now / 1000 - b.sigT0 : null, dt, imgSrc, count: false });
@@ -869,7 +858,7 @@ V.soup = {
     updateVoice(dt);
   },
   draw: drawInside, pointerDown, pointerMove, drop, hover, click,
-  cursor: () => grab && grab.on ? "grabbing" : hovered ? roundOver(hovered) : null,
+  cursor: () => grab && grab.on ? "grabbing" : hovered ? "pointer" : null,
   jolt(k) { for (const b of badges.values()) { b.vy += rand(.35, .8) * k; b.vx += rand(-.12, .12) * k; b.vz += rand(-.12, .12) * k; b.fly = k * rand(2.6, 3.4); b.flyA = rand(5, 8); } },
   texts: () => [...sentences.filter(s => mediumOf(s) === "text").map(s => s.s), ...[...replies.values()].flat().map(r => r.s)].filter(Boolean),
   readLevel,

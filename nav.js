@@ -647,8 +647,10 @@
   // Over a version dot (the bar's, the index's, the menu's), on every page: the cursor is a round the dot's
   // size, in its colour. A system cursor, like the arrow and hand: the image is made once, the first time a
   // dot of that size and colour is reached, and the system draws it from then on, so it never lags.
+  // Listened for in the bar's own root too: from one of its dots to the next, the pointer never leaves the bar,
+  // so the document hears nothing (only the first dot reached would turn round)
   const rounds = new Map();
-  document.addEventListener("pointerover", (event) => {
+  const roundCursor = (event) => {
     const el = event.composedPath()[0]?.closest?.("ol.v .dot, .g u, .vers a");
     if (!el) return;
     const dot = el.matches(".vers a") ? el.querySelector("i") : el;
@@ -659,7 +661,9 @@
       rounds.set(key, `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${w / 2} ${w / 2}, pointer`);
     }
     el.style.cursor = rounds.get(key);
-  });
+  };
+  document.addEventListener("pointerover", roundCursor);
+  sh.addEventListener("pointerover", roundCursor);
 
   const stepName = sh.querySelector(".step-name");
   sh.querySelectorAll(".step").forEach((a) => {
