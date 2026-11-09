@@ -6,7 +6,7 @@ const { rand, clamp, lerp, smooth, $, reduce } = V;
 
 // The world, in the volcano's own units: y up, the base at y = 0, the axis at x = z = 0. eye: the chamber's middle
 // height; Rc: the chamber's radius
-const VOL = { H: 28, Rb: 40, Rt: 2.8, eye: 2, Rc: 4.6 };   // a mountain as big as 2.00's, steep (37°), the hole small on it; the chamber as in 1.00
+const VOL = { H: 7, Rb: 11.3, Rt: 2.8, eye: 2, Rc: 4.6 };   // the cone a third larger than 1.00's (5.2, 8.4, 2.1); the chamber the same
 const SLOPE = (VOL.Rb - VOL.Rt) / VOL.H;
 
 // ================= its part of the picture (see field.js) =================
