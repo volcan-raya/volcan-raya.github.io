@@ -39,7 +39,7 @@ button, input, select { font: inherit; color: inherit; }
 
 /* the title, top left, over everything but the panels. The type is the placeholder above */
 #title { position: fixed; z-index: 5; top: 12px; left: calc(16px + env(safe-area-inset-left, 0px)); right: 16px; margin: 0; pointer-events: none;
-  color: #000; font: 400 12px/1.5 "DM Mono", ui-monospace, Menlo, monospace; }
+  color: #000; font: 500 13px/1.5 var(--type); letter-spacing: .02em; }   /* the soup's own sans */
 #title span { display: block; }
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */
@@ -75,7 +75,7 @@ button, input, select { font: inherit; color: inherit; }
   <canvas id="marks" role="img" aria-label="the notes, red dots inside the volcano; pull back to see the volcano"></canvas>
 </div>
 
-<h1 id="title"><span>&lt;!--notification soup--&gt;</span><span>&lt;link rel="stylesheet" href="ecal.css"&gt;</span></h1>
+<h1 id="title">NOTIFICATION SOUP</h1>
 
 <aside id="dev" aria-label="DEV" data-dev data-ui hidden></aside>
 

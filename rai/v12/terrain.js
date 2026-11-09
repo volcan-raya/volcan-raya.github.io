@@ -11,7 +11,7 @@ const R_DISC = 2.25 * VOL.Rb;                    // the disc ends on a ring
 // the lines go, the foot's circle, how many
 // rings from the axis to the foot (0: none), how many meridians (0: none), how thick (CSS px), in what ink
 const LINES_DEFAULT = { ground: false, disc: true, cone: true, foot: true, rings: 8, spokes: 24, width: 1, ink: "hot" };   // by default: no disc, the volcano alone, lines red-orange
-const lines = { ...LINES_DEFAULT, ...(store.get("volcano-v12-lines5", null) || {}) };
+const lines = { ...LINES_DEFAULT, ...(store.get("volcano-v12-lines6", null) || {}) };
 const INKS = { black: [0, 0, 0], grey: [.55, .55, .55], hot: [1, .2706, 0], sky: null };
 
 // ================= the sky =================
@@ -45,7 +45,7 @@ function coolGlow(dt) {
 // The disc (what = 3), white; the only marks lie on it and on the cone, measured in pixels, so they stay one thin line
 // at any distance: the foot's circle, black, and the rings and meridians
 const glsl = `
-uniform float uGround, uThin, uOnDisc, uOnCone, uFoot, uCell, uSpokes; uniform vec3 uSky, uInk;
+uniform float uGround, uThin, uOnDisc, uOnCone, uFoot, uCell, uCellY, uSpokes; uniform vec3 uSky, uInk;
 const float RD = ${R_DISC.toFixed(3)};
 void terrainHit(vec3 p, vec3 rd, float lo, inout float best, inout vec3 N) {
   if (uGround > .5 && rd.y < 0.) {             // without it, the volcano alone in the sky
@@ -67,7 +67,8 @@ float ink(vec3 P, vec3 N, vec3 rd, float T) {
   if (what > 2.5 && uFoot > .5) a = lineAt(r, RB + (uThin + .5) * sr, sr);   // the foot, on the disc just outside the cone so none of it is hidden
   // rings and meridians, laid over the disc and the volcano alike, a map seen from the pole (DEV: where, how many, how thick)
   if ((what > 2.5 ? uOnDisc : uOnCone) > .5) {
-    if (uCell > 0.) a = max(a, lines(r, uCell, sr));
+    // the rings: on the disc round the axis; on the mountain, contour lines at equal heights
+    if (uCell > 0.) a = max(a, what > 2.5 ? lines(r, uCell, sr) : lines(P.y, uCellY, spanOf(vec3(0., 1., 0.), N, rd, px)));
     if (uSpokes > .5) a = max(a, lines(atan(P.z, P.x), TAU / uSpokes, sa));
   }
   return a;
@@ -75,17 +76,17 @@ float ink(vec3 P, vec3 N, vec3 rd, float T) {
 vec3 terrainColour(vec3 P, vec3 N, vec3 rd, float T) { return mix(vec3(1.), uInk, ink(P, N, rd, T)); }
 vec3 terrainSky() { return uSky; }
 `;
-const uniforms = ["uGround", "uThin", "uOnDisc", "uOnCone", "uFoot", "uCell", "uSpokes", "uSky", "uInk"];
+const uniforms = ["uGround", "uThin", "uOnDisc", "uOnCone", "uFoot", "uCell", "uCellY", "uSpokes", "uSky", "uInk"];
 function setUniforms(gl, u, env) {
   const sky = skyAt(glow);
   gl.uniform3fv(u.uSky, sky); gl.uniform1f(u.uGround, lines.ground ? 1 : 0);
   gl.uniform1f(u.uThin, .5 * lines.width * Math.max(1, .8 * env.sc)); gl.uniform1f(u.uOnDisc, lines.disc ? 1 : 0); gl.uniform1f(u.uOnCone, lines.cone ? 1 : 0);
-  gl.uniform1f(u.uFoot, lines.foot ? 1 : 0); gl.uniform1f(u.uCell, lines.rings > 0 ? VOL.Rb / lines.rings : 0); gl.uniform1f(u.uSpokes, lines.spokes);
+  gl.uniform1f(u.uFoot, lines.foot ? 1 : 0); gl.uniform1f(u.uCell, lines.rings > 0 ? VOL.Rb / lines.rings : 0); gl.uniform1f(u.uCellY, lines.rings > 0 ? VOL.H / lines.rings : 0); gl.uniform1f(u.uSpokes, lines.spokes);
   gl.uniform3fv(u.uInk, INKS[lines.ink] || sky);
 }
 
-// ================= DEV: the lines =================
-V.dev.tab("terrain", `
+// ================= DEV: the lines (in the volcano's tab) =================
+V.dev.tab("volcano", `   // after the volcano's own rows: its lines, and the disc
   <div class="full seg" role="group" aria-label="Terrain">
     <span class="k">terrain</span>
     <button class="t" type="button" data-on="ground" aria-pressed="false">the disc</button>
@@ -96,7 +97,7 @@ V.dev.tab("terrain", `
     <button class="t" type="button" data-on="cone" aria-pressed="false">volcano</button>
     <button class="t" type="button" data-on="foot" aria-pressed="false">foot circle</button>
   </div>
-  <label class="full"><span class="k">rings, axis to foot (0: none) </span><span id="ringsVal"></span><input type="range" id="rings" min="0" max="48" step="1"></label>
+  <label class="full"><span class="k">rings: contours on the mountain, top to foot (0: none) </span><span id="ringsVal"></span><input type="range" id="rings" min="0" max="48" step="1"></label>
   <label class="full"><span class="k">meridians (0: none) </span><span id="spokesVal"></span><input type="range" id="spokes" min="0" max="96" step="4"></label>
   <label class="full"><span class="k">thickness, px </span><span id="widthVal"></span><input type="range" id="width" min="0.5" max="4" step="0.25"></label>
   <div class="full seg" role="group" aria-label="Lines: ink">
@@ -111,7 +112,7 @@ function showLines() {
   document.querySelectorAll("[data-on]").forEach(b => b.setAttribute("aria-pressed", String(!!lines[b.dataset.on])));
   document.querySelectorAll("[data-ink]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ink === lines.ink)));
   for (const k of ["rings", "spokes", "width"]) { $(k).value = lines[k]; $(k + "Val").textContent = lines[k]; }
-  store.set("volcano-v12-lines5", lines);
+  store.set("volcano-v12-lines6", lines);
 }
 document.querySelectorAll("[data-on]").forEach(b => b.addEventListener("click", () => { lines[b.dataset.on] = !lines[b.dataset.on]; showLines(); }));
 document.querySelectorAll("[data-ink]").forEach(b => b.addEventListener("click", () => { lines.ink = b.dataset.ink; showLines(); }));

@@ -13,12 +13,12 @@ const VOL = V.volcano.VOL;
 //                   the view from the side, far off. Its tilt depends on s alone, but dragging sideways still turns it round the axis; going in is going out backwards
 //   S_RAIL … S_MAX  outside, free: orbit and tilt round the axis, each step back the same share further. It stops
 //                   short of S_FAR, where the distances are counted to, before the mountain's foot comes into view
-const S_IN = 1, S_RAIL = 2.2, S_FAR = 4.5, S_MAX = 3.02, Z0 = -1.2, D_RAIL = 30, FAR = 115, DOWN = Math.PI / 2, SWING = .5;   // SWING: where on the rail the swing starts
+const S_IN = 1, S_RAIL = 2.2, S_FAR = 4.5, S_MAX = 3.3, Z0 = -1.2, D_RAIL = 45, FAR = 115, DOWN = Math.PI / 2, SWING = .5;   // SWING: where on the rail the swing starts
 // the lens: outside it goes long, the eye further back by the same share as the lens grows, so the size stays and the
 // perspective flattens: at eye level the volcano is four straight lines, not the curves of a close round base
 const EYE_LINE = .56, TELE = 90;
 // outside, the eye looks at the axis this high: on the mountain's upper part, so the summit sits in the view and the foot below it
-const LOOK = VOL.H * .6;
+const LOOK = VOL.H * .75;
 let F = 1, PX = 0, PY = 0, lensK = 1;
 function lens() { const { W, H } = V.size(); F = Math.max(H * .95, W * .68) * lensK; PX = W / 2; PY = H * EYE_LINE; }
 const P_MIN = -20 * Math.PI / 180, P_MAX = 75 * Math.PI / 180;
@@ -36,10 +36,12 @@ function camera() {
     T = TELE ** smooth(S_RAIL, S_RAIL + 1, s);
     pos = [-f[0] * D * T, LOOK - f[1] * D * T, -f[2] * D * T];
   } else if (s >= S_IN) {                      // the rail: up the axis, then the swing out (coming in: the swing over the top, then down onto the hole)
-    const u = (s - S_IN) / (S_RAIL - S_IN), dive = 1 - smooth(SWING, 1, u), D = lerp(.03, D_RAIL, u ** 1.6);   // still drawing back while it swings, so the volcano keeps getting smaller
-    p = lerp(tilted, DOWN, dive);
-    const f = dir(), cy = lerp(LOOK, VOL.H, dive);
-    pos = [-f[0] * D, cy - f[1] * D, -f[2] * D];
+    // the eye rises steadily the whole way, never stopping and never going down again; from halfway it also moves out,
+    // and it always looks at the axis, at the summit at first, then lower, at the mountain's upper part
+    const u = (s - S_IN) / (S_RAIL - S_IN), out = smooth(SWING, 1, u), cy = lerp(VOL.H, LOOK, out);
+    const y = lerp(VOL.H + .03, LOOK + Math.sin(tilted) * D_RAIL, u), r = Math.cos(tilted) * D_RAIL * out;
+    p = r < 1e-4 ? DOWN : Math.atan2(y - cy, r);
+    pos = [-sa * r, y, -ca * r];
   } else {                                     // in: down the axis, the head lifting
     const u = 1 - s / S_IN, f0 = dir();
     rise = smooth(.15, 1, u);
@@ -156,7 +158,7 @@ addEventListener("keydown", e => {
 
 // ================= DEV: where the camera is, the lens =================
 V.dev.tab("camera", `
-  <label class="full"><span class="k">camera </span><span id="camVal"></span><input type="range" id="camera" min="0" max="3.02" step="0.001" value="0"></label>
+  <label class="full"><span class="k">camera </span><span id="camVal"></span><input type="range" id="camera" min="0" max="3.3" step="0.001" value="0"></label>
   <span class="full"><button class="t" id="home" type="button">back to the soup</button></span>
   <label class="full"><span class="k">lens </span><span id="lensVal">1.00</span><input type="range" id="lens" min="0.4" max="3" step="0.01" value="1"></label>`);
 const camIn = $("camera"), camVal = $("camVal");
@@ -166,7 +168,8 @@ camIn.max = S_MAX;
 camIn.addEventListener("input", () => { travel = aim = +camIn.value; glide = false; });
 function showDev() {
   const where = cam.rail ? "on the rail" : cam.out ? "outside" : cam.rise < 1 ? `coming in ${Math.round(cam.rise * 100)}%` : "in the chamber";
-  camVal.textContent = `${travel.toFixed(2)} · tilt ${Math.round(pitch * 180 / Math.PI)}° · ${where}`;
+  const far = Math.hypot(cam.x, cam.y - VOL.H, cam.z);   // from the eye to the summit, and the eye's height, in the mountain's units (it is 36 high)
+  camVal.textContent = `${travel.toFixed(2)} · tilt ${Math.round(pitch * 180 / Math.PI)}° · ${where} · ${Math.round(far)} from the summit, ${Math.round(cam.y)} high`;
   if (document.activeElement !== camIn) camIn.value = travel.toFixed(3);
 }
 

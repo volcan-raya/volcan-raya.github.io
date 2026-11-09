@@ -64,7 +64,7 @@ window.V = (() => {
   const at = e => { const r = marks.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 
   // ================= DEV: one panel, in tabs; each file puts its rows in its own =================
-  const TABS = ["volcano", "soup", "text", "terrain", "camera"];   // volcano first: its "erupt" is the one most reached for
+  const TABS = ["volcano", "soup", "text", "camera"];   // volcano first: its "erupt" is the one most reached for; its lines and the disc are in it too
   const devEl = $("dev"), bar = document.createElement("div"), groups = new Map();
   bar.className = "full devTabs"; bar.setAttribute("role", "tablist"); bar.setAttribute("aria-label", "DEV");
   bar.innerHTML = TABS.map(k => `<button type="button" role="tab" data-devtab="${k}">${k}</button>`).join("");

@@ -334,6 +334,10 @@ function updateBadges(dt, t) {
   for (const b of badges.values()) {
     b.readT = clamp(b.readT + (b.read ? dt : -dt) / 2, 0, 1);   // two seconds, as in v05
     if (b === picked) { b.vx = b.vy = b.vz = 0; continue; }   // open, it stays where it is; its replies go on round it
+    if (b.fly > 0 && b !== grab?.b) {            // erupting: thrown up and out of the hole, to the sky; then it falls back to its home
+      b.fly -= dt; b.vy += b.flyA * dt; b.vx *= Math.exp(-dt * .3); b.vz *= Math.exp(-dt * .3);
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; continue;
+    }
     if (b.hold) { const k = Math.exp(-dt * 8); b.vx *= k; b.vy *= k; b.vz *= k; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; continue; }
     if (b.parent) {                            // round its note, pulled back to its orbit whenever it is thrown or let go
       const p = b.parent, o = b.orb, a = o.a0 + t * o.w * (reduce.matches ? .3 : 1), c = Math.cos(a), sn = Math.sin(a), k = 1 - Math.exp(-dt / .45), R = o.R * sat.orbit / 100;
@@ -561,8 +565,8 @@ function setComposer(on) {                      // there whenever the soup can b
 // a picture and a voice sit in its middle, which is the middle of the screen
 // The voice's tallest bar: 50% is the box's height, so it can go to twice the box. The text: at its size, or, to see a
 // long one whole, shrunk until it fits the box (never bigger than its size)
-const BIG_KEY = "volcano-v12-big2";
-const BIG0 = { fs: 14, lh: .92, side: 40, tb: 90, ink: "black", fit: "contain", vw: "off", show: "off", wh: 23, bars: 88, bw: 7, tsize: "fixed", sig: 14 };
+const BIG_KEY = "volcano-v12-big3";
+const BIG0 = { fs: 14, lh: .92, side: 40, tb: 90, ink: "black", fit: "contain", vw: "off", show: "off", wh: 23, bars: 88, bw: 7, tsize: "fit", sig: 14 };
 const saved = store.get(BIG_KEY, {}) || {};
 if (saved.wh != null && !saved.v3) {           // kept before the tallest bar was counted against half the box: the same look
   saved.wh = Math.max(3, Math.round(saved.wh / 2));
@@ -854,7 +858,7 @@ V.soup = {
   },
   draw: drawInside, pointerDown, pointerMove, drop, hover, click,
   cursor: () => grab && grab.on ? "grabbing" : hovered ? "pointer" : null,
-  jolt(k) { for (const b of badges.values()) { b.vy += rand(.35, .8) * k; b.vx += rand(-.12, .12) * k; b.vz += rand(-.12, .12) * k; } },
+  jolt(k) { for (const b of badges.values()) { b.vy += rand(.35, .8) * k; b.vx += rand(-.12, .12) * k; b.vz += rand(-.12, .12) * k; b.fly = k * rand(2.6, 3.4); b.flyA = rand(5, 8); } },
   texts: () => [...sentences.filter(s => mediumOf(s) === "text").map(s => s.s), ...[...replies.values()].flat().map(r => r.s)].filter(Boolean),
   readLevel,
 };

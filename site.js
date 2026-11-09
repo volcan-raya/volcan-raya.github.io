@@ -127,7 +127,7 @@ window.CABZ = {
        ],
        "live": true,
        "href": "rai/v09/",
-       "release": "1.00 ecal"
+       "release": "1.00"
       },
       {
        "id": "v10",
@@ -152,7 +152,7 @@ window.CABZ = {
        ],
        "live": true,
        "href": "rai/v11/",
-       "release": "1.01 ecal"
+       "release": "1.01"
       },
       {
        "id": "v12",
@@ -164,7 +164,7 @@ window.CABZ = {
        ],
        "live": true,
        "href": "rai/v12/",
-       "release": "1.02 ecal"
+       "release": "1.02"
       }
      ],
      "cross": "ex",
