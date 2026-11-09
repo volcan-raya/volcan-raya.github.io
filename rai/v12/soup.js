@@ -190,6 +190,7 @@ async function loadSentences() {
   const seen = new Set(), out = [];
   const add = o => {
     if (!o || typeof o.s !== "string" || (!o.s.trim() && !o.img) || seen.has(String(o.id))) return;
+    if (o.medium === "voice") return;          // no voices in 1.02: they were spoken by a made-up voice, not recorded
     seen.add(String(o.id));
     out.push({ id: String(o.id), s: o.s.trim().slice(0, 240), t: Number(o.t) || 0,
       name: typeof o.name === "string" ? o.name.slice(0, 20) : "", trip: typeof o.trip === "string" ? o.trip.slice(0, 8) : "",
@@ -498,7 +499,7 @@ function makeComposer(host, placeholder, onSend, attach = false) {
     const text = c.input.value.trim(); if (!text && !c.img) return;
     if (listening && micComp === c) stopMic();
     const I = c.peak != null ? c.peak : dev && voiceMode === "debug" ? $("intensity").value / 100 : null;
-    const img = c.img, medium = img ? "image" : c.spoke ? "voice" : "text";
+    const img = c.img, medium = img ? "image" : "text";   // what the mic heard is kept as words (no voices in 1.02)
     // sending, seen: the arrow is pulled down out of the red button, then the button itself goes into the soup as the ball
     const from = c.send.getBoundingClientRect(), wipe = !reduce.matches;
     c.going = wipe; if (wipe) c.send.classList.add("going");
