@@ -402,8 +402,11 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];
 // how a seen ball looks (DEV, soup; kept in this browser): its red going black ("fill"), or its fill giving way to a
 // ring at its edge, red ("outline") or black ("outline-black"); either way over the same 2 s, and still whole to touch
-let seenLook = ["fill", "outline", "outline-black"].includes(store.get(KEY + "seen", "fill")) ? store.get(KEY + "seen", "fill") : "fill";
-function showSeen() { document.querySelectorAll("[data-seen]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.seen === seenLook))); store.set(KEY + "seen", seenLook); }
+// One choice for every page on this soup (1.03 and 3.00 alike). By default the red ring ("outline"); the key is new
+// with that default, so a choice kept from before (often "fill") doesn't hide it
+const SEEN_KEY = "volcano-soup-seen";
+let seenLook = ["fill", "outline", "outline-black"].includes(store.get(SEEN_KEY, "outline")) ? store.get(SEEN_KEY, "outline") : "outline";
+function showSeen() { document.querySelectorAll("[data-seen]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.seen === seenLook))); store.set(SEEN_KEY, seenLook); }
 document.querySelectorAll("[data-seen]").forEach(b => b.addEventListener("click", () => { seenLook = b.dataset.seen; showSeen(); }));
 showSeen();
 function badgeColour(b) {

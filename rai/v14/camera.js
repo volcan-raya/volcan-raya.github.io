@@ -18,7 +18,7 @@ const crater = () => [CX, CY - E * look.craterY];
 const pivot = () => [CX, CY + E * look.pivotY];     // low in the volcano, where the soup is: the zoom grows round it
 
 // the way in: s eases to its aim. ZMAX: how much the emoji grows on the way in, round its crater
-const ZMAX = 60, TIME = 1.7;
+const ZMAX = 60, TIME = 1.4, CUT = .85;           // CUT: how far in (e) the soup takes over, at once, no fade
 let s = 0, aim = 0, cam = null;                   // it opens in the soup
 function goTo(v) { aim = clamp(v, 0, 1); if (reduce.matches) s = aim; }
 function update(dt) {
@@ -26,7 +26,7 @@ function update(dt) {
     const step = dt / TIME;
     s = aim > s ? Math.min(aim, s + step) : Math.max(aim, s - step);
   }
-  const t = 1 - s, e = t * t * (3 - 2 * t);       // 0 outside … 1 in
+  const t = 1 - s, e = t < .5 ? 4 * t * t * t : 1 - 4 * (1 - t) ** 3;   // 0 outside … 1 in: slow to start, fast through the middle
   const zoom = Math.exp(Math.log(ZMAX) * e);
   const [kx, ky] = pivot();
   // one axis only: the emoji grows and shrinks round the middle of the screen, low in the volcano; nothing else moves
@@ -34,8 +34,8 @@ function update(dt) {
   cam = {
     s, e, zoom, fx, fy, kx, ky,                    // the emoji, the words: scaled by zoom round (kx, ky), which is drawn at (fx, fy)
     out: e < .999, in: e > .001,
-    inside: smooth(.6, .97, e),                   // how much the soup is drawn
-    soup: smooth(.8, 1, e),                        // how much it can be touched
+    inside: e >= CUT ? 1 : 0,                      // the soup, or the volcano: a cut, no fade
+    soup: e >= CUT ? 1 : 0,                        // and it can be touched
     F: 1, x: 0, y: 0, z: 0,
   };
   return cam;

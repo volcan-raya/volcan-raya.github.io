@@ -90,9 +90,9 @@ button, input, select { font: inherit; color: inherit; }
   background: rgb(10, 10, 12); border-bottom: 1px solid rgba(255, 255, 255, .12); }
 #dev .devTabs button { flex: 1 1 auto; padding: 6px 2px 8px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none;
   color: var(--dim); font-size: 11.5px; cursor: pointer; }
-/* out of the soup: the propositions, in a row at the top, black on the orange; any of them takes you out */
+/* out of the soup: the propositions, in a row at the top, black on the orange, there at once (no fade); any of them takes you out */
 #goOut { position: fixed; z-index: 6; top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; align-items: flex-start; flex-wrap: wrap; justify-content: center;
-  animation: outIn .6s ease-out backwards; width: max-content; max-width: calc(100% - 20px); }
+  width: max-content; max-width: calc(100% - 20px); }
 #goOut button { flex: none; width: 56px; padding: 4px 0 0; border: 0; border-radius: 10px; background: none; color: #000; cursor: pointer;
   display: grid; justify-items: center; gap: 2px; transition: transform .25s ease; }
 #goOut .g { height: 40px; display: grid; place-items: center; font: 400 32px/1 var(--type); }
@@ -103,7 +103,6 @@ button, input, select { font: inherit; color: inherit; }
 #goOut button:hover { transform: translateY(-3px); }
 #goOut button:hover .n { opacity: 1; }
 #goOut button:focus-visible { outline: 1.5px solid #000; outline-offset: -2px; }
-@keyframes outIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } }
 #dev .devTabs button[aria-selected="true"] { color: #B026FF; border-bottom-color: #B026FF; }
 #dev .devTabs button:focus-visible { outline: 1px solid #B026FF; outline-offset: -2px; }
 </style>
