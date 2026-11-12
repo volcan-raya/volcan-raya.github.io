@@ -6,14 +6,19 @@ const { clamp, lerp, smooth, $, reduce } = V;
 const VOL = V.volcano.VOL;
 
 // The way in is one number, s:
-//   0 … S_IN        in the chamber: from the hole down the axis to the middle; the black fades out evenly, the soup's reds coming
-//                   through it, as the head lifts from straight down to level. At 0 you look round the middle, as the mouse turns you
+//   S_BOT … 0       the soup's depth: from its floor, where the title lies (0 m), up to where the eye rests over it. The
+//                   page opens on the floor, the title filling the view, and rises to rest (the opening), the balls going
+//                   past; you can always scroll back down to it
+//   0 … S_IN        in the chamber: from the hole straight down the axis, looking straight down the whole way, onto the soup
+//                   below, as from the sky: the black fades out evenly, the soup's reds coming through it, the balls coming up
+//                   at you only near the end. Nothing turns. At 0 you look down on the soup; a drag turns you round the
+//                   axis or lifts the head towards level (dip), and scrolling out brings it straight down again
 //   S_IN … S_RAIL   the rail, as in 2.00: going out, the camera first rises straight up the axis, looking down on the
 //                   hole, to about three times the volcano's height; only then does it swing out, still drawing back, to
 //                   the view from the side, far off. Its tilt depends on s alone, but dragging sideways still turns it round the axis; going in is going out backwards
 //   S_RAIL … S_MAX  outside, free: orbit and tilt round the axis, each step back the same share further. It stops
 //                   short of S_FAR, where the distances are counted to, before the mountain's foot comes into view
-const S_IN = 1, S_RAIL = 2.2, S_FAR = 4.5, S_MAX = 3.3, Z0 = -1.2, D_RAIL = 45, FAR = 115, DOWN = Math.PI / 2, SWING = .4, SWUNG = .7;   // where on the rail the swing starts and ends
+const S_IN = .8, S_RAIL = 2.2, S_FAR = 4.5, S_MAX = 3.3, Z0 = -1.2, D_RAIL = 45, FAR = 115, DOWN = Math.PI / 2, SWING = .45, SWUNG = .7;   // where on the rail the swing starts (s 1.43: until then, straight down) and ends. The rim at .8, so the hole's black lets go of the screen at .9
 // the lens: outside it goes long, the eye further back by the same share as the lens grows, so the size stays and the
 // perspective flattens: at eye level the volcano is four straight lines, not the curves of a close round base
 const EYE_LINE = .56, TELE = 90;
@@ -27,11 +32,31 @@ const P_MIN = -20 * Math.PI / 180, P_MAX = 75 * Math.PI / 180;
 // in the chamber you can look up from below; outside the camera stays above the disc
 const P_OUT = 28 * Math.PI / 180;               // outside, always from above, so you come out looking down on it and the disc is never edge on
 const pitchFloor = s => lerp(P_MIN, P_OUT, smooth(0, S_IN, s));
-let travel = 0, aim = 0, glide = false, cam = null, yaw = 0, yawAim = 0, pitch = 0, pitchAim = 0;
+const REST_Y = VOL.eye - Z0;                    // where the eye rests, over the middle of the soup
+// the soup's floor, under the lowest balls, where the title lies (index.html #title), and the eye's lowest point over it
+// The eye stops low enough to fill the view with the title, never so low that its ends are cut: at 0 m the title's ink
+// runs from margin to margin, the same margins as a note opened full screen (soup.js: --side on #big, DEV soup)
+const S_BOT = -1, FLOOR_Y = VOL.eye - VOL.Rc, TITLE_W = .55;
+const sideOf = () => { const b = document.getElementById("big"); return (b && parseFloat(getComputedStyle(b).getPropertyValue("--side"))) || 40; };
+// and, in a short window, the eyes and the title together never taller than TALL of it
+const TALL = .58;
+const bottomY = () => {
+  const { W, H } = V.size(), across = 1 / Math.max(1, W - 2 * sideOf()), up = ink ? ink.h / ink.w / Math.max(1, H * TALL) : 0;
+  return FLOOR_Y + F * TITLE_W * Math.max(across, up);
+};
+// the opening: from the floor up to rest, slow, faster, slow, as the title is left behind (none with reduced motion)
+// it holds HOLD s on the title, by the clock (the first frames of a page can stutter), then rises over dur s
+let opening = reduce.matches ? null : { start: 0, hold: 2, dur: 2.8 };
+let travel = reduce.matches ? 0 : S_BOT, aim = travel, glide = false, cam = null, yaw = 0, yawAim = 0, pitch = 0, pitchAim = 0;
+// in the chamber the head is straight down; dip lifts it towards level (a drag), and goes back to 0 as you scroll out
+let dip = 0, dipAim = 0;
 const onRail = () => travel > .02 && travel < S_RAIL - .02;
 function camera() {
+  // the eye's line: the middle of the screen while you look straight down (in the soup, down the hole, up the axis), so
+  // the title on the floor is exactly centred at 0 m; lower (EYE_LINE) as you swing out to the side view
+  { const { H } = V.size(); PY = H * lerp(.5, EYE_LINE, smooth(S_IN + (S_RAIL - S_IN) * SWING, S_RAIL, travel)); }
   const s = travel, tilted = Math.max(pitch, pitchFloor(s)), ca = Math.cos(yaw), sa = Math.sin(yaw);
-  let p = tilted, pos, T = 1, rise = 0;
+  let p = tilted, pos, T = 1, rise = 0, balls = 1;
   const dir = () => [sa * Math.cos(p), -Math.sin(p), ca * Math.cos(p)];
   if (s >= S_RAIL) {                           // outside
     p = Math.min(tilted + lifted(s), 85 * Math.PI / 180);
@@ -43,20 +68,25 @@ function camera() {
     // and it always looks at the axis, at the summit at first, then lower, at the mountain's upper part
     // (the swing ends before the rail does, so its last part is already the climb)
     const u = (s - S_IN) / (S_RAIL - S_IN), out = smooth(SWING, SWUNG, u), cy = lerp(VOL.H, LOOK, out);
-    const y = lerp(VOL.H + .03, LOOK + Math.sin(tilted) * D_RAIL, u), r = Math.cos(tilted) * D_RAIL * out;
+    // up fast just past the rim, so the hole's black lets go of the screen soon, then slower to the same height
+    const y = lerp(VOL.H + .03, LOOK + Math.sin(tilted) * D_RAIL, 1 - (1 - u) ** 4), r = Math.cos(tilted) * D_RAIL * out;
     p = r < 1e-4 ? DOWN : Math.atan2(y - cy, r);
     pos = [-sa * r, y, -ca * r];
-  } else {                                     // in: down the axis, the head lifting
-    const u = 1 - s / S_IN, f0 = dir();
+  } else if (s < 0) {                          // the soup's depth, down to its floor
+    rise = 1;
+    pos = [0, lerp(bottomY(), REST_Y, (s - S_BOT) / -S_BOT), 0];
+    p = DOWN - dip;
+  } else {                                     // in: straight down the axis, looking straight down
+    const u = 1 - s / S_IN;
     rise = smooth(.15, 1, u);
-    const end = [-f0[0] * -Z0, VOL.eye - f0[1] * -Z0, -f0[2] * -Z0], go = smooth(0, 1, u);
-    pos = [end[0] * go, lerp(VOL.H - .03, end[1], go), end[2] * go];
-    p = lerp(DOWN, tilted, rise);
+    balls = smooth(.55, .92, u);               // the balls only near the end, not as soon as the black lifts
+    pos = [0, lerp(VOL.H - .03, REST_Y, smooth(0, 1, u)), 0];
+    p = DOWN - dip * (1 - smooth(0, .5, s));   // a lifted head goes back down as you scroll out
   }
   const cp = Math.cos(p), sp = Math.sin(p);
   // how much the camera looks down from above (the soup can whiten with it)
-  const white = .6 * smooth(0, P_MAX, tilted);
-  cam = { in: s < S_IN, inside: rise, rise, white, x: pos[0], y: pos[1], z: pos[2], f: [sa * cp, -sp, ca * cp], rt: [ca, 0, -sa], up: [sa * sp, cp, ca * sp],
+  const white = s < S_IN ? 0 : .6 * smooth(0, P_MAX, tilted);
+  cam = { in: s < S_IN, inside: rise, rise, balls, white, x: pos[0], y: pos[1], z: pos[2], f: [sa * cp, -sp, ca * cp], rt: [ca, 0, -sa], up: [sa * sp, cp, ca * sp],
     F: F * T, s, out: s >= S_IN, rail: s >= S_IN && s < S_RAIL };
   // the soup can be touched once it is mostly up
   cam.soup = smooth(.5, .9, rise);
@@ -74,12 +104,22 @@ function unproject(sx, sy, d) {
   return [0, 1, 2].map(i => [cam.x, cam.y, cam.z][i] + f[i] * d + rt[i] * lx + up[i] * ly);
 }
 // moving: everything eases towards the aim; asked for, it glides there more slowly
-function goTo(s, slow = false) { aim = clamp(s, 0, S_MAX); glide = slow; if (slow && reduce.matches) travel = aim; }
-function push(ds) { aim = clamp(aim + ds, 0, S_MAX); glide = false; }
+function goTo(s, slow = false) { opening = null; aim = clamp(s, S_BOT, S_MAX); glide = slow; if (slow && reduce.matches) travel = aim; }
+function push(ds) { opening = null; aim = clamp(aim + ds, S_BOT, S_MAX); glide = false; }
 function updateTravel(dt) {
   yaw += (yawAim - yaw) * (1 - Math.exp(-dt * 12));
   pitchAim = Math.max(pitchAim, pitchFloor(travel));
   pitch += (pitchAim - pitch) * (1 - Math.exp(-dt * 12));
+  if (travel > .05) dipAim = 0;                 // out of the soup: straight down again, so the way back in is too
+  dip += (dipAim - dip) * (1 - Math.exp(-dt * 12));
+  if (opening) {                                // rising off the floor, unless you scroll first
+    if (!inkReady) return;                      // it waits for the title to be there
+    const now = performance.now() / 1000; if (!opening.start) opening.start = now;
+    const t = now - opening.start - opening.hold;
+    travel = aim = lerp(S_BOT, 0, smooth(0, 1, t / opening.dur));
+    if (t >= opening.dur) opening = null;
+    return;
+  }
   const rate = glide ? 2.4 : 10;
   travel += (aim - travel) * (1 - Math.exp(-dt * rate));   // no cap: when you stop scrolling, it settles at once where you left it
   if (Math.abs(aim - travel) < 1e-4) { travel = aim; glide = false; }
@@ -106,7 +146,11 @@ addEventListener("gesturechange", e => {
 // touch: two fingers pinch, one finger orbits and tilts, as the mouse does. In the chamber a dot, with one finger or the
 // mouse, is picked up by the soup (soup.js) and dropped where you let go
 const pointers = new Map(), YAW_K = .0035;     // radians per px
-const tilt = dy => { if (onRail()) return; pitchAim = clamp(pitchAim + dy * YAW_K, P_MIN, P_MAX); };
+const tilt = dy => {
+  if (travel < .05) { dipAim = clamp(dipAim - dy * YAW_K, 0, DOWN); return; }   // in the soup: the head lifts towards level
+  if (onRail() || travel < S_IN) return;
+  pitchAim = clamp(pitchAim + dy * YAW_K, P_MIN, P_MAX);
+};
 let pinchD = 0, dragged = false, downAt = null, grabbing = false, orbit = null;
 const drop = () => { if (grabbing) { grabbing = false; soup().drop(); } };
 marks.addEventListener("pointerdown", e => {
@@ -168,18 +212,75 @@ V.dev.tab("camera", `
 const camIn = $("camera"), camVal = $("camVal");
 $("lens").addEventListener("input", () => { lensK = +$("lens").value; $("lensVal").textContent = lensK.toFixed(2); lens(); });
 $("home").addEventListener("click", () => goTo(0, true));
-camIn.max = S_MAX;
+camIn.max = S_MAX; camIn.min = S_BOT;
 camIn.addEventListener("input", () => { travel = aim = +camIn.value; glide = false; });
+// DEV: two numbers. Where the camera is on its way, the raw position the wheel moves (0 at the title on the soup's
+// floor, 1 at rest over the soup, 2 at the rim, 3.43 where it starts to swing out to the side), and where it
+// looks, its pitch: -90° straight down, 0° level, 90° straight up
+const camText = () => {
+  const deg = Math.round(Math.asin(Math.max(-1, Math.min(1, cam.f[1]))) * 180 / Math.PI);
+  return `${(travel - S_BOT).toFixed(2)} · ${deg === 0 ? 0 : deg}°`;
+};
 function showDev() {
-  const where = cam.rail ? "on the rail" : cam.out ? "outside" : cam.rise < 1 ? `coming in ${Math.round(cam.rise * 100)}%` : "in the chamber";
-  const far = Math.hypot(cam.x, cam.y - VOL.H, cam.z);   // from the eye to the summit, and the eye's height, in the mountain's units (it is 36 high)
-  camVal.textContent = `${travel.toFixed(2)} · tilt ${Math.round(pitch * 180 / Math.PI)}° · ${where} · ${Math.round(far)} from the summit, ${Math.round(cam.y)} high`;
+  camVal.textContent = camText();
   if (document.activeElement !== camIn) camIn.value = travel.toFixed(3);
 }
 
+// ================= the title, lying on the soup's floor =================
+// NOTIFICATION SOUP (index.html #title) is on the floor, TITLE_W wide, turning with you; seen from above, nearer or
+// further as the eye goes down or up. From a little way up it softens and fades, so at rest it is gone, and you can
+// always scroll down to it again
+const titleEl = document.querySelector("#title > span");
+// where the letters' ink is in the title's box, measured in its own font: the box has room for the letter spacing after
+// the last letter and the font's own ascent and descent, so its middle is not the ink's. Measured again once the fonts
+// are in (Mebar Display arrives later)
+let ink = null;
+const INK_LIFT = .22;
+function measureInk() {
+  if (!titleEl) return;
+  const cs = getComputedStyle(titleEl), x = document.createElement("canvas").getContext("2d");
+  x.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  // across, from the first letter's ink to the last's, in the box as laid out (with the letter spacing, which the canvas
+  // doesn't take, after every letter, the last one too); up and down, from the whole text's ink about its baseline
+  const t = (titleEl.querySelector(".t") || titleEl).textContent, m = x.measureText(t), m0 = x.measureText(t[0]), m1 = x.measureText(t[t.length - 1]);
+  const w = titleEl.offsetWidth, h = titleEl.offsetHeight, ls = parseFloat(cs.letterSpacing) || 0;
+  const left = -m0.actualBoundingBoxLeft, right = w - ls - (m1.width - m1.actualBoundingBoxRight);
+  const base = (h - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+  let top = base - m.actualBoundingBoxAscent;   // the ink's top: the title's, or the eyes' over it
+  const eyes = titleEl.querySelector(".eyes");
+  if (eyes) {
+    const es = getComputedStyle(eyes), gap = parseFloat(es.bottom) - h;   // bottom: 100% + gap
+    x.font = `${es.fontWeight} ${es.fontSize} ${es.fontFamily}`;
+    const v = x.measureText("V"), eb = (eyes.offsetHeight - (v.fontBoundingBoxAscent + v.fontBoundingBoxDescent)) / 2 + v.fontBoundingBoxAscent;
+    top = Math.min(top, -gap - eyes.offsetHeight + eb - v.actualBoundingBoxAscent);
+  }
+  // the middle of all the ink, eyes and letters, set a little above the middle (INK_LIFT of its own height): the eyes'
+  // weight on top and the screen's lower half taken by the composer make the true middle look low
+  const bottom = base + m.actualBoundingBoxDescent, cy = (top + bottom) / 2 + INK_LIFT * (bottom - top);
+  ink = { w: right - left || w, h: bottom - top, dx: w / 2 - (left + right) / 2, dy: h / 2 - cy };
+  if (eyes) eyes.style.left = `${(left + right) / 2}px`;   // the eyes over the letters' middle, not the box's
+}
+// it shows only once Mebar Display is in and measured, so it never lands in one place and jumps to another
+let inkReady = false;
+const fontsIn = () => { measureInk(); inkReady = true; };
+(document.fonts ? Promise.race([Promise.all([document.fonts.load('300 120px "Mebar Display"'), document.fonts.load('400 120px "Mebar Eyes"', "V")]).then(() => document.fonts.ready), new Promise(r => setTimeout(r, 3000))]) : Promise.resolve()).then(fontsIn);
+document.fonts?.addEventListener?.("loadingdone", () => { if (inkReady) measureInk(); });
+function placeTitle() {
+  if (!titleEl) return;
+  if (!ink) measureInk();
+  const a = cam.in ? project(0, FLOOR_Y, 0) : null, b = a && project(1, FLOOR_Y, 0), h = cam.y - FLOOR_Y;
+  const o = a && b && inkReady ? 1 - smooth(2.2, 4.8, h) : 0;
+  titleEl.style.opacity = o.toFixed(3);
+  if (o <= 0) return;
+  // TITLE_W is the ink's width; its middle on the floor's middle
+  const ppu = Math.hypot(b.x - a.x, b.y - a.y), k = ppu * TITLE_W / ink.w;
+  titleEl.style.transform = `translate(${a.x.toFixed(1)}px, ${a.y.toFixed(1)}px) rotate(${Math.atan2(b.y - a.y, b.x - a.x).toFixed(4)}rad) scale(${k.toFixed(4)}) translate(-50%, -50%) translate(${ink.dx.toFixed(2)}px, ${ink.dy.toFixed(2)}px)`;
+  const bl = 6 * smooth(1, 4.4, h);
+  titleEl.style.filter = bl > .2 ? `blur(${(bl / Math.max(k, .05)).toFixed(2)}px)` : "none";   // in screen px: the filter is scaled with it
+}
 V.camera = {
   get cam() { return cam; }, project, unproject, NEAR: .14, z0: Z0, goTo, lens, screen: () => ({ PX, PY }),
-  update(dt) { updateTravel(dt); camera(); },
+  update(dt) { updateTravel(dt); camera(); placeTitle(); },
   dragging: () => !!(orbit && dragged), showDev,
 };
 })();

@@ -2,7 +2,7 @@
 
 Live: https://volcan-raya.github.io/ (opens rai's 1.03, v13)
 
-- `rai/`: Rai's volcano, every version. `v09/` is 1.00 ecal, `v11/` is 1.01 ecal, `v12/` 1.02 and `v13/` 1.03 ecal (the same branch, going on), `v10/` is 2.00 blender, `v14/` is 3.00, only text and flat (1.03 and 3.00 share `shared/soup.js`), `v06`–`v08` and `_v/` the earlier ones.
+- `rai/`: Rai's volcano, every version. `v09/` is 1.00 ecal, `v11/` is 1.01 ecal, `v12/` 1.02 and `v13/` 1.03 ecal (the same branch, going on), `v10/` is 2.00 blender, `v14/` is 3.00 and `v15/` 3.01, only text and flat (1.03 and the 3.x share `shared/soup.js`), `v06`–`v08` and `_v/` the earlier ones.
 - `aya/`: Aya's iterations.
 - `nav.js`, `site.js`: the bar on top of every page.
 

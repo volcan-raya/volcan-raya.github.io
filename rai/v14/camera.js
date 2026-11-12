@@ -65,7 +65,8 @@ document.body.insertAdjacentHTML("beforeend", `
 // the propositions for the way out, to choose from: each one takes you out. [glyph, kind (emo, sign, word), what it says]
 const OUTS = [
   ["💥", "emo", "burst out"], ["⏏", "sign", "eject"], ["↑", "sign", "up"], ["OUT", "word", "out"],
-  ["⏏", "sign tri", "eject, only its triangle"],
+  // e: the eject's triangle alone, as large as the whole ⏏ (its triangle and bar: 24 × 19 px of ink at 32 px)
+  ['<svg width="24" height="19" viewBox="0 0 24 19"><path d="M12 0 24 19H0z" fill="currentColor"/></svg>', "sign tri", "eject, only its triangle, as large as the whole"],
 ];
 const goIn = $("goIn"), goOut = $("goOut");
 goOut.innerHTML = OUTS.map(([g, k, say], i) =>

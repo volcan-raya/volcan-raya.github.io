@@ -198,7 +198,14 @@
       </ol>
     </aside>`;
 
+  // a phone, on a project that says so (projects.json "phone": first numbers of its branches): the bar is one thin line,
+  // a link to the newest version of each of those branches, and dev; nothing else
+  const phoneLinks = (project && project.phone || []).map((major) => {
+    let i = -1; vs.forEach((v, k) => { if (v.release && v.release.split(".")[0] === String(major)) i = k; });
+    return i < 0 ? "" : `<a class="btn${i === cur ? " on" : ""}" href="${vHref(vs[i])}"${i === cur ? ' aria-current="true"' : ""}>${esc(vNameOf(i, vs[i]).split(" ")[0])}</a>`;
+  }).join("");
   const host = document.createElement("div");
+  host.toggleAttribute("data-phone", !!phoneLinks);
   host.setAttribute("data-cabz-nav", "");
   host.toggleAttribute("data-home", document.body.classList.contains("home"));
   host.toggleAttribute("data-fork", fork);
@@ -227,8 +234,11 @@
   .bar { height: var(--bar-h, 32px); align-items: center; background: transparent;
     border-bottom: 1px solid var(--nfg); }
 
-  /* columns 1–3: where you are · 4–6: the versions, always from column 4, whatever the title's length · 7–8: tools */
-  .crumbs { grid-column: 1 / 4; display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; }
+  /* columns 1–3: index, where you are, and ‹ › to the projects either side · 4–6: the versions, always from column 4,
+     whatever the title's length · 7–8: latest (on an older version), the river, and dev at the far right */
+  .left { grid-column: 1 / 4; display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .left > .menu, .left > .steps { flex: none; }
+  .crumbs { flex: 0 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; }
   .crumbs > i, .pg i { font-style: normal; opacity: 1; }
   /* raíz is set like everything else in the bar: the trail, index and the index's headings share one type */
   .brand { font: inherit; letter-spacing: inherit; }
@@ -259,7 +269,9 @@
   .dot:focus-visible { outline: 1px solid var(--nfg); outline-offset: 3px; }
   .dot.cur { background: var(--nfg); }
   .info { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 1; }
-  .dev { flex: none; }
+  /* where the bar is short the title gives way (an ellipsis), never index or the arrows: the page you are on first */
+  .crumbs > a, .crumbs > span { flex: 0 0 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .crumbs > .here, .crumbs > .pg { flex-shrink: 1; }
   .dev[hidden] { display: none; }
   .info b { font-weight: 400; }
   .latest, .warn { color: var(--nfg); white-space: nowrap; }
@@ -347,7 +359,7 @@
   .gridlines[hidden] { display: none; }
   .gridlines i { display: block; height: 100%; background: color-mix(in srgb, var(--c-sun, #ff4500) 14%, transparent); }
   @media (max-width: 600px) {
-    .crumbs { grid-column: 1 / 5; }
+    .left { grid-column: 1 / 5; gap: 8px; }
     .vg { grid-column: 5 / 7; gap: 8px; }
     .design { grid-column: 1 / -1; }
     .design .k { grid-column: 1 / 3; }
@@ -361,25 +373,38 @@
     .panel .t { grid-column: 5 / -1; }
   }
   @media (max-width: 600px) and (min-width: 0) { .tools { gap: 4px; } .btn { padding: 4px 6px; } }
+  /* a phone: the trail keeps raíz and where you are, so the title and dev fit */
+  @media (max-width: 600px) { .crumbs > a.c:not(.home):not(.here), .crumbs > i:has(+ a.c:not(.home):not(.here)) { display: none; } }
+  .ph { display: none; }
+  @media (max-width: 600px) {
+    :host([data-phone]) { --bar-h: 32px !important; }
+    :host([data-phone]) .bar { display: flex; align-items: center; justify-content: space-between; }
+    :host([data-phone]) .left, :host([data-phone]) .vg, :host([data-phone]) .latest, :host([data-phone]) .grid-btn { display: none; }
+    :host([data-phone]) .ph { display: flex; gap: 8px; }
+    .ph .on { background: var(--nfg); color: var(--nbg); }
+  }
   @media (prefers-reduced-motion: reduce) { .dot { transition: none; } }
 </style>
 <div class="wrap${past ? " past" : ""}">
   <nav class="bar cols" aria-label="${BRAND}">
-    <div class="crumbs">${crumbs.join("")}</div>
-    <div class="vg">${vs.length > 1 ? `
-      <ol class="v" aria-label="versions">${vs.slice(0, trunk).map((v, i) => `<li>${vDot(v, i)}</li>`).join("")}${fork ? forkLanes : ""}</ol>
-      <span class="info" aria-hidden="true">${vLabel(cur)}</span>
-      ${past ? `<a class="latest" href="${vHref(vs[vs.length - 1])}">latest →</a>` : ""}` : ""}
-      <button class="btn dev" type="button" aria-pressed="false" hidden>dev</button>
-      ${local ? `<span class="warn" title="pages that load data need a local server: double-click open-locally.command">local file</span>` : ""}
-    </div>
-    <div class="tools">
+    ${phoneLinks ? `<div class="ph" aria-label="versions">${phoneLinks}</div>` : ""}
+    <div class="left">
+      <button class="btn menu" type="button" aria-expanded="false" aria-controls="panel">index</button>
+      <div class="crumbs">${crumbs.join("")}</div>
       ${prev ? `<span class="steps">
         <a class="step" href="${pHref(prev)}" data-name="‹ ${esc(prev.name)}" aria-label="previous: ${esc(prev.name)}">‹</a>
         <a class="step" href="${pHref(next)}" data-name="${esc(next.name)} ›" aria-label="next: ${esc(next.name)}">›</a>
         <span class="step-name" aria-hidden="true" hidden></span></span>` : ""}
+    </div>
+    <div class="vg">${vs.length > 1 ? `
+      <ol class="v" aria-label="versions">${vs.slice(0, trunk).map((v, i) => `<li>${vDot(v, i)}</li>`).join("")}${fork ? forkLanes : ""}</ol>
+      <span class="info" aria-hidden="true">${vLabel(cur)}</span>` : ""}
+      ${local ? `<span class="warn" title="pages that load data need a local server: double-click open-locally.command">local file</span>` : ""}
+    </div>
+    <div class="tools">
+      ${vs.length > 1 && past ? `<a class="latest" href="${vHref(vs[vs.length - 1])}">latest →</a>` : ""}
       <button class="btn grid-btn" type="button" aria-pressed="false" aria-label="switch to river navigation (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path/><path/><path/><path/></svg></button>
-      <button class="btn menu" type="button" aria-expanded="false" aria-controls="panel">index</button>
+      <button class="btn dev" type="button" aria-pressed="false" hidden>dev</button>
     </div>
   </nav>
   <div class="panel cols" id="panel" hidden><div class="projects">${panel}</div>${designColumn}</div>
@@ -443,6 +468,7 @@
   if (off === true || (Array.isArray(off) && off.includes(page))) {
     const st = document.createElement("style");
     st.textContent = `html{height:100%;padding-top:${barH}px!important;box-sizing:border-box!important}` +
+      (phoneLinks ? "@media (max-width:600px){html{padding-top:32px!important}}" : "") +
       "body{height:100%!important;min-height:0!important;transform:translateZ(0)}";
     document.head.appendChild(st);
   }
@@ -461,7 +487,7 @@
   menu.addEventListener("click", () => setMenu(!isOpen()));
 
   // dev options: a project marks its own with data-dev (any element; on <body> when they only exist in
-  // its script). Then the bar shows "dev" after the version, which shows and hides them; the page hears
+  // its script). Then the bar shows "dev" at its right end, which shows and hides them; the page hears
   // it as the cabz-dev class on <html> and a cabz:dev event ({ detail: { on } }). Remembered per project.
   const devBtn = sh.querySelector(".dev");
   // an older version can't carry data-dev itself: projects.json lists its dev-only parts ("dev": {"v04": ["#gauge"]})

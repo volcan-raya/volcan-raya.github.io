@@ -166,10 +166,14 @@ $("lens").addEventListener("input", () => { lensK = +$("lens").value; $("lensVal
 $("home").addEventListener("click", () => goTo(0, true));
 camIn.max = S_MAX;
 camIn.addEventListener("input", () => { travel = aim = +camIn.value; glide = false; });
+// DEV: two numbers. Where the camera is on its way, the raw position the wheel moves (0 in the soup, at rest), and where it
+// looks, its pitch: -90° straight down, 0° level, 90° straight up
+const camText = () => {
+  const deg = Math.round(Math.asin(Math.max(-1, Math.min(1, cam.f[1]))) * 180 / Math.PI);
+  return `${(travel).toFixed(2)} · ${deg === 0 ? 0 : deg}°`;
+};
 function showDev() {
-  const where = cam.rail ? "on the rail" : cam.out ? "outside" : cam.rise < 1 ? `coming in ${Math.round(cam.rise * 100)}%` : "in the chamber";
-  const far = Math.hypot(cam.x, cam.y - VOL.H, cam.z);   // from the eye to the summit, and the eye's height, in the mountain's units (it is 36 high)
-  camVal.textContent = `${travel.toFixed(2)} · tilt ${Math.round(pitch * 180 / Math.PI)}° · ${where} · ${Math.round(far)} from the summit, ${Math.round(cam.y)} high`;
+  camVal.textContent = camText();
   if (document.activeElement !== camIn) camIn.value = travel.toFixed(3);
 }
 

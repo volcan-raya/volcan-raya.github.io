@@ -123,6 +123,13 @@ function showWho() {
 let idFrom = null;
 function openId(from) {
   idFrom = from; idPanel.hidden = false;
+  // opened from a composer: in its own row, over it, the person's ball where it is: the Name field where Vent is (its
+  // word at the left, as Vent's), the arrow where the mic (or send) is, the same size and the same gaps
+  const bar = from && from.closest && from.closest("form"), fw = bar && bar.querySelector(".fieldwrap"), last = bar && [...bar.querySelectorAll(".round")].filter(e => !e.hidden).pop();
+  if (fw && last) {
+    const a = fw.getBoundingClientRect(), z = last.getBoundingClientRect();
+    Object.assign(idPanel.style, { left: a.left + "px", right: "auto", width: z.right - a.left + "px", bottom: innerHeight - z.bottom + "px" });
+  } else idPanel.removeAttribute("style");
   document.querySelectorAll(".you").forEach(b => b.setAttribute("aria-expanded", "true"));
   nm.value = me.name; updatePreview(); nm.focus({ preventScroll: true });
 }

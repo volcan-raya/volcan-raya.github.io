@@ -40,54 +40,55 @@ button, input, select { font: inherit; color: inherit; }
 /* the badges are drawn; these buttons only carry them for the keyboard and screen readers (the ring is drawn too) */
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-/* the title, on opening: large in the middle, then it is drawn away from us, straight back along the depth (a perspective
-   translateZ, so it shrinks as a thing moving off would), slowly at first and faster as it goes. As it gets small it goes
-   out of focus and fades, quickly: the blur is on the h1, which does not move, so it is a blur on the screen and does not
-   shrink with the words. The balls (../shared/soup.js, INTRO) come in from our side at the same time and stop at their own
-   depths, in front of it. It is gone, 3.4 s in, as the first balls come to rest (INTRO.dur there). It stays in the page for screen readers. Over everything but the panels, never in the way of a click */
-#title { position: fixed; z-index: 5; inset: 0; margin: 0; display: grid; place-items: center; pointer-events: none; overflow: hidden;
-  color: #000; font: 300 clamp(40px, 11vw, 220px)/1 "Mebar Display", var(--type); letter-spacing: .02em; text-align: center;   /* in Mebar Display (../shared/mebar.css) at its own weight, no outline; T and U, which it does not draw, in the light sans */
-  animation: outOfFocus 2.8s linear .6s forwards; }
-#title span { display: block; transform-origin: 50% 50%; animation: suckedOut 2.8s cubic-bezier(.55, 0, .85, .35) .6s forwards; will-change: transform; }
-@keyframes suckedOut {
-  from { transform: perspective(600px) translateZ(0); }
-  to   { transform: perspective(600px) translateZ(-30000px); }
-}
-@keyframes outOfFocus {
-  0%, 30% { filter: blur(0); opacity: 1; }
-  65%     { filter: blur(3px); opacity: .8; }
-  100%    { filter: blur(7px); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) { #title, #title span { animation: none; } #title { animation: fadeAway 2s ease 1.2s forwards; } }
-@keyframes fadeAway { to { opacity: 0; } }
+/* the title lies on the soup's floor, under the balls (camera.js, placeTitle, places it every frame): the page opens on
+   it, close, and the eye rises off it to rest, leaving it below, small, soft and gone; scroll down and it is there.
+   Under the balls' canvas, over the soup's colour. It stays in the page for screen readers, never in the way of a click */
+#title { position: fixed; z-index: 0; left: 0; top: 0; margin: 0; pointer-events: none; white-space: nowrap;
+  color: #000; font: 300 120px/1 "Mebar Display", var(--type); letter-spacing: .02em; }   /* in Mebar Display (../shared/mebar.css) at its own weight, no outline; T and U, which it does not draw, in the light sans */
+#title > span { position: relative; display: inline-block; transform-origin: 0 0; will-change: transform, opacity; opacity: 0; }
+#title .t { font-weight: inherit; }
+/* the three eyes, Mebar's V, over the title: centred on its letters (camera.js sets left from them), a little above;
+   the two together are what is centred at 0 m */
+#title .eyes { position: absolute; bottom: calc(100% + .15em); left: 50%; transform: translateX(-50%); font: 400 1.2em/1 "Mebar Eyes"; letter-spacing: 0; font-style: normal; }
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */
-#dev { position: fixed; z-index: 9; top: 12px; right: calc(10px + env(safe-area-inset-right, 0px)); width: min(300px, calc(100% - 20px)); box-sizing: border-box;
-  max-height: calc(100% - 50px); overflow: auto; padding: 14px; border: 1px solid rgba(176, 38, 255, .55); border-radius: 14px; background: rgba(10, 10, 12, .9);
+#dev { position: fixed; z-index: 9; top: 12px; right: calc(var(--grid-margin, 24px) + env(safe-area-inset-right, 0px)); width: min(300px, calc(100% - 2 * var(--grid-margin, 24px)));   /* its right edge on the site's margin, as the bar's dev box */ box-sizing: border-box;
+  max-height: calc(100% - 50px); overflow: auto; padding: 14px; border: 1px solid #C16CFF; border-radius: 2px; background: rgb(5, 5, 6);
   font-size: 12px; display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: start; }
 #dev .full { grid-column: 1 / -1; }
 #dev .k { color: var(--dim); }
 #dev button.t { padding: 0; border: 0; background: none; color: #fff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .35); }
 #dev .seg { display: flex; gap: 14px; }
-#dev .seg button[aria-pressed="true"] { color: #B026FF; text-decoration-color: #B026FF; }
+#dev .seg button[aria-pressed="true"] { color: #C16CFF; text-decoration-color: #C16CFF; }
 #tube { position: relative; width: 12px; height: 150px; grid-row: span 3; cursor: ns-resize; touch-action: none; border: 1px solid rgba(255, 255, 255, .5);
   background: repeating-linear-gradient(to top, transparent 0 calc(10% - 1px), rgba(255, 255, 255, .16) calc(10% - 1px) 10%); }
 #tube:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
 #pFill { position: absolute; left: 2px; right: 2px; bottom: 2px; height: 0; background: linear-gradient(to top, #5a0a05, #ff3b30 60%, #ffb3a8); }
 #pBoom { justify-self: start; padding: 6px 12px; border: 1px solid var(--red); border-radius: 999px; background: none; color: #ffb3a8; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
 #pBoom:disabled { opacity: .35; cursor: default; }
-#dev input[type=range] { width: 100%; margin: 0; accent-color: #B026FF; }
+#dev input[type=range] { width: 100%; margin: 0; accent-color: #C16CFF; }
 /* DEV in tabs (core.js), each file's rows in its own group; and one type, the title's mono, whatever the piece's */
 #dev, #dev button, #dev input, #dev select { font-family: "DM Mono", ui-monospace, Menlo, monospace; }
 #dev .devGroup { display: contents; }
 #dev .devTabs { position: sticky; top: -14px; z-index: 1; margin: -14px -14px 2px; padding: 10px 10px 0; display: flex; gap: 0;
-  background: rgb(10, 10, 12); border-bottom: 1px solid rgba(255, 255, 255, .12); }
+  background: rgb(5, 5, 6); border-bottom: 1px solid rgba(193, 108, 255, .35); }
 #dev .devTabs button { flex: 1 1 auto; padding: 6px 2px 8px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none;
   color: var(--dim); font-size: 11.5px; cursor: pointer; }
-#dev .devTabs button[aria-selected="true"] { color: #B026FF; border-bottom-color: #B026FF; }
-#dev .devTabs button:focus-visible { outline: 1px solid #B026FF; outline-offset: -2px; }
+#dev .devTabs button[aria-selected="true"] { color: #C16CFF; border-bottom-color: #C16CFF; }
+#dev .devTabs button:focus-visible { outline: 1px solid #C16CFF; outline-offset: -2px; }
+/* the opening title never makes the page wider than the screen (on a phone it would zoom the whole page out) */
+#title { right: 0; bottom: 0; overflow: hidden; }
+/* DEV on a phone: only "erupt", on its own at the top right, whatever tab is open; the rest of the panel is not there */
+@media (max-width: 600px) {
+  #dev { visibility: hidden; pointer-events: none; }
+  #dev .devGroup:has(#pBoom)[hidden] { display: contents !important; }
+  #dev #pBoom { visibility: visible; pointer-events: auto; position: fixed; z-index: 9; top: 12px; right: calc(12px + env(safe-area-inset-right, 0px));
+    background: #000; border-color: #000; color: #fff; padding: 8px 14px; }
+  #dev #pBoom:disabled { opacity: .45; }
+}
 </style>
 <link rel="stylesheet" href="../shared/soup.css">
+<link rel="preload" href="../shared/fonts/mebar-display-regular.otf" as="font" type="font/otf" crossorigin>
 <link rel="stylesheet" href="../shared/mebar.css">
 
 <div id="view">
@@ -95,7 +96,7 @@ button, input, select { font: inherit; color: inherit; }
   <canvas id="marks" role="img" aria-label="the notes, red dots inside the volcano; pull back to see the volcano"></canvas>
 </div>
 
-<h1 id="title"><span>NOTIFICATION SOUP</span></h1>
+<h1 id="title"><span><b class="t">NOTIFICATION SOUP</b><i class="eyes" aria-hidden="true">V</i></span></h1>
 
 <aside id="dev" aria-label="DEV" data-dev data-ui hidden></aside>
 

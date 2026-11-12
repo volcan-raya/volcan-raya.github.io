@@ -134,6 +134,13 @@ function showWho() {
 let idFrom = null;
 function openId(from) {
   idFrom = from; idPanel.hidden = false;
+  // opened from a composer: in its own row, over it, the person's ball where it is: the Name field where Vent is (its
+  // word at the left, as Vent's), the arrow where the mic (or send) is, the same size and the same gaps
+  const bar = from && from.closest && from.closest("form"), fw = bar && bar.querySelector(".fieldwrap"), last = bar && [...bar.querySelectorAll(".round")].filter(e => !e.hidden).pop();
+  if (fw && last) {
+    const a = fw.getBoundingClientRect(), z = last.getBoundingClientRect();
+    Object.assign(idPanel.style, { left: a.left + "px", right: "auto", width: z.right - a.left + "px", bottom: innerHeight - z.bottom + "px" });
+  } else idPanel.removeAttribute("style");
   document.querySelectorAll(".you").forEach(b => b.setAttribute("aria-expanded", "true"));
   nm.value = me.name; updatePreview(); nm.focus({ preventScroll: true });
 }
@@ -257,7 +264,9 @@ function placeHome(b) {                        // the same place on every visit,
   // spread as wide as the view is from where you start, so they fill it at every depth, but always inside the chamber
   const hw = Math.min(.3 + Math.abs(z - CH.z0) * .62, Math.max(.3, Math.sqrt(Math.max(0, CH.Rc ** 2 - z * z)) * .9));
   const hh = Math.min(hw * .6, 1.2);
-  b.hx = (r() * 2 - 1) * hw; b.hy = CH.eye + (r() * 1.8 - .8) * hh; b.hz = z;
+  // 1.03 looks straight down on the soup, from above it (camera.js): the same layout turned a quarter, its depth going
+  // down from the eye and its height on the screen lying along z
+  b.hx = (r() * 2 - 1) * hw; b.hy = CH.eye - z; b.hz = (r() * 1.8 - .8) * hh;
 }
 function makeBadge(s) {
   const btn = document.createElement("button"); btn.type = "button"; btn.setAttribute("role", "listitem");
@@ -286,7 +295,9 @@ function setCount(b) {
   if (!b.shown) { b.readT = b.read ? 1 : 0; b.shown = true; }   // already read last time: black at once
 }
 // where you dropped a badge in the soup (this browser only): its home from then on
-let placed = store.get("volcano-v09-placed", {}) || {};
+// (1.03 keeps its own since the soup is seen from above: the old places were for a soup seen from the side)
+const PLACED_KEY = FLAT ? "volcano-v09-placed" : "volcano-v13-placed-top";
+let placed = store.get(PLACED_KEY, {}) || {};
 function syncBadges(freshId) {
   const byId = new Map(sentences.map(s => [s.id, s]));
   for (const [id, b] of badges) if (!b.parent && !byId.has(id)) { b.btn.remove(); badges.delete(id); }
@@ -318,7 +329,7 @@ function markRead(b) { readMap[b.s.id] = Math.max(1, readMap[b.s.id] || 0); stor
 // slow, wide drift round its home and a gentle bob, as if suspended in something thick
 const driftOf = (b, t, calm) => FLAT ? [(Math.sin(t * .035 * b.sp + b.ph) * .05 + Math.sin(t * .011 + b.ph * 2) * .02) * calm,   // flat: smaller, on the screen
   (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .04 + Math.sin(t * .9 * b.sp + b.ph) * .006) * calm, 0] : [(Math.sin(t * .035 * b.sp + b.ph) * .2 + Math.sin(t * .011 + b.ph * 2) * .08) * calm,
-  (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .1 + Math.sin(t * .9 * b.sp + b.ph) * .01) * calm, Math.sin(t * .021 * b.sp + b.ph * 2.2) * .3 * calm];
+  Math.sin(t * .021 * b.sp + b.ph * 2.2) * .3 * calm, (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .1 + Math.sin(t * .9 * b.sp + b.ph) * .01) * calm];   // seen from above: the bob in depth is up and down
 function updateBadges(dt, t) {
   const calm = reduce.matches ? .5 : 1, exy = 1 - Math.exp(-dt / 1.1), ez = 1 - Math.exp(-dt / 1.6);
   for (const b of badges.values()) {
@@ -359,7 +370,7 @@ const NEAR = C.NEAR;
 // just as the title is gone (#title, 2.8 s from 0.6 s): change one, change the other
 const INTRO = { t0: performance.now() + 600, dur: 3500, spread: 1600, f: 600, S: 14 };   // S: how much larger than its place a ball starts
 function introOf(b, now) {
-  if (reduce.matches) return null;
+  if (reduce.matches || !FLAT) return null;   // 1.03: the camera itself rises off the soup's floor through them (camera.js)
   const u = (now - INTRO.t0 - (b.ph / (Math.PI * 2)) * INTRO.spread) / INTRO.dur;
   if (u >= 1) return null;
   const e = u <= 0 ? 0 : 1 - Math.pow(1 - u, 3);   // out: it slows as it comes into place
@@ -374,9 +385,9 @@ function projectBadges() {
   for (const b of badges.values()) {
     const p = C.project(b.x, b.y, b.z);
     if (!p || p.d < NEAR) continue;
-    let R = BR * p.k * (b.parent ? sat.size / 100 : 1), sx = p.x, sy = p.y, a = 1;
+    let R = BR * p.k * (b.parent ? sat.size / 100 : 1), sx = p.x, sy = p.y, a = cam.balls ?? 1;
     const io = introOf(b, now);
-    if (io) { sx = W / 2 + (sx - W / 2) * io.s; sy = H / 2 + (sy - H / 2) * io.s; R *= io.s; a = io.a; }
+    if (io) { sx = W / 2 + (sx - W / 2) * io.s; sy = H / 2 + (sy - H / 2) * io.s; R *= io.s; a *= io.a; }
     if (sx + R < -40 || sx - R > W + 40 || sy + R < -40 || sy - R > H + 40) continue;
     b.sx = sx; b.sy = sy; b.R = R; b.d = p.d; b.seen = cam.inside * a;
     vis.push(b);
@@ -442,9 +453,23 @@ function drawLinks(x) {
 function drawInside(x) {
   const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W } = V.size(); lastDraw = now;
   drawLinks(x);
-  for (const b of vis) volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: b === hovered ? now / 1000 - b.sigT0 : null, dt, imgSrc, count: false });
+  // the further a ball is, the softer: in focus up close, a little blurred with depth (1.03, seen down into the soup;
+  // flat 3.00 has no depth). Up to BLUR px, from FOCUS on, full at FOCUS + 4 of the soup's units
+  for (const b of vis) {
+    const bl = FLAT ? 0 : BLUR * smooth(FOCUS, FOCUS + 4, b.d);
+    x.filter = bl > .3 ? `blur(${bl.toFixed(1)}px)` : "none";
+    drawBall(x, b, now, dt, TYPE);
+  }
+  x.filter = "none";
   x.globalAlpha = 1;
   // what it is, next to the one the keyboard is on
+  drawFocusLabel(x, W, TYPE);
+}
+const BLUR = 1.5, FOCUS = 1.6;
+function drawBall(x, b, now, dt, TYPE) {
+  volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: b === hovered ? now / 1000 - b.sigT0 : null, dt, imgSrc, count: false });
+}
+function drawFocusLabel(x, W, TYPE) {
   const pk = [...badges.values()].find(b => b.focus);
   if (pk && vis.includes(pk) && pk.seen > .5) {
     x.font = `400 13px ${TYPE}`; x.textBaseline = "middle"; x.fillStyle = "#fff";
@@ -463,7 +488,7 @@ function drop() {
   const b = g.b; b.hold = hovered === b || b.focus;
   if (!g.on || b.parent) return;              // a reply goes back to its orbit
   const [dx, dy, dz] = driftOf(b, performance.now() / 1000, reduce.matches ? .5 : 1);
-  placed[b.s.id] = [b.x, b.y, b.z]; store.set("volcano-v09-placed", placed);   // its home on the next visits
+  placed[b.s.id] = [b.x, b.y, b.z]; store.set(PLACED_KEY, placed);   // its home on the next visits
   b.hx = b.x - dx; b.hy = b.y - dy; b.hz = b.z - dz;   // and now, so it drifts on from where it was dropped
 }
 function pointerDown(px, py) {

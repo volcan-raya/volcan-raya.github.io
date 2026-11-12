@@ -189,11 +189,27 @@ window.CABZ = {
        "live": true,
        "href": "rai/v14/",
        "release": "3.00"
+      },
+      {
+       "id": "v15",
+       "label": "v15",
+       "date": "2026-11-12T14:29:23+01:00",
+       "msg": "notification soup",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "rai/v15/",
+       "release": "3.01"
       }
      ],
      "cross": "ex",
      "cursor": "normal",
-     "offset": true
+     "offset": true,
+     "phone": [
+      "1",
+      "3"
+     ]
     },
     {
      "id": "aya",
