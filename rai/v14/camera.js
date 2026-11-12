@@ -1,5 +1,5 @@
 // 3.00: no camera, no 3D. One number, s, says where you are: 0 in the soup, 1 outside, looking at the volcano (an emoji,
-// 🌋). Going in is a click on it: the emoji grows round a point low in it, in the middle of the screen, until it fills the screen, and the soup's
+// 🌋). Going in is a click on it: the emoji grows round a point low in it, low on the screen, until it fills the screen, and the soup's
 // orange is that same orange. Coming out is any of the propositions in a row at the top of the soup: the same zoom, backwards, on the one axis. Nothing scrolls.
 // The soup is flat: a ball is a point on the screen, all of them the same size. What the files say to each other is in core.js.
 (() => {
@@ -7,12 +7,12 @@
 const { clamp, lerp, smooth, $, reduce } = V;
 
 // the volcano on the screen: its emoji's middle and size, and its crater, where the words leave from. Set in DEV (volcano)
-const look = { size: 44, craterY: .12, pivotY: .22, ...(V.store.get("volcano-v14-look2", {}) || {}) };   // size: % of the screen's short side; craterY: above the middle, in emoji sizes; pivotY: where the zoom goes in, below the middle, in emoji sizes
+const look = { size: 44, craterY: .12, pivotY: .22, atY: .7, ...(V.store.get("volcano-v14-look2", {}) || {}) };   // size: % of the screen's short side; craterY: above the middle, in emoji sizes; pivotY: where the zoom goes in, below the middle, in emoji sizes; atY: where that point is on the screen, from the top
 let W = 1, H = 1, E = 100, CX = 0, CY = 0;
 function lens() {
   ({ W, H } = V.size());
   E = Math.min(W, H) * look.size / 100;
-  CX = W / 2; CY = H / 2 - E * look.pivotY;      // the volcano placed so the point the zoom goes in at is the screen's middle
+  CX = W / 2; CY = H * look.atY - E * look.pivotY;   // the volcano placed so the point the zoom goes in at is low on the screen, the volcano weighing down
 }
 const crater = () => [CX, CY - E * look.craterY];
 const pivot = () => [CX, CY + E * look.pivotY];     // low in the volcano, where the soup is: the zoom grows round it
@@ -29,7 +29,7 @@ function update(dt) {
   const t = 1 - s, e = t < .5 ? 4 * t * t * t : 1 - 4 * (1 - t) ** 3;   // 0 outside … 1 in: slow to start, fast through the middle
   const zoom = Math.exp(Math.log(ZMAX) * e);
   const [kx, ky] = pivot();
-  // one axis only: the emoji grows and shrinks round the middle of the screen, low in the volcano; nothing else moves
+  // one axis only: the emoji grows and shrinks round one point, low in the volcano and low on the screen; nothing else moves
   const fx = kx, fy = ky;
   cam = {
     s, e, zoom, fx, fy, kx, ky,                    // the emoji, the words: scaled by zoom round (kx, ky), which is drawn at (fx, fy)
@@ -117,6 +117,7 @@ V.dev.tab("camera", `
   <label class="full"><span class="k">volcano size, % of the screen </span><span id="sizeV"></span><input type="range" id="vSize" min="10" max="70" step="1"></label>
   <label class="full"><span class="k">crater, above the middle </span><span id="craterV"></span><input type="range" id="vCrater" min="-.2" max=".5" step=".01"></label>
   <label class="full"><span class="k">zoom point, below the middle </span><span id="pivotV"></span><input type="range" id="vPivot" min="-.3" max=".45" step=".01"></label>
+  <label class="full"><span class="k">zoom point on the screen, from the top </span><span id="atV"></span><input type="range" id="vAt" min=".35" max=".85" step=".01"></label>
   <label class="full"><span class="k">ball, px </span><span id="ballV"></span><input type="range" id="vBall" min="8" max="80" step="1"></label>`);
 const camIn = $("camera");
 camIn.addEventListener("input", () => { s = aim = +camIn.value; });
@@ -124,12 +125,14 @@ function showLook() {
   $("vSize").value = look.size; $("sizeV").textContent = look.size + "%";
   $("vCrater").value = look.craterY; $("craterV").textContent = look.craterY.toFixed(2);
   $("vPivot").value = look.pivotY; $("pivotV").textContent = look.pivotY.toFixed(2);
+  $("vAt").value = look.atY; $("atV").textContent = Math.round(look.atY * 100) + "%";
   $("vBall").value = BALL(); $("ballV").textContent = BALL() + " px";
   V.store.set("volcano-v14-look2", look); lens();
 }
 $("vSize").addEventListener("input", e => { look.size = +e.target.value; showLook(); });
 $("vCrater").addEventListener("input", e => { look.craterY = +e.target.value; showLook(); });
 $("vPivot").addEventListener("input", e => { look.pivotY = +e.target.value; showLook(); });
+$("vAt").addEventListener("input", e => { look.atY = +e.target.value; showLook(); });
 $("vBall").addEventListener("input", e => { V.store.set("volcano-v14-ball", +e.target.value); showLook(); });
 function showDev() {
   $("camVal").textContent = s.toFixed(2) + (s >= 1 ? " · outside" : s <= 0 ? " · in the soup" : "");
