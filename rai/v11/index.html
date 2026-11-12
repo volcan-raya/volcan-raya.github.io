@@ -36,10 +36,7 @@ button, input, select { font: inherit; color: inherit; }
 /* the badges are drawn; these buttons only carry them for the keyboard and screen readers (the ring is drawn too) */
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-/* the title, top left, over everything but the panels. The type is the placeholder above */
-#title { position: fixed; z-index: 5; top: 12px; left: calc(16px + env(safe-area-inset-left, 0px)); right: 16px; margin: 0; pointer-events: none;
-  color: #000; font: 800 13px/1.5 var(--type); letter-spacing: .02em; }   /* the soup's own sans, bold */
-#title span { display: block; }
+/* the title is in the corner, bottom left, with how many are venting: ../shared/venting.js */
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */
 #dev { position: fixed; z-index: 9; top: 12px; right: calc(10px + env(safe-area-inset-right, 0px)); width: min(300px, calc(100% - 20px)); box-sizing: border-box;
@@ -74,11 +71,11 @@ button, input, select { font: inherit; color: inherit; }
   <canvas id="marks" role="img" aria-label="the notes, red dots inside the volcano; pull back to see the volcano"></canvas>
 </div>
 
-<h1 id="title">NOTIFICATION SOUP</h1>
 
 <aside id="dev" aria-label="DEV" data-dev data-ui hidden></aside>
 
 <script src="../shared/notification.js"></script>
+<script src="../shared/venting.js"></script>
 <script>window.playhtmlReady = new Promise(r => { window.__playhtmlResolve = r; });</script>
 <script type="module">
   // who is here at the same time is counted with playhtml (https://playhtml.fun): presence clears when a person leaves
