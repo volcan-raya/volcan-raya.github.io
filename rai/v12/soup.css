@@ -31,14 +31,21 @@
 #composer { position: fixed; z-index: 6; left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px));
   bottom: calc(10px + env(safe-area-inset-bottom, 0px)); max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; }
 
-/* name + secret code */
+/* a name, or anonymous: a field that says Name inside it, as the composer says Vent, no outline; a round red arrow
+   keeps it (or Enter); emptied and kept, you are anonymous again. No shadow under it: there are none elsewhere */
 #idPanel { position: fixed; z-index: 8; left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-  width: min(340px, calc(100% - 16px)); box-sizing: border-box; padding: 16px; border-radius: 20px; background: rgba(28, 28, 29, .97);
-  border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 16px 50px rgba(0, 0, 0, .5); display: flex; flex-direction: column; gap: 12px; }
-#idPanel p { margin: 0; font-size: 13px; line-height: 1.45; color: #aeaeb2; }
-#idPanel label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--dim); }
-#idPanel input, #idPanel select { height: 38px; box-sizing: border-box; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 12px; background: #000; font-size: 16px; }
-#preview { font-size: 13px; color: #fff; }
+  width: min(340px, calc(100% - 16px)); box-sizing: border-box; padding: 12px; border-radius: 26px; background: rgba(28, 28, 29, .97);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+/* the microphone's "under construction", over it, as the name panel is: no outline, no shadow */
+#soon { position: fixed; z-index: 8; max-width: min(300px, calc(100% - 16px)); box-sizing: border-box; padding: 12px 16px; border-radius: 20px;
+  background: rgba(28, 28, 29, .97); color: #fff; font-size: 14px; line-height: 1.4; pointer-events: none; }
+#idPanel form { align-self: stretch; display: flex; gap: 8px; margin: 0; }
+#idPanel input { flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 18px; border: 0; border-radius: 22px; background: #000; color: #fff; font-size: 16px; outline: none; }
+#idPanel input::placeholder { color: #7d7d82; }
+#keep { flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 22px; background: var(--red, #c81600); color: #fff; display: grid; place-items: center; cursor: pointer; }
+#keep svg { width: 22px; height: 22px; }
+#keep:disabled { opacity: .4; cursor: default; }
+#keep:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .7); outline-offset: 2px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .pill { padding: 8px 14px; border: 0; border-radius: 999px; background: #2c2c2e; font-size: 13px; cursor: pointer; }
 .pill.go { background: var(--red); color: #fff; }

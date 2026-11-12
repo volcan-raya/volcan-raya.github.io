@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>notification soup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&family=Inter+Tight:wght@300;400;500;600;800&family=Spectral:wght@400;500;600&display=swap">
+<style>
+/* v14 (3.00), a branch of its own, new: only text, and flat. The volcano is an emoji, 🌋, in the middle of the orange, and
+   the words leave its crater as in the drawing: smoke, black, out in a fan; lava, hot and blurred, out to the sides and
+   down. Pressure and eruption as in 1.03. It opens in the soup, orange all the way up. Nothing scrolls: a click on the
+   volcano goes in (it grows round its crater, on that one axis, until its lava is the soup's orange), and the way out is
+   at the top of the soup, still being chosen: a row of propositions, a to e, any of them takes you out. The soup is
+   1.03's, flat: every ball the same size, on the screen, no depth.
+   v13 (1.03), after v12: the hole stays black. No disc: the volcano's lines always on, red-orange (8 rings, 12 meridians,
+   0.75 px). The sky starts at what was 40% and is a gradient: only its upper part goes red-orange, so an eruption stays
+   readable. An eruption sends out 8 to 80 words (DEV), the notes repeated when there are fewer.
+   v12 (1.02), after v11: the volcano a big, pointed mountain, alone in the sky; the zoom stops before its foot shows.
+   v11 (1.01), after v09 (1.00): no grid; the volcano on a white disc floating in the sky, a flat black hole on top, and the
+   way in is 2.00's: over the summit and down the hole.
+   v09: the volcano stops being depicted. A white shape of four lines, on a flat white earth, in one field of sky; the sky carries the
+   energy, blue to red-orange as the pressure builds. Inside, one gradient, red-orange to white, and the notes as red
+   dots. The white is a skin one pixel thin, and past it you are straight in the orange: one cut, no easing. Looking down from above whitens the inside. You orbit, tilt and zoom; an eruption sends words away on wide waves.
+   Each post is one medium: an image, a text or a voice. The type is a placeholder (Inter Tight) for LL Unica77:
+   to change it, change FONTS in the script. DEV switches between it and a serif, Spectral.
+   The page is in files by subject, so two windows can work on it at once (see core.js): volcano.js, terrain.js,
+   camera.js and soup.js (+ soup.css) each hold one subject; core.js, field.js and this page are shared. */
+:root {
+  --red: #c81600;
+  --line: #f2f2f2;
+  --dim: #8e8e93;
+  --type: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: #050506; color: var(--line); font: 13px/1.4 var(--type); overflow: hidden; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+
+/* the scene: the field (soup, wall, or the volcano outside) and, over it, the badges. The tremor moves both, never the controls */
+#view { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+#field, #marks { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#marks { z-index: 1; }
+
+/* the badges are drawn; these buttons only carry them for the keyboard and screen readers (the ring is drawn too) */
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* the title, on opening: large in the middle, then it is drawn away from us, straight back along the depth (a perspective
+   translateZ, so it shrinks as a thing moving off would), slowly at first and faster as it goes. As it gets small it goes
+   out of focus and fades, quickly: the blur is on the h1, which does not move, so it is a blur on the screen and does not
+   shrink with the words. The balls (../shared/soup.js, INTRO) come in from our side at the same time and stop at their own
+   depths, in front of it. It is gone, 3.4 s in, as the first balls come to rest (INTRO.dur there). It stays in the page for screen readers. Over everything but the panels, never in the way of a click */
+#title { position: fixed; z-index: 5; inset: 0; margin: 0; display: grid; place-items: center; pointer-events: none; overflow: hidden;
+  color: #000; font: 300 clamp(40px, 11vw, 220px)/1 "Mebar Display", var(--type); letter-spacing: .02em; text-align: center;   /* in Mebar Display (../shared/mebar.css) at its own weight, no outline; T and U, which it does not draw, in the light sans */
+  animation: outOfFocus 2.8s linear .6s forwards; }
+#title span { display: block; transform-origin: 50% 50%; animation: suckedOut 2.8s cubic-bezier(.55, 0, .85, .35) .6s forwards; will-change: transform; }
+@keyframes suckedOut {
+  from { transform: perspective(600px) translateZ(0); }
+  to   { transform: perspective(600px) translateZ(-30000px); }
+}
+@keyframes outOfFocus {
+  0%, 30% { filter: blur(0); opacity: 1; }
+  65%     { filter: blur(3px); opacity: .8; }
+  100%    { filter: blur(7px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { #title, #title span { animation: none; } #title { animation: fadeAway 2s ease 1.2s forwards; } }
+@keyframes fadeAway { to { opacity: 0; } }
+
+/* DEV: the noisy tools, shown with the "dev" square in the site bar */
+#dev { position: fixed; z-index: 9; top: 12px; right: calc(10px + env(safe-area-inset-right, 0px)); width: min(300px, calc(100% - 20px)); box-sizing: border-box;
+  max-height: calc(100% - 50px); overflow: auto; padding: 14px; border: 1px solid rgba(176, 38, 255, .55); border-radius: 14px; background: rgba(10, 10, 12, .9);
+  font-size: 12px; display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: start; }
+#dev .full { grid-column: 1 / -1; }
+#dev .k { color: var(--dim); }
+#dev button.t { padding: 0; border: 0; background: none; color: #fff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .35); }
+#dev .seg { display: flex; gap: 14px; }
+#dev .seg button[aria-pressed="true"] { color: #B026FF; text-decoration-color: #B026FF; }
+#tube { position: relative; width: 12px; height: 150px; grid-row: span 3; cursor: ns-resize; touch-action: none; border: 1px solid rgba(255, 255, 255, .5);
+  background: repeating-linear-gradient(to top, transparent 0 calc(10% - 1px), rgba(255, 255, 255, .16) calc(10% - 1px) 10%); }
+#tube:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
+#pFill { position: absolute; left: 2px; right: 2px; bottom: 2px; height: 0; background: linear-gradient(to top, #5a0a05, #ff3b30 60%, #ffb3a8); }
+#pBoom { justify-self: start; padding: 6px 12px; border: 1px solid var(--red); border-radius: 999px; background: none; color: #ffb3a8; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+#pBoom:disabled { opacity: .35; cursor: default; }
+#dev input[type=range] { width: 100%; margin: 0; accent-color: #B026FF; }
+/* DEV in tabs (core.js), each file's rows in its own group; and one type, the title's mono, whatever the piece's */
+#dev, #dev button, #dev input, #dev select { font-family: "DM Mono", ui-monospace, Menlo, monospace; }
+#dev .devGroup { display: contents; }
+#dev .devTabs { position: sticky; top: -14px; z-index: 1; margin: -14px -14px 2px; padding: 10px 10px 0; display: flex; gap: 0;
+  background: rgb(10, 10, 12); border-bottom: 1px solid rgba(255, 255, 255, .12); }
+#dev .devTabs button { flex: 1 1 auto; padding: 6px 2px 8px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none;
+  color: var(--dim); font-size: 11.5px; cursor: pointer; }
+/* out of the soup: the propositions, in a row at the top, black on the orange; any of them takes you out */
+#goOut { position: fixed; z-index: 6; top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; align-items: flex-start; flex-wrap: wrap; justify-content: center;
+  animation: outIn .6s ease-out backwards; width: max-content; max-width: calc(100% - 20px); }
+#goOut button { flex: none; width: 56px; padding: 4px 0 0; border: 0; border-radius: 10px; background: none; color: #000; cursor: pointer;
+  display: grid; justify-items: center; gap: 2px; transition: transform .25s ease; }
+#goOut .g { height: 40px; display: grid; place-items: center; font: 400 32px/1 var(--type); }
+#goOut .g.emo { font-size: 30px; }
+#goOut .g.tri { clip-path: inset(0 0 17px 0); }   /* e: b without its bar, the same triangle where it was */
+#goOut .g.word { font: 800 13px/1 var(--type); letter-spacing: .06em; }
+#goOut .n { font: 400 10px/1 "DM Mono", ui-monospace, monospace; opacity: .55; }
+#goOut button:hover { transform: translateY(-3px); }
+#goOut button:hover .n { opacity: 1; }
+#goOut button:focus-visible { outline: 1.5px solid #000; outline-offset: -2px; }
+@keyframes outIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } }
+#dev .devTabs button[aria-selected="true"] { color: #B026FF; border-bottom-color: #B026FF; }
+#dev .devTabs button:focus-visible { outline: 1px solid #B026FF; outline-offset: -2px; }
+</style>
+<link rel="stylesheet" href="../shared/soup.css">
+<link rel="stylesheet" href="../shared/mebar.css">
+
+<div id="view">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <canvas id="marks" role="img" aria-label="a volcano, words leaving its crater; inside, the notes as red balls"></canvas>
+</div>
+
+<h1 id="title"><span>NOTIFICATION SOUP</span></h1>
+
+<aside id="dev" aria-label="DEV" data-dev data-ui hidden></aside>
+
+<script src="../shared/notification.js"></script>
+<script>window.playhtmlReady = new Promise(r => { window.__playhtmlResolve = r; });</script>
+<script type="module">
+  // who is here at the same time is counted with playhtml (https://playhtml.fun): presence clears when a person leaves
+  try {
+    const { playhtml } = await import("https://unpkg.com/playhtml@2.15.0");
+    await playhtml.init({ room: "langues" });   // a fixed room, so everyone meets whatever form of the address they typed
+    window.__playhtmlResolve(playhtml);
+  } catch (e) { console.warn("playhtml unavailable", e); window.__playhtmlResolve(null); }
+</script>
+<script src="core.js"></script>
+<script src="volcano.js"></script>
+<script src="camera.js"></script>
+<script src="../shared/soup.js" data-ver="v14" data-flat></script>
+<script src="field.js"></script>
+<script>V.start();</script>
+<script src="../../site.js" defer></script>
+<script src="../../nav.js" data-path="rai/v14/index.html" data-version="v14" defer></script>

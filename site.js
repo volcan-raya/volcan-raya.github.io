@@ -10,7 +10,7 @@ window.CABZ = {
      "id": "rai",
      "name": "la-voiex-du-volcan",
      "title": "la voiex du volcan",
-     "href": "rai/v12/",
+     "href": "rai/v13/",
      "versions": [
       {
        "id": "407efac",
@@ -165,6 +165,30 @@ window.CABZ = {
        "live": true,
        "href": "rai/v12/",
        "release": "1.02"
+      },
+      {
+       "id": "v13",
+       "label": "v13",
+       "date": "2026-11-12T09:39:12+01:00",
+       "msg": "notification soup",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "rai/v13/",
+       "release": "1.03"
+      },
+      {
+       "id": "v14",
+       "label": "v14",
+       "date": "2026-11-12T10:06:41+01:00",
+       "msg": "notification soup",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "rai/v14/",
+       "release": "3.00"
       }
      ],
      "cross": "ex",

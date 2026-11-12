@@ -11,7 +11,7 @@
   const S = window.CABZ;
   if (!me || !S) return;
 
-  const root = new URL(".", me.src).href;
+  const root = new URL(".", me.src).href, here = root;
   // projects marked "cursor": "normal" in projects.json keep the system cursor instead of the home page's
   const plainCursor = S.sections.some((s) => s.projects.some((p) => p.cursor === "normal" && (me.dataset.path || "").startsWith(p.id + "/")));
   if (plainCursor) {
@@ -21,8 +21,8 @@
     css.rel = "stylesheet"; css.href = root + "cursor.css";
     css.setAttribute("data-cabz-cursor", ""); document.head.append(css);
   }
-  if (!plainCursor && !window.cabzCursorStarted && !document.querySelector('script[src="' + root + 'cursor.js"]')) {
-    const script = document.createElement("script"); script.src = root + "cursor.js";
+  if (!plainCursor && !window.cabzCursorStarted && !document.querySelector('script[src="' + here + 'cursor.js"]')) {
+    const script = document.createElement("script"); script.src = here + "cursor.js";
     document.head.append(script);
   }
   const path = me.dataset.path || "index.html";
@@ -80,16 +80,29 @@
   const fork = firstRelease > 0;
   const trunk = fork ? firstRelease : vs.length;
   // one lane a branch: releases with the same first number (1.00, 1.01…) go on along it, left to right
-  const lanes = [];
+  // a new branch starts under the newest dot of the first lane at the time it was made (3.00 under 1.03), with no line
+  // leading to it: it doesn't come from what is before it. Where there is room, it goes on the row of the branch before
+  // it (3.00 after 2.00, with a gap), so the bar doesn't grow
+  const lanes = [], rows = [];
   vs.slice(trunk).forEach((v, i) => {
     const key = /^(\d+)\./.exec(v.release || "")?.[1] ?? v.release ?? v.id;
     let lane = lanes.find((l) => l.key === key);
-    if (!lane) lanes.push((lane = { key, dots: [] }));
+    if (!lane) {
+      lanes.push((lane = { key, dots: [], at: lanes.length ? lanes[0].dots.length - 1 : 0 }));
+      const last = rows[rows.length - 1], end = last && Math.max(...last.map((l) => l.at + l.dots.length - 1));
+      if (rows.length > 1 && lane.at > end + 1) last.push(lane); else rows.push([lane]);
+    }
     lane.dots.push(vDot(v, trunk + i));
   });
-  const forkH = lanes.length * 17 - 8, rowY = (i) => 4.5 + i * 17;
-  const forkPath = `M0 ${forkH / 2}H8M8 ${rowY(0)}V${rowY(lanes.length - 1)}` + lanes.map((_, i) => `M8 ${rowY(i)}H16`).join("");
-  const forkLanes = !fork ? "" : `<li class="fork"><svg viewBox="0 0 16 ${forkH}" style="height:${forkH}px" aria-hidden="true"><path d="${forkPath}"/></svg><span class="lanes">${lanes.map((l) => `<span class="lane">${l.dots.join("<i></i>")}</span>`).join("")}</span></li>`;
+  // the room before a branch: whole steps (a dot and its line, 25 px) up to its column, with no line in it
+  const rowHtml = (row) => row.map((l, k) => {
+    const prevEnd = k ? row[k - 1].at + row[k - 1].dots.length - 1 : -1;
+    const skip = k ? (l.at - prevEnd - 1) * 25 + 16 : l.at * 25;
+    return (skip > 0 ? `<b class="skip" style="width:${skip}px"></b>` : "") + l.dots.join("<i></i>");
+  }).join("");
+  const forkH = rows.length * 17 - 8, rowY = (i) => 4.5 + i * 17;
+  const forkPath = `M0 ${forkH / 2}H8M8 ${rowY(0)}V${rowY(rows.length - 1)}` + rows.map((_, i) => `M8 ${rowY(i)}H16`).join("");
+  const forkLanes = !fork ? "" : `<li class="fork"><svg viewBox="0 0 16 ${forkH}" style="height:${forkH}px" aria-hidden="true"><path d="${forkPath}"/></svg><span class="lanes">${rows.map((r) => `<span class="lane">${rowHtml(r)}</span>`).join("")}</span></li>`;
 
   // neighbours inside the section
   let prev, next;
@@ -189,6 +202,8 @@
   host.setAttribute("data-cabz-nav", "");
   host.toggleAttribute("data-home", document.body.classList.contains("home"));
   host.toggleAttribute("data-fork", fork);
+  const barH = !fork ? 32 : Math.max(48, 14 + rows.length * 17);   // a third row: the bar grows to hold it
+  if (barH > 48) host.style.setProperty("--bar-h", barH + "px");
   const sh = host.attachShadow({ mode: "open" });
   sh.innerHTML = `
 <style>
@@ -236,6 +251,7 @@
   .lanes { display: grid; row-gap: 8px; }
   .lane { display: flex; align-items: center; }
   .lane i { display: block; width: 16px; height: 1px; background: var(--nfg); }
+  .lane .skip { display: block; flex: none; }   /* room before a branch that starts later, no line in it */
   .dot { display: block; width: 9px; height: 9px; border: 1px solid var(--nfg); border-radius: 50%; }
   /* hovering a version: the current one's fill fades, its outline stays (the cursor's round is on the hovered one) */
   ol.v:has(.dot:hover) .dot.cur { background: color-mix(in srgb, var(--nfg) 35%, transparent); }
@@ -426,7 +442,7 @@
   const off = project && project.offset;
   if (off === true || (Array.isArray(off) && off.includes(page))) {
     const st = document.createElement("style");
-    st.textContent = `html{height:100%;padding-top:${fork ? 48 : 32}px!important;box-sizing:border-box!important}` +
+    st.textContent = `html{height:100%;padding-top:${barH}px!important;box-sizing:border-box!important}` +
       "body{height:100%!important;min-height:0!important;transform:translateZ(0)}";
     document.head.appendChild(st);
   }

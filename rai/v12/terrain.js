@@ -86,7 +86,7 @@ function setUniforms(gl, u, env) {
 }
 
 // ================= DEV: the lines (in the volcano's tab) =================
-V.dev.tab("volcano", `   // after the volcano's own rows: its lines, and the disc
+V.dev.tab("volcano", `
   <div class="full seg" role="group" aria-label="Terrain">
     <span class="k">terrain</span>
     <button class="t" type="button" data-on="ground" aria-pressed="false">the disc</button>

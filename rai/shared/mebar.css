@@ -1,0 +1,12 @@
+/* Mebar Display: the type of the soup's large messages, an opened note's words (soup.css), in capitals and black, in
+   1.03 (v13) and 3.00 (v14). Everything else keeps the page's own type (--type), the smoke and the lava outside too.
+   The font is unfinished: it draws the capitals A to S (its U and V are eyes, ornaments, not letters; T and W to Z,
+   small letters, figures, punctuation and accents are there but empty). unicode-range takes only A to S, so every other
+   character falls back to the page's type, set lighter (soup.css) so it doesn't stand out against Mebar's thin strokes,
+   instead of coming out blank or as an eye. When the font grows, widen the range */
+@font-face {
+  font-family: "Mebar Display";
+  src: url("fonts/mebar-display-regular.otf") format("opentype");
+  font-weight: 400; font-style: normal; font-display: swap;
+  unicode-range: U+0041-0053;                 /* A–S */
+}

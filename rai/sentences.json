@@ -10,7 +10,7 @@
         },
         {
             "id": "r001",
-            "s": "uf, qué rabia",
+            "s": "ugh, that's infuriating",
             "t": 1790889189083,
             "re": "n01",
             "name": "lu",
@@ -48,7 +48,7 @@
         },
         {
             "id": "r003",
-            "s": "te entiendo perfectamente",
+            "s": "I understand you completely",
             "t": 1790936120230,
             "re": "n02",
             "name": "ines",
@@ -94,7 +94,7 @@
         },
         {
             "id": "r005",
-            "s": "pareil pour moi, courage",
+            "s": "same here, hang in there",
             "t": 1790966614657,
             "re": "n03",
             "name": "mara",
@@ -140,7 +140,7 @@
         },
         {
             "id": "n07",
-            "s": "je déteste les lundis, et les mardis aussi",
+            "s": "I hate Mondays, and Tuesdays too",
             "t": 1791061883206,
             "name": "ines",
             "trip": "q9dz3s",
@@ -156,7 +156,7 @@
         },
         {
             "id": "r013",
-            "s": "te entiendo perfectamente",
+            "s": "I understand you completely",
             "t": 1791067622085,
             "re": "n05"
         },
@@ -191,7 +191,7 @@
         },
         {
             "id": "r021",
-            "s": "pareil pour moi, courage",
+            "s": "same here, hang in there",
             "t": 1791117863174,
             "re": "n08",
             "name": "mara",
@@ -206,7 +206,7 @@
         },
         {
             "id": "r017",
-            "s": "pareil pour moi, courage",
+            "s": "same here, hang in there",
             "t": 1791133034230,
             "re": "n07"
         },
@@ -236,7 +236,7 @@
         },
         {
             "id": "n10",
-            "s": "estoy harta de que me interrumpan cuando hablo",
+            "s": "I'm sick of being interrupted when I talk",
             "t": 1791171307059,
             "i": 0.76,
             "medium": "voice"
@@ -349,7 +349,7 @@
         },
         {
             "id": "n17",
-            "s": "j'en ai marre de faire semblant que tout va bien",
+            "s": "I'm fed up with pretending everything's fine",
             "t": 1791421831366,
             "name": "noé",
             "trip": "e2vbt6",
@@ -373,7 +373,7 @@
         },
         {
             "id": "r030",
-            "s": "uf, qué rabia",
+            "s": "ugh, that's infuriating",
             "t": 1791487099882,
             "re": "n17"
         },
@@ -427,7 +427,7 @@
         },
         {
             "id": "r036",
-            "s": "te entiendo perfectamente",
+            "s": "I understand you completely",
             "t": 1791647911615,
             "re": "n21",
             "name": "lu",
@@ -456,14 +456,14 @@
         },
         {
             "id": "n23",
-            "s": "me duele la espalda de tanto estar sentado frente a la pantalla",
+            "s": "my back hurts from sitting in front of the screen all day",
             "t": 1791696617218,
             "i": 0.69,
             "medium": "voice"
         },
         {
             "id": "r042",
-            "s": "te entiendo perfectamente",
+            "s": "I understand you completely",
             "t": 1791702003915,
             "re": "n23",
             "name": "noé",
@@ -471,7 +471,7 @@
         },
         {
             "id": "r041",
-            "s": "pareil pour moi, courage",
+            "s": "same here, hang in there",
             "t": 1791704327028,
             "re": "n23"
         },
@@ -518,7 +518,7 @@
         },
         {
             "id": "r040",
-            "s": "c'est tellement ça",
+            "s": "that's exactly it",
             "t": 1791752080408,
             "re": "n23",
             "name": "noé",
@@ -589,7 +589,7 @@
         },
         {
             "id": "r048",
-            "s": "pareil pour moi, courage",
+            "s": "same here, hang in there",
             "t": 1791816782570,
             "re": "n25",
             "name": "tom",
@@ -620,7 +620,7 @@
         },
         {
             "id": "r053",
-            "s": "uf, qué rabia",
+            "s": "ugh, that's infuriating",
             "t": 1791895538382,
             "re": "n27",
             "name": "ines",
@@ -645,7 +645,7 @@
         },
         {
             "id": "n30",
-            "s": "le voisin du dessus fait du bricolage tous les dimanches matin",
+            "s": "the upstairs neighbour does DIY every Sunday morning",
             "t": 1791961739894,
             "name": "mara",
             "trip": "k7wq2n",
@@ -711,7 +711,7 @@
         },
         {
             "id": "691087776e88",
-            "s": "j'ai faiiiiiiiiiim",
+            "s": "I'm hungryyyyyyyyyy",
             "t": 1792076800630,
             "medium": "text"
         },
@@ -834,7 +834,7 @@
         },
         {
             "id": "n39",
-            "s": "mi jefe me escribe a las once de la noche como si fuera normal",
+            "s": "my boss texts me at eleven at night like it's normal",
             "t": 1792385169714,
             "name": "lu",
             "trip": "h8rmc4",

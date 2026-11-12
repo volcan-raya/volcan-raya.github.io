@@ -11,19 +11,10 @@ document.body.insertAdjacentHTML("beforeend", `
 <div id="notes" class="sr" role="list" aria-label="the notes"></div>
 <div id="composer" data-ui hidden></div>
 <div id="idPanel" role="dialog" aria-label="Your name" data-ui hidden>
-  <p>Stay anonymous, or take a name and lock it with a secret code. Others see your name with a signature made from the code. The code never leaves this browser.</p>
-  <label for="nm">name<input id="nm" maxlength="20" autocomplete="off"></label>
-  <label for="cd">secret code<input id="cd" type="password" maxlength="40" autocomplete="off"></label>
-  <span id="preview">anonymous</span>
-  <div class="row">
-    <button id="keep" class="pill go" type="button">keep this name</button>
-    <button id="anon" class="pill" type="button">stay anonymous</button>
-  </div>
-  <label for="lang">you speak<select id="lang">
-    <option value="en-US">english</option>
-    <option value="es-ES">español</option>
-    <option value="fr-FR">français</option>
-  </select></label>
+  <form class="nameRow">
+    <input id="nm" placeholder="Name" aria-label="Name" maxlength="20" autocomplete="off" enterkeyhint="done">
+    <button id="keep" type="submit" aria-label="keep this name"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+  </form>
 </div>`);
 // DEV: this file's rows, in the tabs "soup" and "text" (core.js makes the tabs)
 V.dev.tab("soup", `
@@ -115,33 +106,25 @@ addEventListener("cabz:dev", e => { dev = !!e.detail.on; if (typeof applyBig ===
   })();
 }
 
-// ================= identity: name + secret code (tripcode) =================
+// ================= identity: a name, or anonymous. No code and no language to choose (from 1.00 on): the notes are
+// in English, and so is what the microphone hears =================
 let me = { name: "", trip: "" };
-try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name && s.trip) me = s; } catch {}
-const ALPH = "abcdefghjkmnpqrstuvwxyz23456789";
-async function tripcode(name, code) {
-  const data = new TextEncoder().encode(name + "#" + code);
-  let bytes;
-  try { bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", data)); }
-  catch { let h = 2166136261; for (const b of data) h = Math.imul(h ^ b, 16777619); bytes = new Uint8Array(new Uint32Array([h, h * 31, h * 17]).buffer); }
-  return [...bytes.slice(0, 6)].map(b => ALPH[b % ALPH.length]).join("");
-}
-const signature = (name, trip) => name ? `${name} ◆${trip}` : "anonymous";
-const idPanel = $("idPanel"), nm = $("nm"), cd = $("cd"), preview = $("preview"), langSel = $("lang");
+try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name) me = { name: String(s.name).slice(0, 20), trip: "" }; } catch {}
+const signature = name => name || "anonymous";
+const idPanel = $("idPanel"), nm = $("nm");
 const ICON_YOU = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5c1.2-3.6 4-5.4 7-5.4s5.8 1.8 7 5.4"/></svg>';
 function showWho() {
   for (const b of document.querySelectorAll(".you")) {
-    b.classList.toggle("named", !!me.name);
-    if (me.name) b.textContent = me.name; else b.innerHTML = ICON_YOU;
-    b.title = signature(me.name, me.trip);
+    b.innerHTML = ICON_YOU;                       // always the person, never the name; the name is in its tooltip
+    b.title = signature(me.name);
   }
-  $("devWho").textContent = signature(me.name, me.trip);
+  $("devWho").textContent = signature(me.name);
 }
 let idFrom = null;
 function openId(from) {
   idFrom = from; idPanel.hidden = false;
   document.querySelectorAll(".you").forEach(b => b.setAttribute("aria-expanded", "true"));
-  nm.value = me.name; cd.value = ""; updatePreview(); nm.focus({ preventScroll: true });
+  nm.value = me.name; updatePreview(); nm.focus({ preventScroll: true });
 }
 function closeId() {
   if (idPanel.hidden) return;
@@ -150,27 +133,20 @@ function closeId() {
   if (idFrom && idFrom.isConnected) idFrom.focus({ preventScroll: true });
   idFrom = null;
 }
-async function updatePreview() {
+// the arrow (or Enter) keeps what is in the field; an empty field is anonymous again. With nothing typed and no name
+// yet, there is nothing to keep, and the arrow waits
+function updatePreview() { $("keep").disabled = !nm.value.trim() && !me.name; }
+nm.addEventListener("input", updatePreview);
+$("keep").form.addEventListener("submit", e => {
+  e.preventDefault();
   const n = nm.value.trim();
-  preview.textContent = n && cd.value ? signature(n, await tripcode(n, cd.value)) : n ? `${n} ◆ needs a code` : "anonymous";
-  $("keep").disabled = !(n && cd.value);
-}
-nm.addEventListener("input", updatePreview); cd.addEventListener("input", updatePreview);
-$("keep").addEventListener("click", async () => {
-  const n = nm.value.trim(); if (!n || !cd.value) return;
-  me = { name: n, trip: await tripcode(n, cd.value) };
-  try { localStorage.setItem("volcano-id", JSON.stringify(me)); } catch {}
+  if (!n && !me.name) return;
+  me = { name: n, trip: "" };
+  try { if (n) localStorage.setItem("volcano-id", JSON.stringify(me)); else localStorage.removeItem("volcano-id"); } catch {}
   closeId(); showWho();
 });
-$("anon").addEventListener("click", () => {
-  me = { name: "", trip: "" };
-  try { localStorage.removeItem("volcano-id"); } catch {}
-  closeId(); showWho();
-});
-// the language speech is heard in
-let lang = store.get("volcano-lang", null) || ({ es: "es-ES", fr: "fr-FR" }[(navigator.language || "en").slice(0, 2)] || "en-US");
-langSel.value = lang;
-langSel.addEventListener("change", () => { lang = langSel.value; store.set("volcano-lang", lang); if (listening) { const c = micComp; stopMic(); startMic(c); } });
+// the language speech is heard in: English, as the notes are
+const lang = "en-US";
 
 // ================= notes: the same as v05's, kept in ../sentences.json =================
 // Reading: ../api.php?kind=sentences (shared, can write) → ../sentences.json (read-only) → a few built-in notes.
@@ -453,6 +429,19 @@ function click(px, py) {                        // a tap: a badge opens; anywher
 // ================= the composer =================
 const ICON_MIC = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>';
 const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+// the microphone is not ready yet: pressing it only says so, in a small box over it that goes by itself (or at the
+// next press anywhere). startMic and the rest are kept for when it is
+const soonEl = document.createElement("div");
+soonEl.id = "soon"; soonEl.setAttribute("role", "status"); soonEl.hidden = true;
+soonEl.textContent = "Under construction. You will soon be able to talk to the volcano";
+document.body.append(soonEl);
+let soonT = 0;
+function soon(btn) {
+  const r = btn.getBoundingClientRect();
+  soonEl.style.right = Math.max(8, innerWidth - r.right) + "px"; soonEl.style.bottom = (innerHeight - r.top + 10) + "px";
+  soonEl.hidden = false; clearTimeout(soonT); soonT = setTimeout(() => { soonEl.hidden = true; }, 4000);
+}
+addEventListener("pointerdown", e => { if (!soonEl.hidden && !e.target.closest?.(".mic")) soonEl.hidden = true; }, true);
 let active = null;                             // the composer the mic writes into
 const ICON_CLIP = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M17.5 11.2l-6.3 6.3a4.2 4.2 0 0 1-6-6l7.1-7.1a2.8 2.8 0 0 1 4 4l-7 7a1.4 1.4 0 0 1-2-2l6.4-6.4"/></svg>';
 // the medium of what is sent: image if a picture is attached, voice if the mic was used, text otherwise
@@ -482,7 +471,7 @@ function makeComposer(host, placeholder, onSend, attach = false) {
   c.input.addEventListener("input", () => updateSend(c));
   c.input.addEventListener("focus", () => { active = c; });
   c.you.addEventListener("click", () => idPanel.hidden ? openId(c.you) : closeId());
-  c.mic.addEventListener("click", () => { if (listening && micComp === c) stopMic(); else startMic(c); });
+  c.mic.addEventListener("click", () => soon(c.mic));   // not yet: see soon()
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const text = c.input.value.trim(); if (!text && !c.img) return;
