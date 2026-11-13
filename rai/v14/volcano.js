@@ -48,7 +48,7 @@ function tremor(t) {
 // Everything is measured in E, the emoji's size, so the words keep their size against it. They always read from left to
 // right: a word going left has its first letter at its head. Between eruptions a word escapes now and then, as smoke
 // (DEV: "steady smoke", words a minute).
-const HOT = [255, 140, 72], COOL = [70, 18, 4], SMOKE = "#000";
+const HOT = [255, 140, 72], COOL = [70, 18, 4], LAVA = [196, 0, 12], SMOKE = "#000";   // the lava's letters in LAVA, the balls' red; COOL still its heat
 let wordSize = V.store.get("volcano-v14-wordsize", 15);   // % of the emoji
 const lfont = () => `400 100px ${V.type()}`;
 let flyers = [], lavaShare = V.store.get("volcano-v14-lava", .5), steady = V.store.get("volcano-v14-steady", 12);
@@ -168,8 +168,7 @@ function drawSmoke(x, f, away) {
 }
 function drawLava(x, f, away, E) {
   const c = smooth(.15, .9, clamp((f.head - f.way.land) / COOL_L, 0, 1)) * .7 + smooth(3, 16, f.age) * .3;
-  const rgb = HOT.map((v, i) => Math.round(lerp(v, COOL[i], clamp(c, 0, 1))));
-  x.fillStyle = `rgb(${rgb})`;
+  x.fillStyle = `rgb(${LAVA})`;                    // 13/11/26: the notification balls' red (../shared/soup.js, DOT), no cooling
   // its heat: a soft, dark copy round each letter, fading as it cools (shadows are in screen px)
   x.shadowColor = `rgba(${COOL}, ${(.55 * (1 - c * .5)).toFixed(2)})`; x.shadowBlur = Math.max(2, E * .025 * V.camera.cam.zoom); x.shadowOffsetX = 0; x.shadowOffsetY = 0;
   x.globalAlpha = away;

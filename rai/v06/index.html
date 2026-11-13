@@ -118,21 +118,21 @@ body.chatting #idPanel { left: auto; right: calc(16px + env(safe-area-inset-righ
 }
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */
-#dev { position: fixed; z-index: 9; top: 12px; right: calc(10px + env(safe-area-inset-right, 0px)); width: min(260px, calc(100% - 20px)); box-sizing: border-box;
-  max-height: calc(100% - 50px); overflow: auto; padding: 14px; border: 1px solid rgba(176, 38, 255, .55); border-radius: 14px; background: rgba(10, 10, 12, .9);
+#dev { position: fixed; z-index: 9; top: 12px; right: calc(var(--grid-margin, 24px) + env(safe-area-inset-right, 0px)); width: min(260px, calc(100% - 2 * var(--grid-margin, 24px)));   /* its right edge on the site's margin, as the bar's dev box */ box-sizing: border-box;
+  max-height: calc(100% - 50px); overflow: auto; padding: 14px; border: 1px solid #C16CFF; border-radius: 2px; background: rgb(5, 5, 6);
   font-size: 12px; display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: start; }
 #dev .full { grid-column: 1 / -1; }
 #dev .k { color: var(--dim); }
 #dev button.t { padding: 0; border: 0; background: none; color: #fff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .35); }
 #dev .seg { display: flex; gap: 14px; }
-#dev .seg button[aria-pressed="true"] { color: #B026FF; text-decoration-color: #B026FF; }
+#dev .seg button[aria-pressed="true"] { color: #C16CFF; text-decoration-color: #C16CFF; }
 #tube { position: relative; width: 12px; height: 150px; grid-row: span 6; cursor: ns-resize; touch-action: none; border: 1px solid rgba(255, 255, 255, .5);
   background: repeating-linear-gradient(to top, transparent 0 calc(10% - 1px), rgba(255, 255, 255, .16) calc(10% - 1px) 10%); }
 #tube:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
 #pFill { position: absolute; left: 2px; right: 2px; bottom: 2px; height: 0; background: linear-gradient(to top, #5a0a05, #ff3b30 60%, #ffb3a8); }
 #pBoom { justify-self: start; padding: 6px 12px; border: 1px solid var(--red); border-radius: 999px; background: none; color: #ffb3a8; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
 #pBoom:disabled { opacity: .35; cursor: default; }
-#dev input[type=range] { width: 100%; margin: 0; accent-color: #B026FF; }
+#dev input[type=range] { width: 100%; margin: 0; accent-color: #C16CFF; }
 .meter { height: 4px; background: rgba(255, 255, 255, .12); }
 .meter span { display: block; height: 100%; width: 0; background: #fff; }
 </style>

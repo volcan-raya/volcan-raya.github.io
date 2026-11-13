@@ -41,6 +41,7 @@
 #soon { position: fixed; z-index: 8; max-width: min(300px, calc(100% - 16px)); box-sizing: border-box; padding: 12px 16px; border-radius: 20px;
   background: rgba(28, 28, 29, .97); color: #fff; font-size: 14px; line-height: 1.4; pointer-events: none; }
 #idPanel form { align-self: stretch; display: flex; gap: 8px; margin: 0; }
+#idPanel.above form { flex-direction: row-reverse; }   /* above the composer (soup.js, openId): the arrow over the person, the field over Vent */
 #idPanel input { flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 18px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 22px;
   background: #1c1c1d; color: #fff; font: 400 17px var(--type); outline: none; caret-color: #5e8bff; }
 #idPanel input:focus { border-color: rgba(255, 255, 255, .22); }
@@ -61,9 +62,9 @@
 #big.on { opacity: 1; }
 #big .box { position: absolute; top: var(--tb); bottom: var(--tb); left: var(--side); right: var(--side); }
 #big.outlined .box { outline: 1px dashed #C16CFF; outline-offset: -1px; }
-/* the words in Mebar Display (mebar.css), in capitals, the only letters it draws, and black whatever DEV's ink; what it
-   doesn't draw falls back to the page's type, light (300; Mebar has only its one weight, which it keeps). DEV (soup,
-   "messages") switches them back to the sans as it was: 500, as written, in DEV's ink (.sans) */
+/* the words: by default the sans, 500, as written, in DEV's ink (.sans, set by soup.js). DEV (soup, "messages") can
+   switch them to Mebar Display (mebar.css), the title's type: in capitals, the only letters it draws, black whatever
+   DEV's ink; what it doesn't draw falls back to the page's type, light (300; Mebar has only its one weight) */
 #big .words { position: absolute; left: 0; right: 0; top: 0; margin: 0; text-transform: uppercase;
   color: #000; font: 300 var(--fs)/var(--lh) "Mebar Display", var(--type); letter-spacing: -.035em; overflow-wrap: normal; hyphens: none; white-space: normal; }
 /* Mebar's own letters thickened by an outline in their ink, under the fill (--mw, DEV soup "mebar weight") */

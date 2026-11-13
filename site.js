@@ -13,7 +13,8 @@ window.CABZ = {
      "href": "rai/v13/",
      "versions": [
       {
-       "id": "407efac",
+       "id": "v00",
+       "label": "v00",
        "date": "2026-10-03T00:00:00+02:00",
        "msg": "word volcano, the first prototype",
        "pages": [
@@ -21,10 +22,11 @@ window.CABZ = {
        ],
        "live": false,
        "header": "word-volcano",
-       "href": "rai/_v/407efac/"
+       "href": "rai/_v/v00/"
       },
       {
-       "id": "c9da201",
+       "id": "v01",
+       "label": "v01",
        "date": "2026-10-08T00:00:00+02:00",
        "msg": "word volcano in black and white",
        "pages": [
@@ -32,10 +34,11 @@ window.CABZ = {
        ],
        "live": false,
        "header": "word-volcano",
-       "href": "rai/_v/c9da201/"
+       "href": "rai/_v/v01/"
       },
       {
-       "id": "3f27c69",
+       "id": "v02",
+       "label": "v02",
        "date": "2026-10-14T00:00:00+02:00",
        "msg": "under pressure, the pixel volcano",
        "pages": [
@@ -43,10 +46,11 @@ window.CABZ = {
        ],
        "live": false,
        "header": "under-pressure",
-       "href": "rai/_v/3f27c69/"
+       "href": "rai/_v/v02/"
       },
       {
-       "id": "81cccf5",
+       "id": "v03",
+       "label": "v03",
        "date": "2026-10-15T15:06:00+02:00",
        "msg": "langues",
        "pages": [
@@ -54,10 +58,11 @@ window.CABZ = {
        ],
        "live": false,
        "header": "langues",
-       "href": "rai/_v/81cccf5/"
+       "href": "rai/_v/v03/"
       },
       {
-       "id": "0203e7b",
+       "id": "v04",
+       "label": "v04",
        "date": "2026-10-21T21:37:45+02:00",
        "msg": "notes inside the volcano",
        "pages": [
@@ -68,12 +73,13 @@ window.CABZ = {
        "dev": [
         "#gauge"
        ],
-       "href": "rai/_v/0203e7b/"
+       "href": "rai/_v/v04/"
       },
       {
-       "id": "d350c69",
+       "id": "v05",
+       "label": "v05",
        "date": "2026-10-22T15:51:04+02:00",
-       "msg": "v05 les voies du volcan: minimal, inside the red, notes as unread badges",
+       "msg": "les voies du volcan: minimal, inside the red, notes as unread badges",
        "pages": [
         "index.html"
        ],
@@ -201,6 +207,30 @@ window.CABZ = {
        "live": true,
        "href": "rai/v15/",
        "release": "3.01"
+      },
+      {
+       "id": "v16",
+       "label": "v16",
+       "date": "2026-11-13T14:36:48+01:00",
+       "msg": "notification soup",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "rai/v16/",
+       "release": "3.02"
+      },
+      {
+       "id": "v17",
+       "label": "v17",
+       "date": "2026-11-13T15:07:18+01:00",
+       "msg": "notification soup",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "rai/v17/",
+       "release": "1.04"
       }
      ],
      "cross": "ex",

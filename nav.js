@@ -268,7 +268,8 @@
   .dot:focus-visible { background: var(--nfg); }
   .dot:focus-visible { outline: 1px solid var(--nfg); outline-offset: 3px; }
   .dot.cur { background: var(--nfg); }
-  .info { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 1; }
+  /* the version and its date are never cut: where columns 4–6 are short they run on into 7, whose tools sit at the far right */
+  .info { flex: none; white-space: nowrap; opacity: 1; }
   /* where the bar is short the title gives way (an ellipsis), never index or the arrows: the page you are on first */
   .crumbs > a, .crumbs > span { flex: 0 0 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .crumbs > .here, .crumbs > .pg { flex-shrink: 1; }

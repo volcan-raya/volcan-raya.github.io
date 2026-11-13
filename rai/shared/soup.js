@@ -7,6 +7,9 @@
 (() => {
 "use strict";
 const ME = document.currentScript, FLAT = ME.hasAttribute("data-flat"), KEY = `volcano-${ME.dataset.ver || "v13"}-`;
+// what came with v16 (3.02) and v17 (1.04), by the page's number, so the older pages stay as they were: a ball now and
+// then playing by itself (the cue) and a ball thrown going on (MOVES); before them, the name in a row above the composer
+const VN = parseInt((ME.dataset.ver || "v13").slice(1), 10) || 13, MOVES = VN >= 16, NAME_ABOVE = VN < 16;
 const { rand, clamp, lerp, smooth, $, reduce, store, UP, imgSrc, getJSON } = V;
 const C = V.camera, VO = V.volcano;
 
@@ -24,16 +27,12 @@ document.body.insertAdjacentHTML("beforeend", `
 V.dev.tab("soup", `
   <div class="full seg" role="group" aria-label="The type of an opened message">
     <span class="k">messages</span>
-    <button class="t" type="button" data-bigfont="mebar">mebar</button>
     <button class="t" type="button" data-bigfont="sans">sans</button>
+    <button class="t" type="button" data-bigfont="mebar">mebar</button>
   </div>
+  <label class="full"><span class="k">cue: a ball plays by itself, on average every </span><span id="cueV"></span><input type="range" id="cueEvery" min="0" max="10" step=".5"></label>
+  <label class="full"><span class="k">cue: at most at once </span><span id="cueMaxV"></span><input type="range" id="cueMax" min="1" max="6" step="1"></label>
   <label class="full"><span class="k">mebar weight </span><span id="mebarWV"></span><input type="range" id="mebarW" min="0" max="40" step="1"></label>
-  <div class="full seg" role="group" aria-label="How a seen ball looks">
-    <span class="k">seen balls</span>
-    <button class="t" type="button" data-seen="fill">black</button>
-    <button class="t" type="button" data-seen="outline">outline</button>
-    <button class="t" type="button" data-seen="outline-black">outline black</button>
-  </div>
   <span class="full"><span class="k">here </span><span id="here">…</span></span>
   <label class="full"><span class="k">replies: size of a ball </span><span id="satV"></span><input type="range" id="satSize" min="10" max="100" step="1"></label>
   <label class="full"><span class="k">replies: how far they go round </span><span id="orbV"></span><input type="range" id="orbSize" min="30" max="400" step="5"></label>
@@ -137,7 +136,14 @@ function openId(from) {
   // opened from a composer: in its own row, over it, the person's ball where it is: the Name field where Vent is (its
   // word at the left, as Vent's), the arrow where the mic (or send) is, the same size and the same gaps
   const bar = from && from.closest && from.closest("form"), fw = bar && bar.querySelector(".fieldwrap"), last = bar && [...bar.querySelectorAll(".round")].filter(e => !e.hidden).pop();
-  if (fw && last) {
+  // Up to v15 (1.01 to 3.01): in a row of its own just above the composer, with no box round the two: the arrow over the person's ball, the
+  // Name field (as Vent is) from Vent's left to its right
+  const above = NAME_ABOVE && fw && from.classList.contains("you");
+  idPanel.classList.toggle("above", !!above);
+  if (above) {
+    const y = from.getBoundingClientRect(), a = fw.getBoundingClientRect();
+    Object.assign(idPanel.style, { left: y.left + "px", right: "auto", width: a.right - y.left + "px", bottom: innerHeight - y.top + 10 + "px" });
+  } else if (fw && last) {
     const a = fw.getBoundingClientRect(), z = last.getBoundingClientRect();
     Object.assign(idPanel.style, { left: a.left + "px", right: "auto", width: z.right - a.left + "px", bottom: innerHeight - z.bottom + "px" });
   } else idPanel.removeAttribute("style");
@@ -339,7 +345,7 @@ function updateBadges(dt, t) {
       b.fly -= dt; b.vy += b.flyA * dt; b.vx *= Math.exp(-dt * .3); b.vz *= Math.exp(-dt * .3);
       b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; continue;
     }
-    if (b.hold) { const k = Math.exp(-dt * 8); b.vx *= k; b.vy *= k; b.vz *= k; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; continue; }
+    if (b.hold && !b.coast) { const k = Math.exp(-dt * 8); b.vx *= k; b.vy *= k; b.vz *= k; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; continue; }
     if (b.parent) {                            // round its note, pulled back to its orbit whenever it is thrown or let go
       const p = b.parent, o = b.orb, a = o.a0 + t * o.w * (reduce.matches ? .3 : 1), c = Math.cos(a), sn = Math.sin(a), k = 1 - Math.exp(-dt / .45), R = o.R * sat.orbit / 100;
       if (FLAT) {                                // its orbit seen from above its plane: a circle on the screen, whatever the screen's shape
@@ -353,11 +359,16 @@ function updateBadges(dt, t) {
     } else {
     const [dx, dy, dz] = driftOf(b, t, calm), tx = b.hx + dx, ty = b.hy + dy, tz = b.hz + dz;
     // v06's exponential settling stays fluid at different frame rates; eruption impulses decay independently.
-    b.x += (tx - b.x) * exy; b.y += (ty - b.y) * exy; b.z += (tz - b.z) * ez;
+    if (!b.coast) { b.x += (tx - b.x) * exy; b.y += (ty - b.y) * exy; b.z += (tz - b.z) * ez; }   // thrown, it coasts with no pull home
     }
-    const damping = Math.exp(-dt * 1.3), impulse = (1 - damping) / 1.3;
+    if (b.coast && b.sx != null) {             // thrown against the screen's edge, it comes back off it, slower
+      const { W, H } = V.size(), out = (b.sx < b.R && b.sx < b.psx) || (b.sx > W - b.R && b.sx > b.psx) || (b.sy < b.R && b.sy < b.psy) || (b.sy > H - b.R && b.sy > b.psy);
+      if (out && !b.bounced) { b.vx *= -.5; b.vy *= -.5; b.vz *= -.5; } b.bounced = out; b.psx = b.sx; b.psy = b.sy;
+    }
+    const lam = b.coast ? 3 : 1.3, damping = Math.exp(-dt * lam), impulse = (1 - damping) / lam;   // thrown, it slows sooner
     b.x += b.vx * impulse; b.y += b.vy * impulse; b.z += b.vz * impulse;
     b.vx *= damping; b.vy *= damping; b.vz *= damping;
+    if (b.coast && Math.hypot(b.vx, b.vy, b.vz) < .03) settle(b);   // slowed down: it stays where it stopped
   }
 }
 // where each badge is on the screen, far to near, so the near ones are drawn over the far ones
@@ -411,20 +422,41 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 // what a notification plays under the pointer is in ../shared/notification.js
 // red, or black once read: the deep red holds on the orange, where the interface's red would vanish
 const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];
-// how a seen ball looks (DEV, soup; kept in this browser): its red going black ("fill"), or its fill giving way to a
-// ring at its edge, red ("outline") or black ("outline-black"); either way over the same 2 s, and still whole to touch
-// One choice for every page on this soup (1.03 and 3.00 alike). By default the red ring ("outline"); the key is new
-// with that default, so a choice kept from before (often "fill") doesn't hide it
-const SEEN_KEY = "volcano-soup-seen";
-let seenLook = ["fill", "outline", "outline-black"].includes(store.get(SEEN_KEY, "outline")) ? store.get(SEEN_KEY, "outline") : "outline";
-function showSeen() { document.querySelectorAll("[data-seen]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.seen === seenLook))); store.set(SEEN_KEY, seenLook); }
-document.querySelectorAll("[data-seen]").forEach(b => b.addEventListener("click", () => { seenLook = b.dataset.seen; showSeen(); }));
-showSeen();
+// a seen ball, over 2 s, still whole to touch, on every page on this soup:
+let seenLook = "outline";   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
 function badgeColour(b) {
   const e = b.readT * b.readT * (3 - 2 * b.readT);
   return [lerp(DOT[0], DOT_READ[0], e), lerp(DOT[1], DOT_READ[1], e), lerp(DOT[2], DOT_READ[2], e)];
 }
 let hovered = null, lastDraw = 0;
+function showCue() {
+  $("cueEvery").value = cueEvery; $("cueV").textContent = cueEvery ? cueEvery + " s" : "never"; store.set(KEY + "cue2", cueEvery);
+  $("cueMax").value = cueMax; $("cueMaxV").textContent = cueMax; store.set(KEY + "cuemax", cueMax);
+}
+queueMicrotask(() => {
+  $("cueEvery").parentElement.hidden = $("cueMax").parentElement.hidden = !MOVES; showCue();
+  $("cueEvery").addEventListener("input", e => { cueEvery = +e.target.value; cueNext = 0; showCue(); });
+  $("cueMax").addEventListener("input", e => { cueMax = +e.target.value; showCue(); });
+});
+// a cue that the balls can be touched: by itself, an unread ball in view plays what it plays under the pointer, once
+// through. They start at random, with no rhythm (the gaps between them are as a Geiger counter's: mostly short, now and
+// then long), so two or three can play at once, never more than cueMax, and never two side by side. DEV, soup: "cue",
+// the gap on average (0: never), and "at once"
+let cueEvery = store.get(KEY + "cue2", 2.5), cueMax = store.get(KEY + "cuemax", 3), cueNext = 0;
+const cues = new Map();                       // ball → when it started
+const CUE_LEN = () => reduce.matches ? 8.5 : 8.5 / 2.5;   // one loop of a sign (../shared/notification.js: LOOP / SPEED)
+function cue(t) {
+  for (const [b, t0] of cues) if (t - t0 > CUE_LEN() || !vis.includes(b) || b === picked) cues.delete(b);
+  if (!cueNext) cueNext = t + 2;
+  if (!MOVES || !cueEvery || picked || grab?.on || t < cueNext) return;
+  cueNext = t + clamp(-Math.log(1 - Math.random()) * cueEvery, .25, cueEvery * 3);   // the next one, at random
+  if (cues.size >= cueMax) return;
+  const { W, H } = V.size(), near = b => [...cues.keys()].some(c => Math.hypot(c.sx - b.sx, c.sy - b.sy) < 160);
+  const pool = vis.filter(b => !b.read && b !== hovered && !cues.has(b) && b.R > 6 && b.seen > .6 && !(b.fly > 0)
+    && b.sx > b.R && b.sx < W - b.R && b.sy > b.R && b.sy < H - b.R && !near(b));
+  if (pool.length) cues.set(pool[Math.floor(Math.random() * pool.length)], t);
+}
+const sinceOf = (b, t) => b === hovered ? t - b.sigT0 : cues.has(b) ? t - cues.get(b) : null;
 // ================= the links =================
 // as in Obsidian's graph: a thin line from each reply to the note it answers, and nothing else. In the balls' own red;
 // it stops at each ball's edge, so a seen ball drawn as a ring stays empty inside. Faint, fading with the balls into
@@ -452,6 +484,7 @@ function drawLinks(x) {
 }
 function drawInside(x) {
   const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W } = V.size(); lastDraw = now;
+  cue(now / 1000);
   drawLinks(x);
   // the further a ball is, the softer: in focus up close, a little blurred with depth (1.03, seen down into the soup;
   // flat 3.00 has no depth). Up to BLUR px, from FOCUS on, full at FOCUS + 4 of the soup's units
@@ -467,7 +500,7 @@ function drawInside(x) {
 }
 const BLUR = 1.5, FOCUS = 1.6;
 function drawBall(x, b, now, dt, TYPE) {
-  volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: b === hovered ? now / 1000 - b.sigT0 : null, dt, imgSrc, count: false });
+  volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc, count: false });
 }
 function drawFocusLabel(x, W, TYPE) {
   const pk = [...badges.values()].find(b => b.focus);
@@ -486,7 +519,18 @@ let grab = null;
 function drop() {
   const g = grab; grab = null; if (!g) return;
   const b = g.b; b.hold = hovered === b || b.focus;
-  if (!g.on || b.parent) return;              // a reply goes back to its orbit
+  if (!g.on) return;
+  // let go while moving, it is thrown: it goes on with the hand's speed (at most THROW px a second on the screen), slowing
+  // down; a reply is then pulled back to its orbit, a note stays where it stops (settle). Held still first, it is dropped
+  const sp = Math.hypot(...g.sv), moving = MOVES && !reduce.matches && performance.now() - g.t < 90 && sp > 80;
+  if (moving) { const k = Math.min(1, THROW / sp); b.vx = g.v[0] * k; b.vy = g.v[1] * k; b.vz = g.v[2] * k; b.hold = false; }
+  if (b.parent) return;                       // a reply goes back to its orbit
+  if (moving) { b.coast = true; return; }
+  settle(b);
+}
+const THROW = 1400;   // a throw goes on about a third of this, in px
+function settle(b) {                          // where it is becomes its home, now and on the next visits
+  b.coast = false;
   const [dx, dy, dz] = driftOf(b, performance.now() / 1000, reduce.matches ? .5 : 1);
   placed[b.s.id] = [b.x, b.y, b.z]; store.set(PLACED_KEY, placed);   // its home on the next visits
   b.hx = b.x - dx; b.hy = b.y - dy; b.hz = b.z - dz;   // and now, so it drifts on from where it was dropped
@@ -494,14 +538,23 @@ function drop() {
 function pointerDown(px, py) {
   const b = hitAt(px, py);
   if (!b) return false;
-  grab = { b, on: false, off: [px - b.sx, py - b.sy] }; b.hold = true;
+  grab = { b, on: false, off: [px - b.sx, py - b.sy], v: [0, 0, 0], sv: [0, 0], t: 0, at: null }; b.hold = true; b.coast = false;
   return true;
 }
 function pointerMove(px, py, dragged) {
   if (!grab) return false;
   if (dragged) grab.on = true;
   const b = grab.b, q = C.project(b.x, b.y, b.z);
-  if (grab.on && q && q.d > NEAR) { [b.x, b.y, b.z] = C.unproject(px - grab.off[0], py - grab.off[1], q.d); b.vx = b.vy = b.vz = 0; }
+  if (grab.on && q && q.d > NEAR) {
+    const was = [b.x, b.y, b.z], now = performance.now(), dt = grab.at ? (now - grab.t) / 1000 : 0;
+    [b.x, b.y, b.z] = C.unproject(px - grab.off[0], py - grab.off[1], q.d); b.vx = b.vy = b.vz = 0;
+    if (dt > 0) {                              // the hand's speed, smoothed over the last few hundredths of a second
+      const k = 1 - Math.exp(-dt / .05), nw = [b.x, b.y, b.z];
+      for (let i = 0; i < 3; i++) grab.v[i] += ((nw[i] - was[i]) / dt - grab.v[i]) * k;
+      grab.sv[0] += ((px - grab.at[0]) / dt - grab.sv[0]) * k; grab.sv[1] += ((py - grab.at[1]) / dt - grab.sv[1]) * k;
+    }
+    grab.at = [px, py]; grab.t = now;
+  }
   return true;
 }
 function hover(px, py) {
@@ -691,10 +744,11 @@ let mebarW = store.get(KEY + "mebarw2", 9);   // thousandths of an em
 function showMebarW() { bigEl.style.setProperty("--mw", mebarW / 1000 + "em"); $("mebarW").value = mebarW; $("mebarWV").textContent = mebarW ? "+" + mebarW : "as drawn"; store.set(KEY + "mebarw2", mebarW); }
 $("mebarW").addEventListener("input", e => { mebarW = +e.target.value; showMebarW(); });
 showMebarW();
-// the type of an opened message: Mebar Display, or the sans (DEV, soup; kept in this browser)
-let bigFont = store.get(KEY + "bigfont", "mebar") === "sans" ? "sans" : "mebar";
+// the type of an opened message: the sans by default, or Mebar Display (DEV, soup; kept in this browser). Mebar is the
+// title's; here only to try. A new key since 13/11/26, so every browser starts on the sans
+let bigFont = store.get(KEY + "bigfont4", "sans") === "mebar" ? "mebar" : "sans";
 function setBigFont(f) {
-  bigFont = f; store.set(KEY + "bigfont", f); bigEl.classList.toggle("sans", f === "sans");
+  bigFont = f; store.set(KEY + "bigfont4", f); bigEl.classList.toggle("sans", f === "sans");
   document.querySelectorAll("[data-bigfont]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.bigfont === f)));
   requestAnimationFrame(() => { fitWords(); placeSig(); });
 }

@@ -40,15 +40,15 @@ function tremor(t) {
 }
 
 // ================= the words leaving the crater =================
-// Each word is a line of letters, straight out of the crater, as in the drawing for 3.00:
+// Each word is a line of letters, straight out of the crater, as in the drawing for 3.00 (3.01: from the triangle's apex, touching it):
 //   smoke  black, up and out in a fan, each word on its own ray, its letters growing a little as it goes, on until it
 //          leaves the screen
-//   lava   thrown out to one side, then down and away along a long line just under level, hot orange cooling to
-//          a burnt brown, blurred by its heat; it keeps flowing, at an even pace, until it leaves the screen
+//   lava   (3.01) down the triangle's sides from its apex, then from the foot winding on below in every direction,
+//          out, down, back under; in 1.03's burning red-orange, sharp, no blur; on until it leaves the screen
 // Everything is measured in E, the emoji's size, so the words keep their size against it. They always read from left to
 // right: a word going left has its first letter at its head. Between eruptions a word escapes now and then, as smoke
 // (DEV: "steady smoke", words a minute).
-const HOT = [255, 140, 72], COOL = [70, 18, 4], SMOKE = "#000";
+const LAVA = [196, 0, 12], SMOKE = "#000";   // the lava: the notification balls' red (soup.js DOT); 1.03's were HOT [255, 69, 0], COOL .62
 let wordSize = V.store.get("volcano-v15-wordsize", 15);   // % of the emoji
 const lfont = () => `400 100px ${V.type()}`;
 let flyers = [], lavaShare = V.store.get("volcano-v15-lava", .5), steady = V.store.get("volcano-v15-steady", 12);
@@ -65,16 +65,23 @@ const smoke = (ang, head) => ({ lava: false, ang, head, speed: rand(.55, .8), gr
 const COOL_L = 3.4;                                // how far along its line (in E) a lava word takes to cool
 const farE = () => { const { W, H } = V.size(), { E } = V.camera.volcano(); return Math.hypot(W, H) / Math.max(1, E); };   // past every border, from the crater
 function lavaWay(side) {
-  const pts = [], add = (x, y) => pts.push([x, y]);
-  const land = [side * rand(.12, .3), rand(.18, .34)], up = rand(.1, .35);
-  for (let k = 0; k <= 16; k++) { const t = k / 16; add(land[0] * t, land[1] * t - 4 * up * t * (1 - t)); }
-  const dip = rand(12, 34) * Math.PI / 180, wob = rand(.01, .04), ph = rand(0, 6.28);
-  for (let k = 1, n = Math.ceil((farE() + 4) / .06); k <= n; k++) {   // long enough to go off the screen
-    const r = k * .06;
-    add(land[0] + side * Math.cos(dip) * r, land[1] + Math.sin(dip) * r + Math.sin(r * 4 + ph) * wob * Math.min(1, r));
+  // 3.01: down the triangle's side from its apex (just inside its edge, on the black), then from the foot it winds on
+  // below, each word its own way: out to the side, straight down, or back under the volcano; never up
+  const pts = [], add = (x, y) => pts.push([x, y]), IN = .035, foot = rand(.45, 1);   // foot: how far down the side it leaves it
+  for (let k = 0; k <= 24; k++) { const t = k / 24 * foot; add(side * (.5 * t - IN * .7), .5 * t + IN * .7 * (t > 0 ? 1 : 0)); }
+  const [fx0, fy0] = pts[pts.length - 1];
+  let th = Math.PI / 4;                                 // its heading: 0 out to the side, π/2 straight down, past it back under
+  const aim = rand(0, 1.5) * Math.PI / 2, turn = rand(2.5, 6), wob = rand(1.5, 3.5), ph = rand(0, 6.28), fr = rand(1.5, 3.5);
+  let x = fx0, y = fy0;
+  for (let k = 1, n = Math.ceil((farE() + 4) / .05); k <= n; k++) {   // long enough to go off the screen
+    const r = k * .05;
+    th += ((aim - th) * turn * .05) + Math.sin(r * fr + ph) * wob * .05 * Math.min(1, r * 2);   // turning to its own way soon, then meandering
+    th = clamp(th, -.05, Math.PI * .8);
+    x += side * Math.cos(th) * .05; y += Math.sin(th) * .05;
+    add(x, y);
   }
   let l = 0; const way = pts.map((p, i) => { if (i) l += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); return { p, l }; });
-  return { pts: way, L: l, land: way[16].l };
+  return { pts: way, L: l, land: way[24].l };
 }
 const lava = (side, head) => ({ lava: true, way: lavaWay(side), head, fly: rand(1.4, 1.9), speed: rand(.35, .55) });
 function puff() {
@@ -134,7 +141,7 @@ function updateFlyers(dt) {
 const sizeAt = (f, d) => wordSize / 100 * (f.lava ? .9 : 1 + f.grow * Math.max(0, d));
 function drawFlyers(x) {
   const cam = V.camera.cam, { E, crater } = V.camera.volcano(), { W, H } = V.size();
-  const away = 1 - smooth(0, .5, cam.e);          // going in, they go as the volcano grows
+  const away = cam.inside ? 0 : 1;                 // whole until the cut to the soup, no fade (3.01)
   if (away <= 0 || !E) return;
   // the scene, grown round the crater as the emoji is (camera.js), in E from the crater
   x.save();
@@ -160,18 +167,19 @@ function drawSmoke(x, f, away) {
   for (const L of lets) {
     const size = sizeAt(f, d), adv = L.w * size, mid = d - adv / 2;
     d -= adv;
-    if (mid < .02) break;                          // still in the crater
+    if (mid < 0) break;                            // not out of the apex yet: a letter shows once its middle is out, touching it
     if (L.ch === " ") continue;
-    x.globalAlpha = away * smooth(.02, .12, mid);
+    x.globalAlpha = away;
     letter(x, L.ch, dx * mid, dy * mid, ang, size);
   }
 }
 function drawLava(x, f, away, E) {
-  const c = smooth(.15, .9, clamp((f.head - f.way.land) / COOL_L, 0, 1)) * .7 + smooth(3, 16, f.age) * .3;
-  const rgb = HOT.map((v, i) => Math.round(lerp(v, COOL[i], clamp(c, 0, 1))));
-  x.fillStyle = `rgb(${rgb})`;
+  // 1.03's lava: its red-orange, burning, cooling only a little darker as it goes, never to white or black. On this
+  // orange it starts a little darker than 1.03's hot (that is the orange itself)
+  // 13/11/26: the notification balls' red (../shared/soup.js, DOT), as it is, no cooling
+  x.fillStyle = `rgb(${LAVA.join(",")})`;
   // its heat: a soft, dark copy round each letter, fading as it cools (shadows are in screen px)
-  x.shadowColor = `rgba(${COOL}, ${(.55 * (1 - c * .5)).toFixed(2)})`; x.shadowBlur = Math.max(2, E * .025 * V.camera.cam.zoom); x.shadowOffsetX = 0; x.shadowOffsetY = 0;
+  // 3.01: no heat blur, sharp from the apex on
   x.globalAlpha = away;
   const size = sizeAt(f, 0), at = l => wayAt(f.way, l);
   const tail = f.head - f.em * size, a = at(Math.max(0, tail)), b = at(f.head);
@@ -180,7 +188,7 @@ function drawLava(x, f, away, E) {
   for (const L of f.letters) {
     const adv = L.w * size, mid = back ? l - adv / 2 : l + adv / 2;
     l += back ? -adv : adv;
-    if (mid < .02) { if (back) break; continue; }
+    if (mid < 0) { if (back) break; continue; }
     if (L.ch === " ") continue;
     const p = at(mid), q = at(mid + .01);
     let ang = Math.atan2(q[1] - p[1], q[0] - p[0]); if (back) ang += Math.PI;

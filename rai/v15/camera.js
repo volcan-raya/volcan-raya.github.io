@@ -61,15 +61,15 @@ function unproject(px, py) {
 const view = V.view, marks = V.marks, at = V.at, soup = () => V.soup;
 document.body.insertAdjacentHTML("beforeend", `
 <button id="goIn" class="sr" type="button">into the volcano</button>
-<nav id="goOut" aria-label="out of the volcano" hidden></nav>`);
-// the way out: the eject, ⏏, the volcano's triangle on its bar
+<nav id="goOut" aria-label="into and out of the volcano"></nav>`);
+// the way in and the way out, both: the eject, ⏏, the volcano's triangle on its bar, always at the top
 const OUTS = [["⏏", "sign", "eject"]];
 const goIn = $("goIn"), goOut = $("goOut");
 goOut.innerHTML = OUTS.map(([g, k, say], i) =>
   `<button type="button" title="${say}" aria-label="out (${say})"><span class="g ${k}" aria-hidden="true">${g}</span></button>`).join("");
 function onVolcano(px, py) {                     // on the triangle (field.js), with a little room round it
   const u = (px - CX) / E, v = (py - CY) / E;
-  return cam.e < .05 && v > -.3 && v < .3 && Math.abs(u) < .55 * (v + .3) / .55 + .05;
+  return cam.e < .05 && v > -.3 && v < .6 && Math.abs(u) < (v < .3 ? v + .35 : .55);   // the triangle, and the bar under it
 }
 function enter() { if (aim !== 0) goTo(0); }
 function leave() {
@@ -77,7 +77,7 @@ function leave() {
   goTo(1);                                         // the balls stay where they are: they go up only in an eruption (volcano.js)
 }
 goIn.addEventListener("click", enter);
-goOut.addEventListener("click", e => { if (e.target.closest("button")) leave(); });
+goOut.addEventListener("click", e => { if (e.target.closest("button")) (aim === 0 ? leave : enter)(); });
 
 let downAt = null, dragged = false, grabbing = false;
 marks.addEventListener("pointerdown", e => {
@@ -146,8 +146,11 @@ V.camera = {
   cursor: () => hoverVolcano && cam.e < .05 ? "pointer" : null,
   afterFrame() {                                   // the way out only once you are in; the hidden way in only outside
     const inNow = cam.soup > .5;
-    if (goOut.hidden === inNow) goOut.hidden = !inNow;
+    const b = goOut.querySelector("button"), say = inNow ? "out of the volcano" : "into the volcano";
+    if (b.getAttribute("aria-label") !== say) { b.setAttribute("aria-label", say); b.title = inNow ? "out" : "in"; }
     goIn.disabled = cam.e > .05;
+    const hide = inNow ? "" : "hidden";            // only in the soup: outside, the volcano itself is the way in
+    if (b.style.visibility !== hide) b.style.visibility = hide;
   },
 };
 lens();

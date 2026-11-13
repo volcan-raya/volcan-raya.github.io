@@ -18,11 +18,10 @@ document.body.insertAdjacentHTML("beforeend", `
 </div>`);
 // DEV: this file's rows, in the tabs "soup" and "text" (core.js makes the tabs)
 V.dev.tab("soup", `
-  <div class="full seg" role="group" aria-label="How a seen ball looks">
-    <span class="k">seen balls</span>
-    <button class="t" type="button" data-seen="fill">black</button>
-    <button class="t" type="button" data-seen="outline">outline</button>
-    <button class="t" type="button" data-seen="outline-black">outline black</button>
+  <div class="full seg" role="group" aria-label="The type of an opened message">
+    <span class="k">messages</span>
+    <button class="t" type="button" data-bigfont="sans">sans</button>
+    <button class="t" type="button" data-bigfont="mebar">mebar</button>
   </div>
   <span class="full"><span class="k">here </span><span id="here">…</span></span>
   <label class="full"><span class="k">replies: size of a ball </span><span id="satV"></span><input type="range" id="satSize" min="10" max="100" step="1"></label>
@@ -126,7 +125,14 @@ function openId(from) {
   // opened from a composer: in its own row, over it, the person's ball where it is: the Name field where Vent is (its
   // word at the left, as Vent's), the arrow where the mic (or send) is, the same size and the same gaps
   const bar = from && from.closest && from.closest("form"), fw = bar && bar.querySelector(".fieldwrap"), last = bar && [...bar.querySelectorAll(".round")].filter(e => !e.hidden).pop();
-  if (fw && last) {
+  // 1.01, 1.02, as up to 3.01: in a row of its own just above the composer, with no box round the two: the arrow over the person's ball, the
+  // Name field (as Vent is) from Vent's left to its right
+  const above = fw && from.classList.contains("you");
+  idPanel.classList.toggle("above", !!above);
+  if (above) {
+    const y = from.getBoundingClientRect(), a = fw.getBoundingClientRect();
+    Object.assign(idPanel.style, { left: y.left + "px", right: "auto", width: a.right - y.left + "px", bottom: innerHeight - y.top + 10 + "px" });
+  } else if (fw && last) {
     const a = fw.getBoundingClientRect(), z = last.getBoundingClientRect();
     Object.assign(idPanel.style, { left: a.left + "px", right: "auto", width: z.right - a.left + "px", bottom: innerHeight - z.bottom + "px" });
   } else idPanel.removeAttribute("style");
@@ -373,12 +379,8 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 // what a notification plays under the pointer is in ../shared/notification.js
 // red, or black once read: the deep red holds on the orange, where the interface's red would vanish
 const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];
-// how a seen ball looks (DEV, soup; kept in this browser): its red going black ("fill"), or its fill giving way to a
-// ring at its edge, red ("outline") or black ("outline-black"); either way over the same 2 s, and still whole to touch
-let seenLook = ["fill", "outline", "outline-black"].includes(store.get("volcano-v12-seen", "fill")) ? store.get("volcano-v12-seen", "fill") : "fill";
-function showSeen() { document.querySelectorAll("[data-seen]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.seen === seenLook))); store.set("volcano-v12-seen", seenLook); }
-document.querySelectorAll("[data-seen]").forEach(b => b.addEventListener("click", () => { seenLook = b.dataset.seen; showSeen(); }));
-showSeen();
+// a seen ball, over 2 s, still whole to touch:
+let seenLook = "outline";   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
 function badgeColour(b) {
   const e = b.readT * b.readT * (3 - 2 * b.readT);
   return [lerp(DOT[0], DOT_READ[0], e), lerp(DOT[1], DOT_READ[1], e), lerp(DOT[2], DOT_READ[2], e)];
@@ -597,6 +599,26 @@ function fitWords() {
   fits(lo);
 }
 addEventListener("resize", () => fitWords());
+// the words, with the letters Mebar draws (A to S, ../shared/mebar.css) in spans of their own, so only they are thickened
+// when Mebar is chosen; built as text, never as html
+function setWords(t) {
+  wordsEl.textContent = "";
+  for (const run of String(t || "").match(/[a-s]+|[^a-s]+/gi) || []) {
+    if (/^[a-s]/i.test(run)) { const m = document.createElement("span"); m.className = "m"; m.textContent = run; wordsEl.append(m); }
+    else wordsEl.append(run);
+  }
+}
+// the type of an opened message: the sans by default, or Mebar Display (DEV, soup; kept in this browser). Mebar is the
+// title's (1.03 on); here only to try
+const BIGFONT_KEY = "volcano-v12-bigfont2";
+let bigFont = store.get(BIGFONT_KEY, "sans") === "mebar" ? "mebar" : "sans";
+function setBigFont(f) {
+  bigFont = f; store.set(BIGFONT_KEY, f); bigEl.classList.toggle("mebar", f === "mebar");
+  document.querySelectorAll("[data-bigfont]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.bigfont === f)));
+  requestAnimationFrame(fitWords);
+}
+document.querySelectorAll("[data-bigfont]").forEach(b => b.addEventListener("click", () => setBigFont(b.dataset.bigfont)));
+setBigFont(bigFont);
 document.querySelectorAll("button[data-font]").forEach(b => b.addEventListener("click", () => requestAnimationFrame(fitWords)));   // the type changed (core.js)
 document.fonts && document.fonts.addEventListener && document.fonts.addEventListener("loadingdone", () => fitWords());
 document.querySelectorAll("[data-big]").forEach(i => i.addEventListener("input", () => { big[i.dataset.big] = +i.value; applyBig(); }));
@@ -628,7 +650,7 @@ function openNote(b) {
   picked = b.fake ? null : b;
   const s = b.s, me = mediumOf(s);
   bigEl.dataset.kind = me;
-  wordsEl.textContent = me === "image" ? "" : s.s;
+  setWords(me === "image" ? "" : s.s);
   sigEl.textContent = signLine(s);
   if (me === "image") { picEl.src = imgSrc(s.img); picEl.alt = s.s || "a picture"; } else { picEl.removeAttribute("src"); picEl.alt = ""; }
   bigEl.classList.add("on");
