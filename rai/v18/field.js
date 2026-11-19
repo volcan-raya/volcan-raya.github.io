@@ -28,23 +28,61 @@ function size() {
   const { W, H, MDPR } = V.size();
   field.width = Math.round(W * MDPR); field.height = Math.round(H * MDPR);
 }
+// v18, aya's look (index.html, the toggle; the default): aya v14's colours. The sky from night blue to cream, darkening as
+// the pressure builds, darkest sealed and through the eruption, clearing after it, lighter, then back (her v11, v12); the
+// mountain one body, the crater's peach at the apex down through a hot orange to a dark red-brown, its two sides black
+// as in her drawing; the soup, deep in that body, from its warm middle down to the dark. Rai's look: the orange, black
+const SKY = ["#174a80", "#fdf8f2"], BODY = ["#ffb075", "#ee7a4c", "#701a26"], SOUP = ["#b54f3b", "#701a26"];
+const DARK = ["#060d1c", "#4b4a78"], CLEAR = ["#3b8fdc", "#f6fbff"];
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, f) => { const A = hex(a), B = hex(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * f).toString(16).padStart(2, "0")).join(""); };
+let dark = 0, clear = 0, lastPhase = "build", lastT = performance.now();
+function skyNow() {
+  const now = performance.now(), dt = Math.min(.1, (now - lastT) / 1000); lastT = now;
+  const vo = V.volcano; if (!vo) return SKY;
+  const p = vo.pressure || 0, ph = vo.phase;
+  const aim = ph === "seal" || ph === "settle" ? 1 : Math.pow(Math.max(0, (p - .35) / .65), 1.6) * .9;
+  if (ph !== "settle" && lastPhase === "settle") clear = 1;
+  lastPhase = ph;
+  dark += (aim - dark) * Math.min(1, dt * (aim < dark ? 3 : 1.2));
+  clear = Math.max(0, clear - dt / 14);
+  const c = clear * clear * (3 - 2 * clear);
+  return [0, 1].map(i => mix(mix(SKY[i], DARK[i], dark), CLEAR[i], c * (1 - dark)));
+}
+const ayaLook = () => document.documentElement.dataset.look !== "rai";
 function draw() {
-  const { W, H, MDPR } = V.size(), cam = V.camera.cam, x = ctx;
+  const { W, H, MDPR } = V.size(), cam = V.camera.cam, x = ctx, aya = ayaLook();
   x.setTransform(MDPR, 0, 0, MDPR, 0, 0);
+  const sk = aya ? skyNow() : null;
   if (cam.inside < 1) {
-    x.fillStyle = ORANGE; x.fillRect(0, 0, W, H);
-    const { CX, CY, E } = V.camera.volcano();
-    x.beginPath();
-    TRI.forEach(([u, v], i) => { const [px, py] = V.camera.outside(CX + u * E, CY + v * E); i ? x.lineTo(px, py) : x.moveTo(px, py); });
-    x.closePath(); x.fillStyle = "#000"; x.fill();
-    // aya v05: no ground; the triangle's two sides go on down, past the screen's edges, a mountain filling the bottom
+    const { CX, CY, E } = V.camera.volcano(), out = V.camera.outside;
+    const [ax, ay] = out(CX, CY - .25 * E);        // the apex, on the screen
+    if (aya) {
+      const g = x.createLinearGradient(0, ay - H * .75, 0, ay + H * .3);
+      g.addColorStop(0, sk[0]); g.addColorStop(1, sk[1]);
+      x.fillStyle = g;
+    } else x.fillStyle = ORANGE;
+    x.fillRect(0, 0, W, H);
+    // the mountain: the triangle and, aya v05, its two sides on down past the screen's edges
     const BIG = 40 * Math.max(W, H) / Math.max(1, E);
     x.beginPath();
-    [[0, -.25], [BIG, -.25 + BIG], [BIG, BIG * 4], [-BIG, BIG * 4], [-BIG, -.25 + BIG]].forEach(([u, v], i) => { const [px, py] = V.camera.outside(CX + u * E, CY + v * E); i ? x.lineTo(px, py) : x.moveTo(px, py); });
-    x.closePath(); x.fill();
+    [[0, -.25], [BIG, -.25 + BIG], [BIG, BIG * 4], [-BIG, BIG * 4], [-BIG, -.25 + BIG]].forEach(([u, v], i) => { const [px, py] = out(CX + u * E, CY + v * E); i ? x.lineTo(px, py) : x.moveTo(px, py); });
+    x.closePath();
+    if (aya) {
+      const deep = ay + Math.max(H, (V.camera.maxPan ? V.camera.maxPan() : 0) + H * .6);
+      const g = x.createLinearGradient(0, ay, 0, deep);
+      g.addColorStop(0, BODY[0]); g.addColorStop(.32, BODY[1]); g.addColorStop(1, BODY[2]);
+      x.fillStyle = g; x.fill();
+      x.strokeStyle = "#000"; x.lineWidth = Math.max(2, E * cam.zoom * .022); x.lineJoin = "miter"; x.lineCap = "butt";
+      x.beginPath();
+      for (const sgn of [-1, 1]) { const [px, py] = out(CX + sgn * BIG * E, CY + (-.25 + BIG) * E); x.moveTo(ax, ay); x.lineTo(px, py); }
+      x.stroke();
+    } else { x.fillStyle = "#000"; x.fill(); }
   }
-  if (cam.inside > 0) {                            // the soup, coming through: the orange, all the way up
-    x.globalAlpha = cam.inside; x.fillStyle = ORANGE; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
+  if (cam.inside > 0) {                            // the soup, coming through: all the way up
+    if (aya) { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, SOUP[0]); g.addColorStop(1, SOUP[1]); x.fillStyle = g; }
+    else x.fillStyle = ORANGE;
+    x.globalAlpha = cam.inside; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
   }
 }
 V.field = {

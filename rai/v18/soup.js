@@ -437,6 +437,10 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 // what a notification plays under the pointer is in ../shared/notification.js
 // red, or black once read: the deep red holds on the orange, where the interface's red would vanish
 const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];   // rai v18: the soup's red again, on the orange (aya v07's)
+// v18: aya's look, the crater's peach on her dark red (aya v11); rai's, the soup's red. Changed in place: DOT is read every frame
+const DOTS = { aya: [251, 179, 129], rai: [196, 0, 12] };
+const setDot = k => DOT.splice(0, 3, ...(DOTS[k] || DOTS.aya));
+setDot(document.documentElement.dataset.look); addEventListener("v18:look", e => setDot(e.detail));
 // a seen ball, over 2 s, still whole to touch, on every page on this soup:
 let seenLook = "outline";   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
 function badgeColour(b) {

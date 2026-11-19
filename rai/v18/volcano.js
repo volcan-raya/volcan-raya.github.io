@@ -52,7 +52,8 @@ function tremor(t) {
 // Everything is measured in E, the emoji's size, so the words keep their size against it. They always read from left to
 // right: a word going left has its first letter at its head. Between eruptions a word escapes now and then, as smoke
 // (DEV: "steady smoke", words a minute).
-const LAVA = [196, 0, 12], SMOKE = "#000";   // the lava: the notification balls' red (soup.js DOT); 1.03's were HOT [255, 69, 0], COOL .62
+const LAVA = [196, 0, 12], SMOKE = "#000";
+const ayaLook = () => document.documentElement.dataset.look !== "rai";   // v18: on aya's darkening sky the smoke is light, on her body the trace dark   // the lava: the notification balls' red (soup.js DOT); 1.03's were HOT [255, 69, 0], COOL .62
 let wordSize = V.store.get("volcano-v18-wordsize", 15);   // % of the emoji
 const lfont = () => `400 100px ${V.type()}`;
 let flyers = [], lavaShare = V.store.get("volcano-v18-lava", .5), steady = V.store.get("volcano-v18-steady", 12);
@@ -164,7 +165,7 @@ function letter(x, ch, px, py, ang, size) {
 function drawSmoke(x, f, away) {
   const dx = Math.sin(f.ang), dy = -Math.cos(f.ang), back = dx < -.02;   // going left: its first letter at the head
   const ang = back ? Math.atan2(-dy, -dx) : Math.atan2(dy, dx);
-  x.fillStyle = SMOKE;
+  x.fillStyle = ayaLook() ? "#fff1e6" : SMOKE;
   // the word lies from its tail (crater side) to its head; letters laid from the head inwards, each at its own size
   let d = f.head;
   const lets = back ? f.letters : [...f.letters].reverse();
@@ -540,7 +541,7 @@ function bake(L) {                                   // what stays of it: a ligh
   traceFit();
   const { MDPR } = V.size();
   tctx.setTransform(MDPR, 0, 0, MDPR, 0, 0);
-  tctx.globalAlpha = lv.trace / 100; tctx.fillStyle = "rgb(196,0,12)";   // aya v04: a red trace, on the black
+  tctx.globalAlpha = lv.trace / 100; tctx.fillStyle = ayaLook() ? "rgb(60,12,22)" : "rgb(196,0,12)";   // aya v04: a red trace, on the black (v18, aya's: dark, on her body)
   tctx.font = lfont2(L.fs); tctx.textBaseline = "alphabetic"; tctx.textAlign = "left";
   tctx.save(); tctx.translate(L.x + L.w / 2, L.y + (lavaRun ? lavaRun.p0 : 0)); tctx.rotate(L.rot); tctx.fillText(L.ch, -L.w / 2, 0); tctx.restore();
   tctx.globalAlpha = 1;
@@ -559,7 +560,7 @@ function drawLava2(x) {
     if (L.done || !L.show || L.ch === " ") continue;
     const f = lfont2(L.fs); if (f !== font) { x.font = f; font = f; }
     x.globalAlpha = L.a;
-    x.fillStyle = L.smoke ? "#000" : L.heat <= 0 ? "rgb(196,0,12)" : heatCol(L.heat);
+    x.fillStyle = L.smoke ? (ayaLook() ? "#fff1e6" : "#000") : L.heat <= 0 ? (ayaLook() ? "rgb(60,12,22)" : "rgb(196,0,12)") : heatCol(L.heat);
     const s = L.smoke ? L.scale : (L.k ?? 1), ox = L.smoke ? L.off * (s - 1) : 0;   // smoke: the word swells as a whole, its letters apart; lava: grows as it comes
     x.save(); x.translate(L.x + L.w / 2 + ox - (L.smoke ? L.w / 2 : 0), L.y); x.rotate(L.rot); if (s !== 1) x.scale(s, s); x.fillText(L.ch, -L.w / 2, 0); x.restore();
   }

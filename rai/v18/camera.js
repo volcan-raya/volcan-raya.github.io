@@ -202,6 +202,7 @@ V.camera = {
   cursor: () => hoverVolcano && cam.e < .05 ? "pointer" : null,
   afterFrame() {                                   // the way out only once you are in; the hidden way in only outside
     const inNow = cam.soup > .5;
+    document.documentElement.toggleAttribute("data-out", cam.inside < 1);   // v18: outside, for the look's colours (index.html)
     const b = goOut.querySelector("button"), say = inNow ? "out of the volcano" : "into the volcano";
     if (b.getAttribute("aria-label") !== say) { b.setAttribute("aria-label", say); b.title = inNow ? "out" : "in"; }
     goIn.disabled = cam.e > .05;
