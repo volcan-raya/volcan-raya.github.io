@@ -55,8 +55,11 @@ function maxPan() {
 }
 function panBy(d) { panAim = clamp(panAim + d, 0, maxPan()); }
 // one scroll, the whole way: down, the soup → out through the ⏏ → down the mountain; up, the reverse
+// v20: the door is locked: no way down until a mood is picked (19/11/26: "impossible to scroll down below the volcano if
+// we didn't chose an emoji"), and the way down after the pick is the glide's own, not to be taken over
+const locked = () => moodHold || (!picked && !!$("mood"));
 function scroll(d) {                               // v20: down the page (d > 0) is towards the soup, s towards 0, px for px
-  if (!d) return;
+  if (!d || locked()) return;
   scrolled = true;
   aim = clamp(aim - d / pageD(), 0, 1); if (reduce.matches) s = aim;
 }
@@ -126,7 +129,7 @@ function onVolcano(px, py) {                     // on the triangle (field.js), 
   const u = (px - CX) / E, v = (py - CY) / E;
   return cam.s > .95 && v > -.3 && v < .6 && Math.abs(u) < (v < .3 ? v + .35 : .55);
 }
-function enter() { if (aim !== 0) { goTo(0); panAim = 0; } }   // aya v05: back up to the apex on the way in
+function enter() { if (locked()) return; if (aim !== 0) { goTo(0); panAim = 0; } }   // aya v05: back up to the apex on the way in
 function leave() { if (aim !== 1) goTo(1); }       // the balls stay where they are: they go up only in an eruption (volcano.js)
 goIn.addEventListener("click", enter);
 goOutSr.addEventListener("click", leave);
@@ -210,7 +213,7 @@ function showDev() {
 // v20: the title, at the page's top, over the volcano: set as an opened note is (its size and margin read off #big, so
 // DEV soup's "messages" move it too), its top TITLE_TOP of the screen down, moved up as the page is scrolled
 const titleEl = $("title"), TITLE_TOP = .14;
-let titleKey = "";
+let titleKey = "", titleLow = 1;
 function placeTitle() {
   if (!titleEl) return;
   const big = $("big"), cs = big && getComputedStyle(big), fs = cs && cs.getPropertyValue("--fs").trim(), side = cs && cs.getPropertyValue("--side").trim();
@@ -225,7 +228,9 @@ function placeTitle() {
   titleEl.style.transform = `translateY(${y.toFixed(1)}px)`;
   // and it fades as soon as you scroll down, gone within the first third of a screen (19/11/26: "the title should
   // disappear once we scroll down"); back as you come up to the top
-  const fade = 1 - smoothE(0, .35 * H, cam.off || 0);
+  // only the once: faded, it never comes back, not even at the top again (19/11/26: "as soon as we scroll down, this
+  // should never reappear"; index.html: html[data-entered] hides it and the mood for good)
+  const fade = titleLow = Math.min(titleLow, 1 - smoothE(0, .35 * H, cam.off || 0));
   titleEl.style.opacity = fade.toFixed(3);
   titleEl.style.visibility = fade <= 0 ? "hidden" : "";
   // the mood at the door (soup.js #mood) on the black triangle: low in it, about halfway from the apex to the screen's
@@ -233,7 +238,7 @@ function placeTitle() {
   // nor so low it meets the count at the bottom; on the page, scrolled with the volcano
   const mood = $("mood"), root = document.documentElement;
   // picked, it stays where it is on the page, going up with the volcano, until we are in the soup (index.html: html[data-mood-hold])
-  if (moodHold && s <= .001 && !glide) { moodHold = false; root.removeAttribute("data-mood-hold"); }
+  if (moodHold && s <= .001 && aim === 0) { glide = null; moodHold = false; root.removeAttribute("data-mood-hold"); root.setAttribute("data-entered", ""); }
   if (mood && (!mood.hidden || moodHold)) {
     const row = mood.querySelector(".row"), half = (row ? row.offsetWidth : 300) / 2;
     const ay = CY - .25 * E, mh = mood.offsetHeight;
@@ -244,10 +249,11 @@ function placeTitle() {
 }
 // v20: once you have picked your mood at the door, the view goes down the whole page, into the soup; the faces stay
 // on the volcano meanwhile (soup.js would close them 1.5 s after the pick), gone only once we are in the soup
-let moodHold = false;
+let moodHold = false, picked = false;
 document.addEventListener("click", e => {
   if (!(e.target instanceof Element) || !e.target.closest("#mood [data-mood]")) return;
-  moodHold = true; document.documentElement.setAttribute("data-mood-hold", "");
+  if (picked) return;
+  picked = moodHold = true; document.documentElement.setAttribute("data-mood-hold", "");
   setTimeout(() => goTo(0), reduce.matches ? 0 : 500);
 });
 V.camera = {

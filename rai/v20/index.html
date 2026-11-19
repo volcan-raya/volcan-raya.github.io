@@ -114,6 +114,8 @@ html body #mood button:hover, html body #mood button:focus-visible { transform: 
 html body #mood .named { display: none; }
 /* picked: it stays on the volcano, scrolled away with it, until we are in the soup (camera.js, data-mood-hold) */
 html[data-mood-hold] body #mood { display: block !important; opacity: 1 !important; pointer-events: none; }
+/* in the soup, once: the title and the mood are gone for good, never again on the volcano (camera.js, data-entered) */
+html[data-entered] body #mood, html[data-entered] #title { display: none !important; }
 #title span { display: block; }
 /* it shows only once its font is in, so it never appears in a fallback first and changes (the script under #title) */
 html:not([data-fonts]) #title { visibility: hidden; }
