@@ -457,6 +457,9 @@ function syncBadges(freshId) {
       b = makeBadge(s); badges.set(s.id, b); b.s = s; placeHome(b);
       if (arriving.delete(s.id)) b.arrive = performance.now();
       const p = placed[s.id]; if (Array.isArray(p) && p.length === 3 && p.every(Number.isFinite)) [b.hx, b.hy, b.hz] = p;   // where it was dropped
+      if (s.id === freshId && FLAT && VN >= 20) {   // v20: what you just sent goes up to the middle of the soup, above it, where it can be seen, and stays there
+        b.hx = rand(-.3, .3); b.hy = rand(.12, .38); placed[s.id] = [b.hx, b.hy, 0]; store.set(PLACED_KEY, placed);
+      }
       if (s.id === freshId && birth) { b.x = birth.x; b.y = birth.y; b.z = birth.z; birth = null; }   // what you just wrote leaves the send button, then sinks in
       else { b.x = b.hx; b.y = b.hy; b.z = b.hz; }
     }
