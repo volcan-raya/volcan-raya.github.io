@@ -63,3 +63,5 @@ Never force-push, reset, stash or checkout files you don't own.
 - (B, 19/11/26, the user's request "from v20 on") **index.html touched by B**: the SOUP (look) and MORPH toggles removed,
   `data-look` fixed to "rai" (aya's gradient gone, so field.js's `ayaLook()` is always false now), the avatar toggle
   cursors ↔ evangelions only (no balls), its arrow black. The morph code is gone from soup.js.
+- (B, 19/11/26, the user's request) **index.html, #avatar again**: no box, only what it switches to: the black arrow, or
+  an EVA 90 px tall (as in the soup, soup.js EVA_H); the coloured dots gone.

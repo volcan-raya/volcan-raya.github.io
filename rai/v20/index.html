@@ -156,11 +156,11 @@ html:not([data-fonts]) #title { visibility: hidden; }
 /* v20 on: one look, rai's (the soup's red on the orange): aya's gradient and its toggle are gone, and so is MORPH */
 #avatar { position: fixed; z-index: 6; top: 12px; right: 16px; padding: 0; border: 0; background: none; cursor: pointer; }
 /* how the others are seen, cursors or evangelions: it shows the other one, a click away */
-#avatar span { display: grid; place-items: center; width: 48px; aspect-ratio: 16 / 9; border: .75px solid #000; border-radius: 2px; background: #fff1e6; overflow: hidden; }
-#avatar img { display: block; height: 24px; width: auto; }
-#avatar i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin: 0 1.5px; }
+#avatar span { display: block; }   /* v20: no box, only what it switches to: the arrow, or an EVA as large as they are in the soup (soup.js EVA_H) */
+#avatar img { display: block; height: 90px; width: auto; }
+#avatar .arr { width: 13px; height: 20px; }
 /* it shows the next one: cursors ↔ evangelions (v20: no balls) */
-#avatar .dots, #avatar img, #avatar .arr { display: none; }
+#avatar img, #avatar .arr { display: none; }
 html[data-avatar="cursor"] #avatar img, html[data-avatar="eva"] #avatar .arr { display: block; }
 #avatar:focus-visible { outline: 1.5px solid #000; outline-offset: 3px; border-radius: 4px; }
 </style>
@@ -176,7 +176,7 @@ html[data-avatar="cursor"] #avatar img, html[data-avatar="eva"] #avatar .arr { d
 document.documentElement.dataset.look = "rai";   // v20 on: one look, rai's
 (() => { let k = "cursor"; try { if (localStorage.getItem("volcano-v18-avatar2") === "eva") k = "eva"; } catch {} document.documentElement.dataset.avatar = k; })();
 </script>
-<button id="avatar" type="button" aria-label="the others: cursors or evangelions"><span><b class="dots"><i style="background:#2f6bff"></i><i style="background:#14c46e"></i><i style="background:#ff4fb3"></i></b><img src="eva.png" alt=""><svg class="arr" width="13" height="20" viewBox="-1 -1 14 22"><path d="M0 0L0 17L4.2 13L7.2 19.6L9.8 18.4L6.9 12L12.4 12Z" fill="#000" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg></span></button>
+<button id="avatar" type="button" aria-label="the others: cursors or evangelions"><span><img src="eva.png" alt=""><svg class="arr" width="13" height="20" viewBox="-1 -1 14 22"><path d="M0 0L0 17L4.2 13L7.2 19.6L9.8 18.4L6.9 12L12.4 12Z" fill="#000" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg></span></button>
 <script>
 document.getElementById("avatar").addEventListener("click", () => {
   const k = document.documentElement.dataset.avatar === "eva" ? "cursor" : "eva";   // v20: cursors ↔ evangelions
