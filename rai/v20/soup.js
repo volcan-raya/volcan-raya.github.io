@@ -352,7 +352,7 @@ async function loadSentences() {
   for (const r of out.filter(s => s.re).sort((a, b) => a.t - b.t)) addReply(r);
   for (const r of simReplies) if (sentences.some(n => n.id === r.re)) addReply(r);   // v20: the simulated others', this visit only
   sentLoaded = true;
-  syncBadges(); showStatus();
+  syncBadges(); showStatus(); warmPics();
 }
 function addReply(r) { if (!replies.has(r.re)) replies.set(r.re, []); replies.get(r.re).push(r); }
 // medium: how it was made, "voice", "text" or "image" (img: a small jpeg as a data URL)
@@ -988,6 +988,29 @@ function sign(s) {
 const inkCtx = document.createElement("canvas").getContext("2d");
 function placeSig() {}   // v20: the signature follows the words, in the column (soup.css)
 picEl.addEventListener("load", placeSig);
+// v20: a picture is shown whole at once: decoded first (it was already fetched with the notes, see warmPics), then faded
+// in, never drawn as it arrives; until then it keeps its place, from its known shape, so nothing under it jumps
+const picCache = new Map();                     // src → a decoded Image
+function warmPics() {
+  for (const n of sentences) if (n.img && !picCache.has(n.img)) {
+    const im = new Image(); im.decoding = "async"; im.src = imgSrc(n.img);
+    picCache.set(n.img, im); im.decode().catch(() => {});
+  }
+}
+let picToken = 0;
+function showPic(s) {
+  const t = ++picToken, src = imgSrc(s.img), im = picCache.get(s.img);
+  picEl.classList.remove("ready"); picEl.alt = s.s || "a picture";
+  const size = p => {                          // its place as it will be drawn: fitted in the column and 55% of the screen's height, never enlarged
+    if (!p || !p.naturalWidth) { picEl.style.width = picEl.style.height = ""; return; }
+    const k = Math.min(1, (boxEl.clientWidth || innerWidth) / p.naturalWidth, innerHeight * .55 / p.naturalHeight);
+    picEl.style.width = Math.round(p.naturalWidth * k) + "px"; picEl.style.height = Math.round(p.naturalHeight * k) + "px";
+  };
+  size(im);
+  const ready = () => { if (t === picToken) { size(pre); picEl.src = src; requestAnimationFrame(() => { if (t === picToken) picEl.classList.add("ready"); }); } };
+  const pre = im || new Image(); if (!im) { pre.src = src; picCache.set(s.img, pre); }
+  (pre.decode ? pre.decode() : Promise.resolve()).then(ready, ready);
+}
 // v20: the column takes the pointer (it scrolls in itself), but a ball under it, or the words beside one, still answer:
 // the pointer over them shows which, a click opens that dialogue. Anywhere else on the column, nothing
 boxEl.addEventListener("pointermove", e => { if (e.pointerType !== "touch") hover(...V.at(e)); });
@@ -1008,7 +1031,7 @@ function openNote(b) {
   bigEl.dataset.kind = me;
   setWords(me === "image" ? "" : s.s);
   sign(s);
-  if (me === "image") { picEl.src = imgSrc(s.img); picEl.alt = s.s || "a picture"; } else { picEl.removeAttribute("src"); picEl.alt = ""; }
+  if (me === "image") showPic(s); else { picToken++; picEl.removeAttribute("src"); picEl.alt = ""; picEl.classList.remove("ready"); picEl.style.width = picEl.style.height = ""; }
   bigEl.classList.add("on");
   showThread(b);                                 // v20: the whole conversation round it
   fitWords(); placeSig(); placeThread();

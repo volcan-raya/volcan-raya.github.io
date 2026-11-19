@@ -67,11 +67,15 @@
 #big .box::-webkit-scrollbar { display: none; }
 #big.outlined .box { outline: 1px dashed #C16CFF; outline-offset: -1px; }
 #big .words { margin: 0; color: var(--ink); font: 500 max(28px, var(--fs))/var(--lh) var(--type); letter-spacing: -.035em; overflow-wrap: break-word; hyphens: none; }
-#big .pic { display: none; max-width: 100%; max-height: 55vh; width: auto; height: auto; object-fit: contain; object-position: left top; margin: 0 0 .5em; }
+#big .pic { display: none; max-width: 100%; max-height: 55vh; width: auto; height: auto; object-fit: contain; object-position: left top; margin: 0 0 .5em;
+  opacity: 0; transition: opacity .3s ease; }
+#big .pic.ready { opacity: 1; }   /* shown once decoded, whole (soup.js, showPic) */
+@media (prefers-reduced-motion: reduce) { #big .pic { transition: none; } }
 #big[data-kind="image"] .pic { display: block; }
 #big .viz { display: none; }
 /* who wrote it, as a quote is credited: — 😤 name, day, hour */
 #big .sig { margin: .9em 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: .4em; color: var(--ink); font: 500 var(--sig)/1.25 var(--type); opacity: .8; }
+#big .sig .who, #big .sig .when { font-weight: inherit; }   /* the name never bold */
 #big .sig .when { font-variant-numeric: tabular-nums; }
 #big .sig .who::before { content: "— "; }
 #big .sig.dated .who::after { content: ","; }
