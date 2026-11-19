@@ -156,16 +156,15 @@ button, input, select { font: inherit; color: inherit; }
   #dev #pBoom:disabled { opacity: .45; }
 }
 
-/* v18: the look, toggled top right (#look): aya's (default) — her v14 sky, night blue to cream, and her body, peach to
+/* v18: the look, toggled top right (#look, showing only the other one): aya's (default) — her v14 sky, night blue to cream, and her body, peach to
    dark red, the mountain and the soup; peach balls, light words — or rai's, the orange, the black mountain, red balls.
    Kept in this browser. html[data-look] is set before anything is drawn (the script at the top of the body) */
-#look { position: fixed; z-index: 6; top: 12px; right: 16px; display: flex; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; }
-#look span { display: grid; place-items: center; width: 48px; aspect-ratio: 16 / 9; border-radius: 3px; opacity: .45;
-  font: 800 11px/1 var(--type); letter-spacing: .06em; text-transform: uppercase; transition: opacity .2s, box-shadow .2s; }
-#look .aya { background: linear-gradient(180deg, #ffb075, #ee7a4c 32%, #701a26); color: #fff1e6; }
-#look .rai { background: #ff4500; color: #000; }
-html[data-look="aya"] #look .aya, html[data-look="rai"] #look .rai { opacity: 1; box-shadow: 0 0 0 1.5px var(--lookRing, #000); }
-html[data-look="aya"] { --lookRing: #fff1e6; }
+#look { position: fixed; z-index: 6; top: 12px; right: 16px; padding: 0; border: 0; background: none; cursor: pointer; }
+/* one rectangle: the other soup, the one a click takes you to, with SOUP written in it */
+#look span { display: grid; place-items: center; width: 48px; aspect-ratio: 16 / 9; border: .75px solid #000; border-radius: 2px;
+  font: 800 11px/1 var(--type); letter-spacing: .06em; text-transform: uppercase; }
+html[data-look="rai"] #look span { background: linear-gradient(180deg, #ffb075, #ee7a4c 32%, #701a26); color: #fff1e6; }
+html[data-look="aya"] #look span { background: #ff4500; color: #000; }
 #look:focus-visible { outline: 1.5px solid #000; outline-offset: 3px; border-radius: 4px; }
 html[data-look="aya"] #big { --ink: rgb(255, 241, 230) !important; }   /* her soup is dark: its words in a light ink */
 html[data-look="aya"] #venting { color: #fff1e6; }
@@ -183,7 +182,7 @@ html[data-look="aya"][data-out] #venting { color: #000; }   /* outside, on her c
 // v18: the look, before anything is drawn: aya's unless this browser chose rai's (the toggle, top right)
 (() => { let k = "aya"; try { k = localStorage.getItem("volcano-v18-look") === "rai" ? "rai" : "aya"; } catch {} document.documentElement.dataset.look = k; })();
 </script>
-<button id="look" type="button" aria-label="background: aya's or rai's"><span class="aya">aya</span><span class="rai">rai</span></button>
+<button id="look" type="button" aria-label="the other soup"><span>soup</span></button>
 <script>
 document.getElementById("look").addEventListener("click", () => {
   const k = document.documentElement.dataset.look === "aya" ? "rai" : "aya";

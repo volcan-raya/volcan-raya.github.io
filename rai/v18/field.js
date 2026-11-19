@@ -73,7 +73,7 @@ function draw() {
       const g = x.createLinearGradient(0, ay, 0, deep);
       g.addColorStop(0, BODY[0]); g.addColorStop(.32, BODY[1]); g.addColorStop(1, BODY[2]);
       x.fillStyle = g; x.fill();
-      x.strokeStyle = "#000"; x.lineWidth = Math.max(2, E * cam.zoom * .022); x.lineJoin = "miter"; x.lineCap = "butt";
+      x.strokeStyle = "#000"; x.lineWidth = Math.max(.75, E * cam.zoom * .004);   // a thin line, as drawn x.lineJoin = "miter"; x.lineCap = "butt";
       x.beginPath();
       for (const sgn of [-1, 1]) { const [px, py] = out(CX + sgn * BIG * E, CY + (-.25 + BIG) * E); x.moveTo(ax, ay); x.lineTo(px, py); }
       x.stroke();
