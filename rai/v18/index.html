@@ -7,45 +7,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&family=Inter+Tight:wght@300;400;500;600;800&family=Spectral:wght@400;500;600&display=swap">
 <style>
-/* raya v18, aya x rai (19/11/26): aya's 3.04 (v14), the drawn volcano, its eruption in pulses and its lava letters, with
-   rai's 1.04 (v17) soup: soup.js reads data-ver="v18", so what came with rai's v16 and v17 is on (MOVES in soup.js):
-   now and then, at random, unread balls play what they play under the pointer, a few at once at most (the cue, DEV,
-   soup), and a ball let go while moving is thrown, goes on and stays where it stops, coming back off the screen's edges.
-   The name opens beside the composer, as in rai's 1.04. Rai's turning view doesn't come: this scene scrolls, it doesn't turn.
-   aya v14, after v13 (17/11/26): the eruption less like fireworks, more like a volcano letting go of what it can no
-   longer hold. It comes in pulses, irregular in strength and timing, with silences between them: a hesitant first
-   breath, the strong release, weaker and stronger ones, slow overflows at the end. Not every ball explodes: some are
-   thrown hard and break while still rising, their words flying on as fragments (now and then one floats high a long
-   time); some rise slowly and let their letters go one by one; some barely leave the crater and spill over the rim;
-   some are thrown whole on long uneven arcs and break where they land; some lava just wells over the rim, no throw.
-   Landed, the letters gather, hesitate, then flow down the cone's face in streams (thick and slow, thin and faster,
-   splitting, joining), queued one behind the other so they pile up where a stream slows, a glow of molten matter under
-   them; cooling, they slow, stop, darken and stay as a trace. Faint smoke round the crater, more with a strong pulse.
-   No flash, no streaks. DEV, aya, "the eruption": how violent, bursting or overflowing, the silences, how thick the
-   lava, how long it stays hot, the smoke; "try": one strong pulse, one soft breath, an overflow.
-   aya v13, v12 made light again (17/11/26), nothing in it looks different: the trace canvas at 1 px a px and only its
-   part on the screen drawn; the volcano and sky drawn again only when they change; the letters' colours from a table,
-   each letter placed without save/restore, the streaks of a ball in one stroke.
-   aya v12, after v11 (17/11/26): livelier colours; a reply shows in the open rant's thread as it comes; the balls burst
-   like fireworks (every way, fast, slowed by the air, streaks and a flash), further, in a night sky that clears after;
-   scrolling on up past the sky's top draws the view back, and so does the eruption while it lasts (camera.js view()).
-   aya v11, after v10 (17/11/26): the close-up of aya's drawing by default; the cone and ground one gradient down to the
-   soup's bottom; the balls the crater's peach, the letters from hot orange to the drawing's dark red; the sky darkening as
-   the pressure builds, clearing after the eruption; the balls come out of the crater's opening only (no more jolt of the soup).
-   aya v10, after v09, as in aya's drawings of 17/11/26: no title, no intro, no eject, no zoom. One tall scene (camera.js,
-   field.js): a sky from night blue to white; a cut cone, its crater flat between two black sides with their lips, the cone
-   and the ground one body, pale orange at the crater down to a dark red-brown; the soup at the bottom, deep in it, its balls
-   lava-coloured. Scrolling goes up to the volcano and back down. An opened note shows its replies under it at once, on a
-   line going down, the thread (soup.js). The eruption (volcano.js): the view goes up, the balls come out of the crater one
-   after another, rise, swell and burst in the air into their note's letters, which fall onto the volcano or the ground
-   and gather into snakes of lava, winding down and out, the note's words along them, until they cool and stay as a trace.
-   aya v09, after v08: the smoke readable, but less: a word's letters leave together and loosen as it rises, lighter,
-   shorter (DEV: smoke, how readable); DEV, aya, in five sections that fold (devlayout.js): try, the eruption, smoke,
-   before it, the soup.
-   aya v08, after v07: the smoke goes up in whole words, readable, darker and longer (7 s); the lava can run sinuous,
-   landing higher up the slope and winding down as real lava runs, creeping on while it is hot (on by default); and
-   DEV, aya, starts with "try": buttons to play each part at once (the whole eruption, a rant opened then the eruption,
-   lava, smoke, the stop motion, up and down the mountain) and the rows to change what was asked for.
+/* v18 (rai x aya, 19/11/26), after rai's 3.02 (v16) and aya's v07 and v14, made of three:
+   the soup, aya v14's (soup.js): the conversations going on, an opened rant with its replies under it at once, on a
+   thread, and a reply coming in while it is open added there live; the simulated others replying and throwing balls;
+   rai's 1.04 moves on (data-ver v18): unread balls playing by themselves now and then, a ball let go while moving thrown.
+   In the soup's own red on the orange, with its intro.
+   the eruption, aya v07's (volcano.js): out of the triangle's apex, the letters thrown in jets, lobs and sprays, each word
+   its own size, landing as lava in rows down the mountain; the smoke thrown the same way, going up. DEV, volcano: erupt.
+   the way in and out, rai v16's zoom into the ⏏, scrolled (camera.js): scrolling down dives into the small ⏏ at the top,
+   the soup growing round it until it is the volcano (its bar fading on the way: the volcano has none), and goes on down
+   into the mountain, as far as the lava; scrolling up comes back the same way. A click on the ⏏ or the volcano goes the
+   whole way at once. DEV, camera: how much scrolling the way in or out takes.
    aya v07, after v06: the letters much bigger and smaller, each word its own size, the near ones swelling as they fly at
    us; 3.01's smoke (the words drifting off the apex between eruptions) gone; the smoke now thrown as the lava is, in
    jets, lobs and sprays of letters, but going up, drifting, curling, swelling and thinning out (volcano.js).
@@ -123,7 +95,7 @@ button, input, select { font: inherit; color: inherit; }
    out of focus and fades, quickly: the blur is on the h1, which does not move, so it is a blur on the screen and does not
    shrink with the words. The balls (../shared/soup.js, INTRO) come in from our side at the same time and stop at their own
    depths, in front of it. It is gone, 3.4 s in, as the first balls come to rest (INTRO.dur there). It stays in the page for screen readers. Over everything but the panels, never in the way of a click */
-#title_v15_unused { position: fixed; z-index: 5; inset: 0; margin: 0; display: grid; place-items: center; pointer-events: none; overflow: hidden;
+#title { position: fixed; z-index: 5; inset: 0; margin: 0; display: grid; place-items: center; pointer-events: none; overflow: hidden;
   color: #000; font: 300 clamp(40px, 11vw, 220px)/1 "Mebar Display", var(--type); letter-spacing: .02em; text-align: center;   /* in Mebar Display (../shared/mebar.css) at its own weight, no outline; T and U, which it does not draw, in the light sans */
   animation: outOfFocus 2.8s linear .6s forwards; }
 #title span { display: block; transform-origin: 50% 50%; animation: suckedOut 2.8s cubic-bezier(.55, 0, .85, .35) .6s forwards; will-change: transform; }
@@ -136,7 +108,7 @@ button, input, select { font: inherit; color: inherit; }
   65%     { filter: blur(3px); opacity: .8; }
   100%    { filter: blur(7px); opacity: 0; }
 }
-@media (prefers-reduced-motion: reduce) { #title, #title span { animation: none; } #title_v15_unused { animation: fadeAway 2s ease 1.2s forwards; } }
+@media (prefers-reduced-motion: reduce) { #title, #title span { animation: none; } #title { animation: fadeAway 2s ease 1.2s forwards; } }
 @keyframes fadeAway { to { opacity: 0; } }
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */
@@ -183,7 +155,6 @@ button, input, select { font: inherit; color: inherit; }
     background: #000; border-color: #000; color: #fff; padding: 8px 14px; }
   #dev #pBoom:disabled { opacity: .45; }
 }
-#venting { color: rgba(255, 241, 230, .85) !important; }   /* aya v10: on the dark of the ground */
 </style>
 <link rel="stylesheet" href="../../rai/shared/soup.css">
 <link rel="stylesheet" href="../../rai/shared/mebar.css">
@@ -193,7 +164,7 @@ button, input, select { font: inherit; color: inherit; }
   <canvas id="marks" role="img" aria-label="a black triangle, a volcano, words leaving its apex; inside, the notes as red balls"></canvas>
 </div>
 
-
+<h1 id="title"><span>NOTIFICATION SOUP</span></h1>
 
 <aside id="dev" aria-label="DEV" data-dev data-ui hidden></aside>
 
@@ -214,7 +185,6 @@ button, input, select { font: inherit; color: inherit; }
 <script src="notes.js"></script>
 <script src="soup.js" data-ver="v18" data-flat></script>
 <script src="field.js"></script>
-<script src="devlayout.js"></script>
 <script>V.start();</script>
 <script src="../../site.js" defer></script>
-<script src="../../nav.js" data-path="raya/v18/index.html" data-version="v18" defer></script>
+<script src="../../nav.js" data-path="rai/v18/index.html" data-version="v18" defer></script>

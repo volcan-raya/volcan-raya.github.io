@@ -1,9 +1,8 @@
 # volcan-raya
 
-Live: https://volcan-raya.github.io/ (opens rai's 1.03, v13)
+Live: https://volcan-raya.github.io/ (opens rai's v18, 3.03)
 
-- `rai/`: Rai's volcano, every version. `v09/` is 1.00 ecal, `v11/` is 1.01 ecal, `v12/` 1.02 and `v13/` 1.03 ecal (the same branch, going on), `v10/` is 2.00 blender, `v14/` is 3.00 and `v15/` 3.01, only text and flat (1.03 and the 3.x share `shared/soup.js`), `v06`–`v08` and `_v/` the earlier ones.
-- `raya/`: the two together. `v18/` is aya's 3.04 (v14) with rai's 1.04 (v17) soup (the cue, the throw).
+- `rai/`: Rai's volcano, every version. `v09/` is 1.00 ecal, `v11/` is 1.01 ecal, `v12/` 1.02 and `v13/` 1.03 ecal (the same branch, going on), `v10/` is 2.00 blender, `v14/` is 3.00, `v15/` 3.01, `v16/` 3.02 and `v18/` 3.03, only text and flat (v18 is rai x aya: aya's soup and eruption, rai's zoom into the ⏏, scrolled) (1.03 and the 3.x share `shared/soup.js`), `v06`–`v08` and `_v/` the earlier ones.
 - `aya/`: Aya's volcano, every version, flat like rai's: `v00`–`v02` are 1.00–1.02 the soup, `v03`–`v09` 2.00–2.06 lava letters, `v10`–`v14` 3.00–3.04 the drawn volcano. `aya/index.html` lists them.
 - `nav.js`, `site.js`: the bar on top of every page; its index lists every version of every project, a row a branch.
 

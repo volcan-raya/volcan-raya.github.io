@@ -64,9 +64,9 @@ window.V = (() => {
   bar.innerHTML = TABS.map(k => `<button type="button" role="tab" data-devtab="${k}">${k}</button>`).join("");
   devEl.append(bar);
   devEl.insertAdjacentHTML("beforeend", '<span class="full devFps"><span class="k">fps </span><span id="fps"></span></span>');
-  let shown = TABS.includes(store.get("volcano-v15-devtab", "soup")) ? store.get("volcano-v15-devtab", "soup") : "soup";
+  let shown = TABS.includes(store.get("volcano-v18-devtab", "soup")) ? store.get("volcano-v18-devtab", "soup") : "soup";
   function showTab(k) {
-    shown = k; store.set("volcano-v15-devtab", k); devEl.scrollTop = 0;
+    shown = k; store.set("volcano-v18-devtab", k); devEl.scrollTop = 0;
     for (const b of bar.children) b.setAttribute("aria-selected", String(b.dataset.devtab === k));
     for (const [n, g] of groups) g.hidden = n !== k;
   }
@@ -92,7 +92,7 @@ window.V = (() => {
   function setFont(name) {
     const f = FONTS[name] ? name : "sans", root = document.documentElement;
     type = FONTS[f];
-    root.style.setProperty("--type", type); root.dataset.font = f; store.set("volcano-v15-font", f);
+    root.style.setProperty("--type", type); root.dataset.font = f; store.set("volcano-v18-font", f);
     document.querySelectorAll("button[data-font]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.font === f)));
     try { document.fonts.load(`500 100px ${type}`); } catch {}   // so the flying words are measured in the real type
   }
@@ -112,7 +112,13 @@ window.V = (() => {
     V.field.draw();
     const x = mctx, cam = camera.cam;
     x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
-    if (cam.inside > 0) soup.draw(x);
+    if (cam.inside > 0) {
+      const T = cam.soupT;                         // rai v18 (3.02's zoom): the soup grows with the ⏏ (camera.js)
+      if (T) { x.save(); x.transform(T.k, 0, 0, T.k, T.tx, T.ty); }
+      soup.draw(x);
+      if (T) x.restore();
+      if (cam.eject) V.field.eject(x);             // the ⏏ on its way, over the soup
+    }
     volcano.drawMarks(x);
     const sc = soup.cursor();
     marks.style.cursor = sc || camera.cursor() || "default";

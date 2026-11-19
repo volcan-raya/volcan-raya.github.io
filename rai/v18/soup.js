@@ -394,7 +394,7 @@ const NEAR = C.NEAR;
 // the balls between. The same perspective as the title's (600 px), started with it; each ball a little after the last,
 // so they come as a stream and not as one wall. The first are at rest (within 1% of their size) 80% of the way, 3.4 s in,
 // just as the title is gone (#title, 2.8 s from 0.6 s): change one, change the other
-const INTRO = { t0: -1e9,   /* aya v10: no intro, the balls are there at once */ dur: 3500, spread: 1600, f: 600, S: 14 };   // S: how much larger than its place a ball starts
+const INTRO = { t0: performance.now() + 600, dur: 3500, spread: 1600, f: 600, S: 14 };   // rai v18: the intro back (aya v07's), the balls coming in   // S: how much larger than its place a ball starts
 function introOf(b, now) {
   if (reduce.matches || !FLAT) return null;   // 1.03: the camera itself rises off the soup's floor through them (camera.js)
   const u = (now - INTRO.t0 - (b.ph / (Math.PI * 2)) * INTRO.spread) / INTRO.dur;
@@ -436,7 +436,7 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 // ================= drawing the inside =================
 // what a notification plays under the pointer is in ../shared/notification.js
 // red, or black once read: the deep red holds on the orange, where the interface's red would vanish
-const DOT = [251, 179, 129], DOT_READ = [10, 3, 2];   // aya v11: the crater's peach (from aya's drawing), on the dark red; v10:   // aya v10: lava, glowing on the dark of the ground (was the soup's red on its orange)
+const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];   // rai v18: the soup's red again, on the orange (aya v07's)
 // a seen ball, over 2 s, still whole to touch, on every page on this soup:
 let seenLook = "outline";   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
 function badgeColour(b) {
@@ -1101,7 +1101,7 @@ setInterval(() => {
 {
   const css = document.createElement("style");
   css.textContent = `
-    #big { --ink: rgb(255, 241, 230) !important; }   /* the soup is deep in the dark lava now: its words in a light ink (not stored: v15 shares the setting) */
+    /* rai v18: the words in the soup's own ink again (aya v14 lightened them for her dark scene) */
     #big .thread { position: absolute; margin: 0; padding: 4px 0 0 18px; border-left: 1.5px solid var(--ink); color: var(--ink);
       font: 400 16px/1.3 var(--type); max-width: 640px; }
     #big .thread::before { content: ""; position: absolute; left: -1.5px; top: -12px; height: 12px; border-left: 1.5px solid var(--ink); }
@@ -1258,6 +1258,8 @@ function updateSims(dt, t) {
     if (!inSoup) { letGo(m, false); continue; }
     const b = m.b;
     if (b && (!badges.has(b.s.id) || b === picked || (grab && grab.b === b) || b.fly > 0 || !vis.includes(b))) { letGo(m, false); m.mode = "wander"; m.t = rand(.3, 1); }
+    // rai v18: let go of while the soup was away (out of the volcano and back), it has no ball: it wanders again
+    if (!m.b && m.mode !== "wander" && m.mode !== "pause") { m.mode = "wander"; m.t = rand(.3, 1); }
     m.t -= dt;
     if (m.mode === "wander") {                  // somewhere, then a pause, then a ball or somewhere else
       if (Math.hypot(m.tx - m.x, m.ty - m.y) < 10 || m.t < -6) { m.mode = "pause"; m.t = rand(.2, 1.4); }

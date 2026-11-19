@@ -7,31 +7,10 @@ window.CABZ = {
    "title": "[aya x rai]",
    "projects": [
     {
-     "id": "raya",
-     "name": "raya",
-     "title": "aya x rai, together",
-     "href": "raya/v18/",
-     "cursor": "normal",
-     "offset": true,
-     "versions": [
-      {
-       "id": "v18",
-       "label": "v18",
-       "date": "2026-11-19T12:00:00+01:00",
-       "msg": "aya's 3.04 (v14), the drawn volcano and its eruption, with rai's 1.04 (v17) soup: unread balls play by themselves now and then, a ball let go while moving is thrown",
-       "pages": [
-        "index.html"
-       ],
-       "live": true,
-       "href": "raya/v18/"
-      }
-     ]
-    },
-    {
      "id": "rai",
      "name": "la-voiex-du-volcan",
      "title": "la voiex du volcan",
-     "href": "rai/v13/",
+     "href": "rai/v18/",
      "versions": [
       {
        "id": "v00",
@@ -252,6 +231,18 @@ window.CABZ = {
        "live": true,
        "href": "rai/v17/",
        "release": "1.04"
+      },
+      {
+       "id": "v18",
+       "label": "v18",
+       "date": "2026-11-19T15:00:00+01:00",
+       "msg": "rai x aya: aya v14's soup and its conversations, with rai's 1.04 moves; aya v07's eruption; rai v16's zoom into the ⏏, scrolled, on down into the mountain",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "rai/v18/",
+       "release": "3.03"
       }
      ],
      "cross": "ex",
