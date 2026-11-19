@@ -629,6 +629,9 @@ const sinceOf = () => null;   // v20: two kinds of ball only, unseen filled and 
 // the depth; the ones of the ball under the pointer, or of the note open, come forward and the rest step back. How
 // strong: DEV, soup, "links" (0: none)
 let linksK = store.get(KEY + "links", 30);
+const RING = { gap: 5, lw: 1.5 };              // v20: the ring round the opened ball, outside it; links stop at its outer edge
+const ringOn = b => b === picked && bigEl.classList.contains("on");
+const edgeOf = b => ringOn(b) ? b.R + RING.gap + RING.lw : b.R;
 function drawLinks(x) {
   if (linksK <= 0 || vis.length < 2) return;
   const on = new Set(vis), focus = hovered || picked, base = linksK / 100;
@@ -642,9 +645,10 @@ function drawLinks(x) {
     const fade = Math.min(a.seen, c.seen) * smooth(1.5, 7, Math.min(a.R, c.R));
     const k = base * fade * (lit ? 2.6 : focus ? .45 : 1);
     if (k < .01) continue;
-    const ux = dx / L, uy = dy / L;
+    const ux = dx / L, uy = dy / L, ra = edgeOf(a), rc = edgeOf(c);   // v20: at the opened ball, the line stops at its ring
+    if (L <= ra + rc + 1) continue;
     x.globalAlpha = Math.min(1, k); x.lineWidth = lit ? 1.25 : .75;
-    x.beginPath(); x.moveTo(a.sx + ux * a.R, a.sy + uy * a.R); x.lineTo(c.sx - ux * c.R, c.sy - uy * c.R); x.stroke();
+    x.beginPath(); x.moveTo(a.sx + ux * ra, a.sy + uy * ra); x.lineTo(c.sx - ux * rc, c.sy - uy * rc); x.stroke();
   }
   x.globalAlpha = 1;
 }
@@ -687,9 +691,9 @@ function drawInside(x) {
   x = conCtx;                                     // over the opened note
   vis = all.filter(b => con.has(b)); drawLinks(x);
   for (const b of vis) {                          // the open constellation: every ball filled, read or not; the clicked one in its own red
-    x.globalAlpha = 1; x.fillStyle = b === picked ? `rgb(${PICKED.join(",")})` : `rgb(${DOT.join(",")})`;
+    x.globalAlpha = 1; x.fillStyle = b === picked || b === hovered ? `rgb(${PICKED.join(",")})` : `rgb(${DOT.join(",")})`;
     x.beginPath(); x.arc(b.sx, b.sy, b.R, 0, Math.PI * 2); x.fill();
-    if (b === hovered && b !== picked) { x.strokeStyle = `rgb(${DOT.join(",")})`; x.lineWidth = 1.25; x.beginPath(); x.arc(b.sx, b.sy, b.R + 3.5, 0, Math.PI * 2); x.stroke(); }
+    if (b === picked) { x.strokeStyle = `rgb(${PICKED.join(",")})`; x.lineWidth = RING.lw; x.beginPath(); x.arc(b.sx, b.sy, b.R + RING.gap + RING.lw / 2, 0, Math.PI * 2); x.stroke(); }
   }
   vis = all;
   layer.style.display = "block";
@@ -698,7 +702,7 @@ function drawInside(x) {
 }
 const BLUR = 1.5, FOCUS = 1.6;
 function drawBall(x, b, now, dt, TYPE) {
-  volcanoNote.draw(x, b, { rgb: DOT, seen: "outline",   /* v20: unseen filled, opened a ring */ alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc, count: false });
+  volcanoNote.draw(x, b, { rgb: b === hovered ? PICKED : DOT, seen: "outline",   /* v20: under the pointer, the selected colour */   /* v20: unseen filled, opened a ring */ alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc, count: false });
 }
 function drawFocusLabel(x, W, TYPE) {
   const pk = [...badges.values()].find(b => b.focus);
