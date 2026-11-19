@@ -877,7 +877,7 @@ let morphOn = store.get(KEY + "morph", true);
 document.documentElement.dataset.transitions = morphOn ? "on" : "off";   // the toggle top right (index.html) shows it
 const mCv = document.createElement("canvas");
 mCv.id = "morph"; mCv.setAttribute("aria-hidden", "true");
-mCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;display:none";
+mCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none";   // always there (clear): measured while hidden, it would say 0, 0
 bigEl.after(mCv);
 const mCtx = mCv.getContext("2d");
 {
@@ -915,11 +915,11 @@ function inkOf(el, maxDots) {
   for (let i = 3; i < data.length; i += 4) if (data[i] > 128) ink++;
   if (!ink) return null;
   const g = Math.max(1, Math.round(Math.sqrt(ink / maxDots))), dots = [];
-  for (let yy = 0; yy < h; yy += g) for (let xx = 0; xx < w; xx += g) if (data[(yy * w + xx) * 4 + 3] > 128) dots.push([box.left - o.left - 2 + xx, box.top - o.top - 2 + yy]);
+  for (let yy = 0; yy < h; yy += g) for (let xx = 0; xx < w; xx += g) if (data[(yy * w + xx) * 4 + 3] > 128) dots.push([box.left - o.left - 2 + xx + g / 2, box.top - o.top - 2 + yy + g / 2]);
   return { area: ink, dots, g, cx: box.left - o.left + box.width / 2, cy: box.top - o.top + box.height / 2, ink: cs.color };
 }
 let morph = null;
-function morphStop() { morph = null; mCv.style.display = "none"; bigEl.classList.remove("morphing"); }
+function morphStop() { morph = null; mCtx.clearRect(0, 0, mCv.width, mCv.height); bigEl.classList.remove("morphing"); if (typeof morphText === "function") morphText(null); }
 function morphActors(b) {
   const list = [[b, wordsEl, 7000]];
   if (!b.parent) {
@@ -941,7 +941,6 @@ function morphOpen(b) {
   if (!actors.length) { morphStop(); return; }
   bigEl.classList.add("morphing");
   morph = { dir: 1, t0: performance.now(), actors };
-  mCv.style.display = "block";
   requestAnimationFrame(morphFrame);
 }
 function morphClose(b) {
@@ -950,49 +949,53 @@ function morphClose(b) {
   bigEl.classList.add("morphing");
   if (!actors.length) { morphStop(); return; }
   morph = { dir: -1, t0: performance.now(), actors };
-  mCv.style.display = "block";
   requestAnimationFrame(morphFrame);
 }
-const MORPH = { dur: 1350, text: 300 };
-// one movement, never still: the ball grows as it travels towards its words (ease-out, so it is quickest at the start
-// and never stops before the end); its dots start leaving it early, each from where it sits in the ball as the ball
-// goes on moving, and fly to its letter; the ball fades as it empties
+const MORPH = { dur: 1500 };
+// one movement with no phases: from the first instant the ball grows as it travels towards its words AND lets its
+// dots go, the first at once, the last halfway; each dot leaves from where it is in the moving ball and flies to its
+// letter. The colour goes the whole way at the same pace, from the ball's to the words' (black on the orange, light on
+// aya's dark); the ball fades as it empties; the real words come in while the last dots land, and those go as they do
 const ease = u => u < .5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;
 const easeOut = u => 1 - (1 - u) ** 3;
+const rgbOf = c => (String(c).match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+const mixRgb = (A, B, f) => `rgb(${Math.round(A[0] + (B[0] - A[0]) * f)},${Math.round(A[1] + (B[1] - A[1]) * f)},${Math.round(A[2] + (B[2] - A[2]) * f)})`;
+const SHADES = 10;
+function morphText(o) {                           // the real words, as much as the morph says (null: as the page has them)
+  for (const el of [wordsEl, threadEl, sigEl]) { el.style.transition = o == null ? "" : "none"; el.style.opacity = o == null ? "" : String(o); }
+}
 function morphFrame(now) {
   if (!morph) return;
   const { W, H, MDPR } = V.size();
   if (mCv.width !== Math.round(W * MDPR)) { mCv.width = Math.round(W * MDPR); mCv.height = Math.round(H * MDPR); }
   const x = mCtx; x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
   const T = MORPH.dur, el = now - morph.t0;
-  // where along the way: opening forward; closing backwards from the words to the ball, a little quicker
-  const u = clamp(morph.dir > 0 ? el / T : 1 - el / (T * .85), 0, 1);
-  const ballRgb = `rgb(${DOT.join(",")})`;
-  const REL0 = .12, REL1 = .5, FLY = .5;                                // when the dots leave (spread), and how long each flies
+  const u = clamp(morph.dir > 0 ? el / T : 1 - el / (T * .8), 0, 1);   // closing: the same way back, a little quicker
+  const ball = DOT.slice(0, 3), REL = .5, FLY = .5;
+  const textIn = smooth(.8, 1, u), dotsOut = 1 - smooth(.86, 1, u);
+  morphText(textIn);
   for (const a of morph.actors) {
+    const ink = a.inkRgb || (a.inkRgb = rgbOf(a.ink));
     const bx = a.b.sx ?? a.cx, by = a.b.sy ?? a.cy, R0 = Math.max(2, a.b.R || 6);
-    const g = easeOut(clamp(u / .8, 0, 1));
-    const R = lerp(R0, a.RT, g), cx = lerp(bx, a.cx, g * .6), cy = lerp(by, a.cy, g * .6);   // growing while moving towards its words
-    const gone = clamp((u - REL0) / (REL1 + FLY * .3 - REL0), 0, 1);    // how much of the ball has left as dots
-    if (gone < 1) { x.globalAlpha = 1 - gone * gone; x.fillStyle = ballRgb; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill(); }
-    const r = Math.max(.8, a.g * .45);
-    x.globalAlpha = morph.dir > 0 ? 1 - clamp((el - T) / MORPH.text, 0, 1) : 1;
-    const hot = new Path2D(), cool = new Path2D();
+    const g = easeOut(u);                                               // growing and travelling, quickest at first, never still
+    const R = lerp(R0, a.RT, g), cx = lerp(bx, a.cx, g * .6), cy = lerp(by, a.cy, g * .6);
+    const left = 1 - clamp(u / REL, 0, 1);                              // how much of the ball is still a ball
+    if (left > 0) { x.globalAlpha = left * (2 - left); x.fillStyle = mixRgb(ball, ink, g); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill(); }
+    const r = Math.max(.8, a.g * .45), paths = Array.from({ length: SHADES }, () => new Path2D());
     for (let i = 0; i < a.dots.length; i++) {
-      const [rr, ang, j] = a.seeds[i], start = REL0 + j * (REL1 - REL0);
+      const [rr, ang, j] = a.seeds[i], start = j * REL;
       if (u <= start) continue;
       const d = ease(clamp((u - start) / FLY, 0, 1));
-      const sx = cx + Math.cos(ang) * rr * R, sy = cy + Math.sin(ang) * rr * R;   // its place in the ball, as the ball is now
+      const sx = cx + Math.cos(ang) * rr * R, sy = cy + Math.sin(ang) * rr * R;
       const px = lerp(sx, a.dots[i][0], d), py = lerp(sy, a.dots[i][1], d);
-      const P = d < .55 ? hot : cool; P.moveTo(px + r, py); P.arc(px, py, r, 0, Math.PI * 2);
+      const P = paths[Math.min(SHADES - 1, Math.floor(Math.max(g, d) * SHADES))];
+      P.moveTo(px + r, py); P.arc(px, py, r, 0, Math.PI * 2);
     }
-    x.fillStyle = ballRgb; x.fill(hot); x.fillStyle = a.ink; x.fill(cool);
+    x.globalAlpha = dotsOut;
+    paths.forEach((P, k) => { x.fillStyle = mixRgb(ball, ink, (k + .5) / SHADES); x.fill(P); });
     x.globalAlpha = 1;
   }
-  if (morph.dir > 0) {
-    if (el >= T - 60) bigEl.classList.remove("morphing");                 // the words come in under the dots
-    if (el >= T + MORPH.text) { morphStop(); return; }
-  } else if (u <= 0) { morphStop(); return; }
+  if (morph.dir > 0 ? u >= 1 : u <= 0) { morphStop(); return; }
   requestAnimationFrame(morphFrame);
 }
 V.dev.tab("soup", `<span class="full seg" id="morphSeg"><span class="k">opening a note</span><button class="t" type="button" data-morph="1">balls into words</button><button class="t" type="button" data-morph="0">fade</button></span>`);
