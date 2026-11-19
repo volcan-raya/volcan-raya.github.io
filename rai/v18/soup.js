@@ -1486,12 +1486,36 @@ function evaOf(a) {
   } catch {}
   return (a.img = c);
 }
+// v18: an EVA aims its head where it is going. Its velocity, smoothed, from where its pointer is frame to frame; the
+// faster it goes the more its head turns towards that way (slow, it stands up again); the turn is a damped spring, so
+// it swings into the aim, overshoots a little and settles, never at once
+const wrap = d => Math.atan2(Math.sin(d), Math.cos(d));
+function evaTurn(a, px, py) {
+  const now = performance.now(), m = a.m || (a.m = { x: px, y: py, t: now, vx: 0, vy: 0, ang: 0, av: 0 });
+  const dt = Math.min(.05, Math.max(0, (now - m.t) / 1000)); m.t = now;
+  if (dt > 0) {
+    const ivx = (px - m.x) / dt, ivy = (py - m.y) / dt, f = Math.min(1, dt * 6);
+    m.vx += (ivx - m.vx) * f; m.vy += (ivy - m.vy) * f;
+    const sp = Math.hypot(m.vx, m.vy), lean = Math.min(1, sp / 500);   // full aim from 500 px a second
+    // the way to aim, between up (still) and the way it goes (fast), blended as directions, not angles
+    const ux = sp > 4 ? m.vx / sp : 0, uy = sp > 4 ? m.vy / sp : -1;
+    const bx = ux * lean, by = uy * lean - (1 - lean), target = Math.hypot(bx, by) > 1e-3 ? Math.atan2(bx, -by) : m.ang;
+    m.av += (wrap(target - m.ang) * 38 - m.av * 7.5) * dt;              // the spring: stiffness and damping
+    m.ang = wrap(m.ang + m.av * dt);
+  }
+  m.x = px; m.y = py;
+  return m.ang;
+}
 const EVA_H = 90;                                // px tall on the screen, its middle at the pointer
 function drawAvatar(x, px, py, key, alpha = 1) {
   const a = avatar(key);
   x.save(); x.globalAlpha = alpha;
   const im = document.documentElement.dataset.avatar === "eva" ? evaOf(a) : null;
-  if (im) { const w = EVA_H * im.width / im.height; x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(im, px - w / 2, py - EVA_H / 2, w, EVA_H); }
+  if (im) {
+    const w = EVA_H * im.width / im.height, ang = evaTurn(a, px, py);
+    x.translate(px, py); x.rotate(ang);
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(im, -w / 2, -EVA_H / 2, w, EVA_H);
+  }
   else { x.fillStyle = a.col; x.beginPath(); x.arc(px, py, 9, 0, Math.PI * 2); x.fill(); }
   x.restore();
 }
