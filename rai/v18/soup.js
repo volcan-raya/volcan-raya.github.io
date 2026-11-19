@@ -1455,7 +1455,7 @@ function updateSims(dt, t) {
   }
 }
 // v18: how the others are seen, the simulated ones and the real ones alike: a ball, or an evangelion (eva.png, aya's
-// pixel EVA-01, its purple turned to another hue). Which one: the toggle under the soup's (index.html, html[data-avatar]).
+// pixel EVA-01, in one colour: its ball's). Which one: the toggle under the soup's (index.html, html[data-avatar]).
 // Each other gets a colour at random, in this browser: two people see the room in different colours
 const AV_COLS = ["#2f6bff", "#14c46e", "#ff4fb3", "#8a5cff", "#12c6d8", "#a6e01c", "#ffd21f", "#c04dff", "#00a3ff", "#ff7ad9"];
 const avOf = new Map();                          // key → { col, hue, img }
@@ -1465,22 +1465,18 @@ function avatar(key) {
   if (!a) { a = { col: AV_COLS[Math.floor(Math.random() * AV_COLS.length)], hue: Math.random() * 360, img: null }; avOf.set(key, a); }
   return a;
 }
-// the EVA in another hue: its pixels turned round the colour wheel once, kept
+// the EVA in its one colour, made once and kept
 function evaOf(a) {
   if (a.img || !evaImg.complete || !evaImg.naturalWidth) return a.img;
   const c = document.createElement("canvas"); c.width = evaImg.naturalWidth; c.height = evaImg.naturalHeight;
   const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(evaImg, 0, 0);
   try {
-    const d = x.getImageData(0, 0, c.width, c.height), p = d.data, rot = a.hue / 360;
+    // monochrome: each pixel's lightness, in this EVA's one colour (its ball's), from dark to a little past it
+    const d = x.getImageData(0, 0, c.width, c.height), p = d.data, C3 = [1, 3, 5].map(k => parseInt(a.col.slice(k, k + 2), 16));
     for (let k = 0; k < p.length; k += 4) {
       if (!p[k + 3]) continue;
-      const r = p[k] / 255, g = p[k + 1] / 255, b = p[k + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
-      if (mx === mn) continue;                    // greys stay grey
-      const dd = mx - mn, sat = l > .5 ? dd / (2 - mx - mn) : dd / (mx + mn);
-      let h = mx === r ? (g - b) / dd + (g < b ? 6 : 0) : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4; h = (h / 6 + rot) % 1;
-      const q = l < .5 ? l * (1 + sat) : l + sat - l * sat, pp = 2 * l - q;
-      const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? pp + (q - pp) * 6 * t : t < .5 ? q : t < 2 / 3 ? pp + (q - pp) * (2 / 3 - t) * 6 : pp; };
-      p[k] = f(h + 1 / 3) * 255; p[k + 1] = f(h) * 255; p[k + 2] = f(h - 1 / 3) * 255;
+      const l = (p[k] * .299 + p[k + 1] * .587 + p[k + 2] * .114) / 255, f = .18 + l * 1.25;
+      for (let q = 0; q < 3; q++) p[k + q] = Math.min(255, f <= 1 ? C3[q] * f : C3[q] + (255 - C3[q]) * (f - 1) * 1.6);
     }
     x.putImageData(d, 0, 0);
   } catch {}
