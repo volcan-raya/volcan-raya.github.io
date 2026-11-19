@@ -44,6 +44,11 @@ Never force-push, reset, stash or checkout files you don't own.
 - **For B, from the user (19/11/26): usernames are two words, each with a capital, a space between: "Magma Hothead",
   not "magma-hothead"** (soup.js `nameFor`, ~197: capitalise both parts, join with " "). Names already kept in
   "volcano-id" from before should be shown the same way.
+- **For B, from the user (19/11/26): the mood window, more minimal.** "how is your day going?" and the 5 faces next to
+  each other in one row, no card round them (no white box, no shadow: on the sky, over the volcano), and **don't show
+  who you are** (no "you are 😄 …" line). A picks the page's start: it now opens at the top, on the volcano, with
+  NOTIFICATION SOUP above it in the note's type (index.html #title, placed by camera.js); v18's opening title, drawn
+  away into the soup, is gone, so soup.js's INTRO (the balls coming in with it) no longer has a title to follow.
 
 ## What A built (v20 outside), 19/11/26
 

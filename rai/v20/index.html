@@ -12,7 +12,7 @@
    calmer, for the 8 most answered notes, freezing and fading; v07's balls for their replies, falling on the triangle and
    flowing down it as their text. The soup: v19's blur round an opened note, the dialogue scrolling inside itself, a
    mood chosen at the door (an emoji, and a name from it), the others as black cursors with theirs. Two kinds of ball
-   only: unread filled, read a ring. One sans, no Mebar. No ⏏ and no click on the triangle: only scrolling goes in and out. Built by two windows at once: see NOTES.md. */
+   only: unread filled, read a ring. One sans, no Mebar. No ⏏ and no click on the triangle: only scrolling goes in and out. It opens at the top, on the volcano, NOTIFICATION SOUP above it. Built by two windows at once: see NOTES.md. */
 /* v18 (rai x aya, 19/11/26), after rai's 3.02 (v16) and aya's v07 and v14, made of three:
    the soup, aya v14's (soup.js): the conversations going on, an opened rant with its replies under it at once, on a
    thread, and a reply coming in while it is open added there live; the simulated others replying and throwing balls;
@@ -96,26 +96,13 @@ button, input, select { font: inherit; color: inherit; }
 /* the badges are drawn; these buttons only carry them for the keyboard and screen readers (the ring is drawn too) */
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-/* the title, on opening: large in the middle, then it is drawn away from us, straight back along the depth (a perspective
-   translateZ, so it shrinks as a thing moving off would), slowly at first and faster as it goes. As it gets small it goes
-   out of focus and fades, quickly: the blur is on the h1, which does not move, so it is a blur on the screen and does not
-   shrink with the words. The balls (../shared/soup.js, INTRO) come in from our side at the same time and stop at their own
-   depths, in front of it. It is gone, 3.4 s in, as the first balls come to rest (INTRO.dur there). It stays in the page for screen readers. Over everything but the panels, never in the way of a click */
-#title { position: fixed; z-index: 5; inset: 0; margin: 0; display: grid; place-items: center; pointer-events: none; overflow: hidden;
-  color: #000; font: 300 clamp(40px, 11vw, 220px)/1 var(--type); letter-spacing: .02em; text-align: center;   /* v20: the sans, no Mebar */
-  animation: outOfFocus 2.8s linear .6s forwards; }
-#title span { display: block; transform-origin: 50% 50%; animation: suckedOut 2.8s cubic-bezier(.55, 0, .85, .35) .6s forwards; will-change: transform; }
-@keyframes suckedOut {
-  from { transform: perspective(600px) translateZ(0); }
-  to   { transform: perspective(600px) translateZ(-30000px); }
-}
-@keyframes outOfFocus {
-  0%, 30% { filter: blur(0); opacity: 1; }
-  65%     { filter: blur(3px); opacity: .8; }
-  100%    { filter: blur(7px); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) { #title, #title span { animation: none; } #title { animation: fadeAway 2s ease 1.2s forwards; } }
-@keyframes fadeAway { to { opacity: 0; } }
+/* v20: the title, at the top of the page, in the sky above the volcano: NOTIFICATION SOUP, black, large, set as an opened
+   note is (soup.css #big .words: the sans at 500, max(28px, 7.5vw), leading 1, -.035em, on the note's margin). No
+   opening animation any more (v18's, drawn away into the soup, is gone). It is on the page: camera.js moves it up with
+   the volcano as you scroll down. For screen readers it stays; never in the way of a click */
+#title { position: fixed; z-index: 0; left: var(--side, 40px); right: var(--side, 40px); top: 0; margin: 0; pointer-events: none;
+  color: #000; font: 500 var(--tfs, max(28px, 7.5vw))/1 var(--type); letter-spacing: -.035em; will-change: transform; }
+#title span { display: block; }
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */
 #dev { position: fixed; z-index: 9; top: 12px; right: calc(var(--grid-margin, 24px) + env(safe-area-inset-right, 0px)); width: min(300px, calc(100% - 2 * var(--grid-margin, 24px)));   /* its right edge on the site's margin, as the bar's dev box */ box-sizing: border-box;

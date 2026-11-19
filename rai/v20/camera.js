@@ -38,7 +38,7 @@ const TIME = 1.4;
 let SPAN = V.store.get("volcano-v18-span", 900);   // (v18's; v20 scrolls the page's own length, LEN)
 let LEN = V.store.get("volcano-v20-len", 2.2);     // v20: the page, from the volcano's view to the soup's, in screens (DEV, camera)
 const pageD = () => LEN * H;
-let s = 0, aim = 0, cam = null, scrolled = false;  // it opens in the soup
+let s = 1, aim = 1, cam = null, scrolled = false;  // v20: it opens at the top of the page, on the volcano
 function goTo(v) { aim = clamp(v, 0, 1); scrolled = false; if (reduce.matches) s = aim; }
 // how far down it goes: until the mountain fills the screen, and on as far as the lava's lowest line
 function maxPan() {
@@ -197,6 +197,23 @@ function showDev() {
   if (document.activeElement !== camIn) camIn.value = s.toFixed(3);
 }
 
+// v20: the title, at the page's top, over the volcano: set as an opened note is (its size and margin read off #big, so
+// DEV soup's "messages" move it too), its top TITLE_TOP of the screen down, moved up as the page is scrolled
+const titleEl = $("title"), TITLE_TOP = .14;
+let titleKey = "";
+function placeTitle() {
+  if (!titleEl) return;
+  const big = $("big"), cs = big && getComputedStyle(big), fs = cs && cs.getPropertyValue("--fs").trim(), side = cs && cs.getPropertyValue("--side").trim();
+  const key = fs + "|" + side;
+  if (key !== titleKey) {
+    titleKey = key;
+    if (fs) titleEl.style.setProperty("--tfs", `max(28px, ${fs})`);
+    if (side) titleEl.style.setProperty("--side", side);
+  }
+  const y = H * TITLE_TOP - (cam.off || 0);
+  titleEl.style.transform = `translateY(${y.toFixed(1)}px)`;
+  titleEl.style.visibility = y < -H ? "hidden" : "";
+}
 V.camera = {
   pan: () => pan, panTo(v) { panAim = clamp(v, 0, maxPan()); }, maxPan,   // aya v05
   get cam() { return cam; }, project, unproject, unit: () => { const b = box(); return [b.sx, b.sy]; }, NEAR: .14, z0: 0, goTo, lens, update, showDev, outside,
@@ -207,6 +224,7 @@ V.camera = {
     const inNow = cam.soup > .5;
     document.documentElement.toggleAttribute("data-out", cam.inside < 1);   // v18: outside, for the look's colours (index.html)
     goIn.disabled = cam.s < .95; goOutSr.disabled = !inNow;
+    placeTitle();
   },
 };
 lens();
