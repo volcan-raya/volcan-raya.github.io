@@ -36,12 +36,26 @@ body:has(#idPanel:not([hidden])) #venting { opacity: 0; }   /* out of the way wh
   const n = el.querySelector(".n");
   // v20: no longer fake: who is in the soup, as the list over it says (soup.js #people: you, the simulated others, the
   // real ones), less you. Until that list is there, the number of simulated others the page asked for (index.html)
+  // You count too: the others listed, and you (19/11/26: "this should say 3 people since we're 3")
   let k = -1;
   const count = () => {
     const list = document.getElementById("people");
-    if (list) return list.querySelectorAll("li:not(.me)").length;
-    try { return JSON.parse(localStorage.getItem("volcano-v20-sims")) || 0; } catch { return 0; }
+    if (list) return list.querySelectorAll("li:not(.me)").length + 1;
+    try { return (JSON.parse(localStorage.getItem("volcano-v20-sims")) || 0) + 1; } catch { return 1; }
   };
+  // v20, the prototype: people come and go. Now and then (every 12 to 40 s) one more simulated person comes in or one
+  // leaves, 2 to 5 in all with you (1 to 4 others); through the soup's own setting for them (soup.js, DEV "simsN"), so
+  // they come in and leave as it makes them do
+  const MIN = 1, MAX = 4;
+  const comeAndGo = () => {
+    const el = document.getElementById("simsN");
+    if (el) {
+      const now = +el.value, up = now <= MIN ? true : now >= MAX ? false : Math.random() < .5;
+      el.value = String(now + (up ? 1 : -1)); el.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    setTimeout(comeAndGo, 12000 + Math.random() * 28000);
+  };
+  setTimeout(comeAndGo, 12000 + Math.random() * 28000);
   const show = () => {
     const c = count(); if (c === k) return; k = c;
     n.textContent = `${c} ${c === 1 ? "person" : "people"} in the soup right now`;
