@@ -39,7 +39,14 @@ let SPAN = V.store.get("volcano-v18-span", 900);   // (v18's; v20 scrolls the pa
 let LEN = V.store.get("volcano-v20-len", 2.2);     // v20: the page, from the volcano's view to the soup's, in screens (DEV, camera)
 const pageD = () => LEN * H;
 let s = 1, aim = 1, cam = null, scrolled = false;  // v20: it opens at the top of the page, on the volcano
-function goTo(v) { aim = clamp(v, 0, 1); scrolled = false; if (reduce.matches) s = aim; }
+// v20: asked for (a key, the mood picked), the view glides there, slow to start, slow to stop, GLIDE s for the whole page
+const GLIDE = 3.2;
+let glide = null;
+function goTo(v) {
+  aim = clamp(v, 0, 1); scrolled = false;
+  if (reduce.matches) { s = aim; glide = null; return; }
+  glide = { from: s, t: 0, dur: Math.max(.6, GLIDE * Math.abs(aim - s)) };
+}
 // how far down it goes: until the mountain fills the screen, and on as far as the lava's lowest line
 function maxPan() {
   return 0;                                        // v20: no pan
@@ -67,8 +74,11 @@ function update(dt) {
   if (Math.abs(panAim - pan) > .1) pan += (panAim - pan) * Math.min(1, dt * 9); else pan = panAim;
   CY = CY0 - pan;
   if (s !== aim) {
-    if (scrolled) { s += (aim - s) * Math.min(1, dt * 7); if (Math.abs(aim - s) < 1e-4) s = aim; }   // following the scroll, softly
-    else { const step = dt / TIME; s = aim > s ? Math.min(aim, s + step) : Math.max(aim, s - step); }
+    if (scrolled || !glide) { glide = null; s += (aim - s) * Math.min(1, dt * 7); if (Math.abs(aim - s) < 1e-4) s = aim; }   // following the scroll, softly (a scroll takes over a glide)
+    else {
+      glide.t += dt; const u = Math.min(1, glide.t / glide.dur), k = u < .5 ? 4 * u * u * u : 1 - 4 * (1 - u) ** 3;
+      s = glide.from + (aim - glide.from) * k; if (u >= 1) { s = aim; glide = null; }
+    }
   }
   // v20: the gradient. e: 1 in the soup … 0 outside, as before. The balls fade out early in it (gone by FADE), so they
   // never sit on the outside; the soup can be touched only when it is all there
@@ -213,7 +223,20 @@ function placeTitle() {
   const y = H * TITLE_TOP - (cam.off || 0);
   titleEl.style.transform = `translateY(${y.toFixed(1)}px)`;
   titleEl.style.visibility = y < -H ? "hidden" : "";
+  // the mood at the door (soup.js #mood) on the black triangle: its middle low enough under the apex that the row of
+  // faces fits inside the slopes (the triangle is as wide as it is deep), and on the page, scrolled with the volcano
+  const mood = $("mood");
+  if (mood && !mood.hidden) {
+    const row = mood.querySelector(".row"), half = (row ? row.offsetWidth : 300) / 2;
+    const my = CY - .25 * E - (cam.off || 0) + half + 28 + mood.offsetHeight / 2;
+    document.documentElement.style.setProperty("--mood-y", my.toFixed(1) + "px");
+  }
 }
+// v20: once you have picked your mood at the door, the view goes down the whole page, into the soup
+document.addEventListener("click", e => {
+  if (!(e.target instanceof Element) || !e.target.closest("#mood [data-mood]")) return;
+  setTimeout(() => goTo(0), reduce.matches ? 0 : 500);
+});
 V.camera = {
   pan: () => pan, panTo(v) { panAim = clamp(v, 0, maxPan()); }, maxPan,   // aya v05
   get cam() { return cam; }, project, unproject, unit: () => { const b = box(); return [b.sx, b.sy]; }, NEAR: .14, z0: 0, goTo, lens, update, showDev, outside,
