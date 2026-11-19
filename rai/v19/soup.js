@@ -108,7 +108,7 @@ const marks = V.marks, notesEl = $("notes");
 // an opened note: one layer in the scene, over the field and under the badges, that never takes the pointer
 const bigEl = document.createElement("div");
 bigEl.id = "big"; bigEl.setAttribute("aria-live", "polite");
-bigEl.innerHTML = '<div class="box"><div class="q"><img class="pic" alt=""><div class="voice"><button class="play" type="button" aria-label="play">'
+bigEl.innerHTML = '<div class="box"><div class="q"><ol class="replies earlier" aria-label="earlier in the conversation"></ol><img class="pic" alt=""><div class="voice"><button class="play" type="button" aria-label="play">'
   + '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="tri" d="M8 5.5v13l11-6.5z"/><path class="bars" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>'
   + '<canvas class="viz" aria-hidden="true"></canvas><span class="dur"></span></div><p class="words"></p><p class="sig"><b class="who"></b><span class="when"></span></p><ol class="replies" aria-label="replies"></ol></div></div>';
 $("field").after(bigEl);
@@ -759,7 +759,7 @@ if (saved.wh != null && !saved.v3) {           // kept before the tallest bar wa
 }
 let big = { ...BIG0, ...saved, v3: 1 };
 const INK = { black: [0, 0, 0], white: [255, 255, 255], red: [196, 0, 12] };
-const qEl = bigEl.querySelector(".q"), repliesEl = bigEl.querySelector(".replies"), playEl = bigEl.querySelector(".play"), durEl = bigEl.querySelector(".dur");
+const qEl = bigEl.querySelector(".q"), repliesEl = bigEl.querySelector(".replies:not(.earlier)"), earlierEl = bigEl.querySelector(".earlier"), playEl = bigEl.querySelector(".play"), durEl = bigEl.querySelector(".dur");
 const boxEl = bigEl.querySelector(".box"), sigEl = bigEl.querySelector(".sig"), wordsEl = bigEl.querySelector(".words"), picEl = bigEl.querySelector(".pic"), vizEl = bigEl.querySelector(".viz");
 function applyBig() {
   const st = bigEl.style;
@@ -836,22 +836,27 @@ function signInto(el, s) {                    // — who, when (v19: the name, "
   const w = whenOf(s); el.querySelector(".when").textContent = w; el.classList.toggle("dated", !!w);
 }
 const sign = s => signInto(sigEl, s);
-// the replies under the quotation, smaller quotations, each signed; built again whenever one comes in
+// the conversation round the quotation: what was clicked is the large one, the rest smaller quotations, each signed,
+// in their order: the note and the replies before it above, the later replies under it. Built again whenever one comes in
 let shownReplies = "";
+function smallQuote(m) {
+  const li = document.createElement("li"), sg = document.createElement("p");
+  if (!m.re && mediumOf(m) === "image") { const im = document.createElement("img"); im.className = "thumb"; im.alt = m.s || "a picture"; im.src = imgSrc(m.img); im.addEventListener("load", () => fitWords()); li.append(im); }
+  else { const q = document.createElement("p"); q.className = "rw"; q.textContent = !m.re && mediumOf(m) === "voice" ? "a voice message" + (m.s ? ": " + m.s : "") : m.s; li.append(q); }
+  sg.className = "sig"; sg.innerHTML = '<b class="who"></b><span class="when"></span>'; signInto(sg, m); li.append(sg);
+  return li;
+}
 function renderReplies() {
-  const root = picked && (picked.parent || picked), list = root ? replies.get(root.s.id) || [] : [], key = list.map(r => r.id).join(",");
+  const root = picked && (picked.parent || picked), list = root ? replies.get(root.s.id) || [] : [];
+  const key = (picked ? picked.s.id : "") + "|" + list.map(r => r.id).join(",");
   if (key === shownReplies) return;
-  shownReplies = key; repliesEl.textContent = "";
-  for (const r of list) {
-    const li = document.createElement("li"), q = document.createElement("p"), sg = document.createElement("p");
-    q.className = "rw"; q.textContent = r.s; sg.className = "sig"; sg.innerHTML = '<b class="who"></b><span class="when"></span>'; signInto(sg, r);
-    li.append(q, sg); repliesEl.append(li);
-  }
-  repliesEl.hidden = !list.length;
+  shownReplies = key; repliesEl.textContent = ""; earlierEl.textContent = "";
+  const thread = root ? [root.s, ...list] : [], at = thread.findIndex(m => m.id === picked?.s.id);
+  thread.slice(0, Math.max(0, at)).forEach(m => earlierEl.append(smallQuote(m)));
+  thread.slice(at + 1).forEach(m => repliesEl.append(smallQuote(m)));
+  earlierEl.hidden = !earlierEl.children.length; repliesEl.hidden = !repliesEl.children.length;
   fitWords();
 }
-// where the note's top left is, in the box: the text's is the box's; a picture's is where it is drawn, fitted in the box
-// and centred in it
 function placeSig() {}   // (v19: the signature follows the words in the column, soup.css)
 picEl.addEventListener("load", () => fitWords());
 addEventListener("resize", placeSig);
@@ -860,7 +865,7 @@ function openNote(b) {
   if (C.cam.soup <= .5 && !b.fake) return;
   stopVoice(); clearTimeout(hideT);
   picked = b.fake ? null : b;
-  const root = b.parent || b, s = root.s, me = mediumOf(s);   // a reply opens its note, with every reply under it
+  const root = b.parent || b, s = b.s, me = mediumOf(s);   // what was clicked is the quotation, large; a reply among its note and the other replies
   bigEl.dataset.kind = me;
   setWords(me === "image" ? "" : s.s);
   sign(s);
@@ -883,7 +888,7 @@ function closeNote() {
   stopVoice();
   if (bigEl.classList.contains("on")) {
     bigEl.classList.remove("on");
-    hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; repliesEl.textContent = ""; shownReplies = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; } }, 700);
+    hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; repliesEl.textContent = ""; earlierEl.textContent = ""; shownReplies = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; } }, 700);
   }
   picked = null; barMode(false);
   if (listening && micComp === mainComp && was) stopMic();

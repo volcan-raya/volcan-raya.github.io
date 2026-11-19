@@ -95,6 +95,9 @@
 /* the replies: smaller quotations under it, a third of the words' size (never under 15 px), each with who said it */
 #big .replies { list-style: none; margin: 2.2em 0 0; padding: 0; display: flex; flex-direction: column; gap: 1.1em; max-width: min(100%, 52em); }
 #big .replies li { margin: 0; }
+/* the note and the replies before the one opened: above it, the same small quotations */
+#big .replies.earlier { margin: 0 0 2.2em; }
+#big .thumb { display: block; max-height: min(160px, 18vh); max-width: 100%; }
 #big .rw { margin: 0; color: var(--ink); font: 500 max(15px, calc(var(--wfs, 4vw) * .3))/1.15 var(--type); letter-spacing: -.01em; }
 #big .replies .sig { margin-top: .35em; font-size: max(11px, calc(var(--sig) * .85)); }
 
