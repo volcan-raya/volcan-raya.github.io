@@ -219,6 +219,7 @@ function placeTitle() {
     titleKey = key;
     if (fs) titleEl.style.setProperty("--tfs", `max(28px, ${fs})`);
     if (side) titleEl.style.setProperty("--side", side);
+    if (fs) document.documentElement.style.setProperty("--note-fs", fs);   // the mood's question, as a note's answers (index.html)
   }
   const y = H * TITLE_TOP - (cam.off || 0);
   titleEl.style.transform = `translateY(${y.toFixed(1)}px)`;
@@ -227,14 +228,17 @@ function placeTitle() {
   const fade = 1 - smoothE(0, .35 * H, cam.off || 0);
   titleEl.style.opacity = fade.toFixed(3);
   titleEl.style.visibility = fade <= 0 ? "hidden" : "";
-  // the mood at the door (soup.js #mood) on the black triangle: its middle low enough under the apex that the row of
-  // faces fits inside the slopes (the triangle is as wide as it is deep), and on the page, scrolled with the volcano
+  // the mood at the door (soup.js #mood) on the black triangle: low in it, about halfway from the apex to the screen's
+  // foot, and never higher than where the row of faces fits inside the slopes (the triangle is as wide as it is deep),
+  // nor so low it meets the count at the bottom; on the page, scrolled with the volcano
   const mood = $("mood"), root = document.documentElement;
   // picked, it stays where it is on the page, going up with the volcano, until we are in the soup (index.html: html[data-mood-hold])
   if (moodHold && s <= .001 && !glide) { moodHold = false; root.removeAttribute("data-mood-hold"); }
   if (mood && (!mood.hidden || moodHold)) {
     const row = mood.querySelector(".row"), half = (row ? row.offsetWidth : 300) / 2;
-    const my = CY - .25 * E - (cam.off || 0) + half + 28 + mood.offsetHeight / 2;
+    const ay = CY - .25 * E, mh = mood.offsetHeight;
+    const depth = Math.max(half + 28, Math.min((H - ay) * .5, H - ay - mh - 70));   // under the apex, to the box's top
+    const my = ay - (cam.off || 0) + depth + mh / 2;
     root.style.setProperty("--mood-y", my.toFixed(1) + "px");
   }
 }

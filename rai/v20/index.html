@@ -106,6 +106,8 @@ button, input, select { font: inherit; color: inherit; }
 /* the mood at the door (soup.js, window B's #mood): no card round it, just the question and the faces on the sky
    (19/11/26: "remove the white box around the 5 emojis"); here, so soup.css stays B's */
 html body #mood { background: none; box-shadow: none; color: #FF4500; top: var(--mood-y, 50%); }   /* on the black triangle (camera.js sets --mood-y), in the soup's orange */
+/* its question as large as the answers round an opened note (soup.js #big .thread: 500, .28 of the note's size, never under 16 px) */
+html body #mood .q { font: 500 max(16px, calc(var(--note-fs, 7.5vw) * .28))/1.12 var(--type); letter-spacing: -.01em; }
 /* no grey square round a face, hovered or picked; a face grows under the pointer; no "you are …" */
 html body #mood button, html body #mood button:hover, html body #mood button:focus-visible, html body #mood button[aria-pressed="true"] { background: none; }
 html body #mood button:hover, html body #mood button:focus-visible { transform: scale(1.3); }
