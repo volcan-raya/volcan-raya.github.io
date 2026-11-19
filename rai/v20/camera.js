@@ -225,16 +225,21 @@ function placeTitle() {
   titleEl.style.visibility = y < -H ? "hidden" : "";
   // the mood at the door (soup.js #mood) on the black triangle: its middle low enough under the apex that the row of
   // faces fits inside the slopes (the triangle is as wide as it is deep), and on the page, scrolled with the volcano
-  const mood = $("mood");
-  if (mood && !mood.hidden) {
+  const mood = $("mood"), root = document.documentElement;
+  // picked, it stays where it is on the page, going up with the volcano, until we are in the soup (index.html: html[data-mood-hold])
+  if (moodHold && s <= .001 && !glide) { moodHold = false; root.removeAttribute("data-mood-hold"); }
+  if (mood && (!mood.hidden || moodHold)) {
     const row = mood.querySelector(".row"), half = (row ? row.offsetWidth : 300) / 2;
     const my = CY - .25 * E - (cam.off || 0) + half + 28 + mood.offsetHeight / 2;
-    document.documentElement.style.setProperty("--mood-y", my.toFixed(1) + "px");
+    root.style.setProperty("--mood-y", my.toFixed(1) + "px");
   }
 }
-// v20: once you have picked your mood at the door, the view goes down the whole page, into the soup
+// v20: once you have picked your mood at the door, the view goes down the whole page, into the soup; the faces stay
+// on the volcano meanwhile (soup.js would close them 1.5 s after the pick), gone only once we are in the soup
+let moodHold = false;
 document.addEventListener("click", e => {
   if (!(e.target instanceof Element) || !e.target.closest("#mood [data-mood]")) return;
+  moodHold = true; document.documentElement.setAttribute("data-mood-hold", "");
   setTimeout(() => goTo(0), reduce.matches ? 0 : 500);
 });
 V.camera = {
