@@ -641,9 +641,9 @@ function drawLinks(x) {
     if (!c || !on.has(c)) continue;
     const dx = c.sx - a.sx, dy = c.sy - a.sy, L = Math.hypot(dx, dy);
     if (L <= a.R + c.R + 1) continue;          // touching: nothing between them to draw
-    const lit = focus && (a === focus || c === focus);
+    const lit = false;                          // v20: the links stay as they are under the pointer and when a note is open: only the ball's colour changes
     const fade = Math.min(a.seen, c.seen) * smooth(1.5, 7, Math.min(a.R, c.R));
-    const k = base * fade * (lit ? 2.6 : focus ? .45 : 1);
+    const k = base * fade;
     if (k < .01) continue;
     const ux = dx / L, uy = dy / L, ra = edgeOf(a), rc = edgeOf(c);   // v20: at the opened ball, the line stops at its ring
     if (L <= ra + rc + 1) continue;
