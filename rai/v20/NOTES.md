@@ -41,7 +41,9 @@ Never force-push, reset, stash or checkout files you don't own.
 
 ## Asks (changes to core.js, or to the other window's files)
 
-- (none yet)
+- **For B, from the user (19/11/26): usernames are two words, each with a capital, a space between: "Magma Hothead",
+  not "magma-hothead"** (soup.js `nameFor`, ~197: capitalise both parts, join with " "). Names already kept in
+  "volcano-id" from before should be shown the same way.
 
 ## What A built (v20 outside), 19/11/26
 
