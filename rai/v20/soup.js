@@ -253,7 +253,7 @@ function showPeople() {
     const li = document.createElement("li"), e = document.createElement("span"), n = document.createElement("span");
     e.className = "e"; e.textContent = p.e || "·"; n.textContent = p.n; li.append(e, n);
     if (p.me) li.className = "me";
-    if (p.t) { const d = document.createElement("span"); d.className = "typing"; d.textContent = "…"; li.append(d); }
+    if (p.t) { const d = document.createElement("span"); d.className = "typing"; d.textContent = "…"; li.prepend(d); }   // left of the face, the list being right-aligned
     peopleEl.append(li);
   }
 }
