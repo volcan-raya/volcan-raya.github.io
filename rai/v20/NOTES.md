@@ -37,3 +37,14 @@ Never force-push, reset, stash or checkout files you don't own.
 ## Asks (changes to core.js, or to the other window's files)
 
 - (none yet)
+
+## What A built (v20 outside), 19/11/26
+
+- **No camera, no ⏏.** The user: "remove the eject button, we just want to scroll up and scroll down". Scrolling (wheel,
+  two fingers, a drag, ↓/↑) is the only way in and out; the triangle is not a button either. Two `.sr` buttons stay for
+  the keyboard (`#goIn`, `#goOutSr`). `cam.soupT` is always null and `cam.eject` false now.
+- **The gradient** (field.js): the soup is painted on its own layer and taken away from the top by a soft edge as s goes
+  up. `cam.inside` fades the balls out by s = .35; `cam.soup` is 1 only at s = 0.
+- **The eruption** (volcano.js, `ER.mode` "v20", DEV volcano): waves for the top 8 notes, balls → lanes of words for
+  their replies. It calls `V.soup.threads()` and `V.soup.ballLook()` **if they exist**, and falls back to notes.js
+  (`AYA_NOTES`) and v18's ball colour until then, so B can add them whenever.
