@@ -290,7 +290,7 @@ function drawDots(x, px, py, t) {                // a small bubble, its three do
     const d = Math.min(2, devicePixelRatio || 1), w = Math.round(innerWidth * d), h = Math.round(innerHeight * d);
     if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
     cx.setTransform(d, 0, 0, d, 0, 0); cx.clearRect(0, 0, innerWidth, innerHeight);
-    if (ptr && me.emoji && moodEl.hidden) drawEmoji(cx, me.emoji, ptr[0] + 1, ptr[1] - 2, 15);
+    // (v20: no emoji on your own cursor: your face is next to Vent; only the others carry theirs)
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
@@ -571,7 +571,14 @@ function hitAt(x, y) {
   }
   return best || near;
 }
-const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
+// v20: with a conversation open, only its own constellation (the note and its replies) can be pointed at; the rest is out of reach
+const conOf = b => { const r = b && (b.parent || b); return r ? new Set([r, ...[...badges.values()].filter(c => c.parent === r)]) : new Set(); };
+const pick = (px, py) => {
+  if (C.cam.soup <= .5) return null;
+  const b = hitAt(px, py);
+  if (b && picked && bigEl.classList.contains("on") && !conOf(picked).has(b)) return null;
+  return b;
+};
 
 // ================= drawing the inside =================
 // what a notification plays under the pointer is in ../shared/notification.js
@@ -642,9 +649,10 @@ function drawLinks(x) {
   x.globalAlpha = 1;
 }
 // v20 (v19's): opened, the rest of the soup is drawn once to a layer and blurred as a whole, never fainter; the opened
-// ball floats above it, sharp, with a ring. The one under the pointer comes out of the blur with its first words beside
-// it: a click on the ball or the words opens that dialogue instead (DEV, soup: "the blur behind")
-let flatK = 0, flatE = 0, blurK = store.get(KEY + "blur", 8), peek = null;
+// conversation's constellation floats above it, sharp, every ball filled, the opened one a slightly different red. Only
+// that constellation can be pointed at (DEV, soup: "the blur behind")
+const PICKED = [232, 28, 14];                    // v20: the opened message's ball, a slightly different red from the rest of its constellation
+let flatK = 0, flatE = 0, blurK = store.get(KEY + "blur", 8);
 // the rest of the soup, opened, on a canvas of its own under the balls' one, blurred by CSS (a canvas's own filter is
 // not in every Safari)
 const layer = document.createElement("canvas"), lctx = layer.getContext("2d");
@@ -653,7 +661,6 @@ marks.before(layer);
 function drawInside(x) {
   const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W, H, MDPR } = V.size(); lastDraw = now;
   cue(now / 1000);
-  peek = null;
   if (flatE < .01) {
     if (layer.style.display !== "none") { layer.style.display = "none"; lctx.clearRect(0, 0, layer.width, layer.height); }
     drawLinks(x);
@@ -665,31 +672,20 @@ function drawInside(x) {
   if (layer.width !== marks.width || layer.height !== marks.height) { layer.width = marks.width; layer.height = marks.height; }
   lctx.setTransform(MDPR, 0, 0, MDPR, 0, 0); lctx.clearRect(0, 0, W, H);
   // v20: the whole constellation of the opened conversation (the note and its replies, their links) stays sharp
-  const root = picked && (picked.parent || picked), con = new Set(root ? [root, ...[...badges.values()].filter(c => c.parent === root)] : []);
-  const all = vis;
+  const con = conOf(picked), all = vis;
   vis = all.filter(b => !con.has(b)); drawLinks(lctx);
-  for (const b of vis) if (b !== hovered) drawBall(lctx, b, now, dt, TYPE);
+  for (const b of vis) drawBall(lctx, b, now, dt, TYPE);
   vis = all.filter(b => con.has(b)); drawLinks(x);
-  for (const b of vis) if (b !== picked) drawBall(x, b, now, dt, TYPE);
+  for (const b of vis) {                          // the open constellation: every ball filled, read or not; the clicked one in its own red
+    x.globalAlpha = 1; x.fillStyle = b === picked ? `rgb(${PICKED.join(",")})` : `rgb(${DOT.join(",")})`;
+    x.beginPath(); x.arc(b.sx, b.sy, b.R, 0, Math.PI * 2); x.fill();
+    if (b === hovered && b !== picked) { x.strokeStyle = `rgb(${DOT.join(",")})`; x.lineWidth = 1.25; x.beginPath(); x.arc(b.sx, b.sy, b.R + 3.5, 0, Math.PI * 2); x.stroke(); }
+  }
   vis = all;
   layer.style.display = "block";
   layer.style.filter = reduce.matches || !blurK ? "none" : `blur(${(blurK * flatE).toFixed(1)}px)`;
-  if (hovered && hovered !== picked && vis.includes(hovered)) { drawBall(x, hovered, now, dt, TYPE); peek = drawPeek(x, hovered, W, TYPE); }
-  if (picked && vis.includes(picked)) {           // the opened message's ball: filled, a full intense red, no ring; the rest of its constellation as it is
-    x.globalAlpha = 1; x.fillStyle = "rgb(255, 0, 0)";
-    x.beginPath(); x.arc(picked.sx, picked.sy, picked.R, 0, Math.PI * 2); x.fill();
-  }
+
 }
-// the first words of a dialogue, beside its ball, while a note is open: where they are, so they can be clicked
-function drawPeek(x, b, W, TYPE) {
-  const txt = b.s.s ? (b.s.s.length > 46 ? b.s.s.slice(0, 44).trimEnd() + "…" : b.s.s) : "a picture";
-  x.font = `500 14px ${TYPE}`; x.textBaseline = "middle";
-  const w = x.measureText(txt).width, flip = b.sx + b.R + 12 + w > W - 12, lx = flip ? b.sx - b.R - 12 - w : b.sx + b.R + 12;
-  x.fillStyle = getComputedStyle(bigEl).getPropertyValue("--ink") || "#000"; x.textAlign = "left";
-  x.fillText(txt, lx, b.sy);
-  return { b, x: lx - 6, y: b.sy - 14, w: w + 12, h: 28 };
-}
-const inPeek = (px, py) => peek && px >= peek.x && px <= peek.x + peek.w && py >= peek.y && py <= peek.y + peek.h;
 const BLUR = 1.5, FOCUS = 1.6;
 function drawBall(x, b, now, dt, TYPE) {
   volcanoNote.draw(x, b, { rgb: DOT, seen: "outline",   /* v20: unseen filled, opened a ring */ alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc, count: false });
@@ -755,13 +751,12 @@ function pointerMove(px, py, dragged) {
 }
 function hover(px, py) {
   let h = px == null ? null : pick(px, py);
-  if (!h && px != null && inPeek(px, py)) h = peek.b;   // v20: on the words beside a ball, it stays the one
   if (h !== hovered) { if (hovered && !hovered.focus) hovered.hold = false; hovered = h; if (h) { h.hold = true; h.sigT0 = performance.now() / 1000; } }
 }
 function click(px, py) {                        // a tap: a badge opens; anywhere else closes what is open
   const open = bigEl.classList.contains("on");
-  const b = pick(px, py) || (open && inPeek(px, py) ? peek.b : null);
-  if (open && b === picked) { closeNote(); return; }   // v20: the opened ball again closes it; another one (or its words) opens that one
+  const b = pick(px, py);
+  if (open && b === picked) { closeNote(); return; }   // v20: the opened ball again closes it; another of its constellation becomes the large one
   if (b) openNote(b);
   else { if (!idPanel.hidden) closeId(); closeNote(); }
 }
@@ -985,7 +980,7 @@ boxEl.addEventListener("pointermove", e => { if (e.pointerType !== "touch") hove
 boxEl.addEventListener("pointerleave", () => hover(null));
 boxEl.addEventListener("click", e => {
   if (getSelection && String(getSelection()).length) return;   // selecting words, not clicking
-  const [px, py] = V.at(e), b = pick(px, py) || (inPeek(px, py) ? peek.b : null);
+  const [px, py] = V.at(e), b = pick(px, py);
   if (b && b !== picked) openNote(b);
 });
 addEventListener("resize", placeSig);
@@ -1287,10 +1282,10 @@ setInterval(() => {
     /* rai v18: the words in the soup's own ink again (aya v14 lightened them for her dark scene) */
     /* v20, as in v19: the rest of the conversation as smaller quotations, a third of the large one's size, each signed;
        no lines. Before it above, after it under */
-    #big .thread { position: relative; margin: 2.2em 0 .5em; padding: 0; color: var(--ink); font: 500 max(17px, calc(var(--fs) * .32))/1.15 var(--type);
-      letter-spacing: -.01em; max-width: 52em; display: flex; flex-direction: column; gap: 1.1em; }
-    #big .thread.earlier { margin: 0 0 2.2em; }
-    #big .thread p { margin: 0; display: flex; flex-direction: column; gap: .35em; }
+    #big .thread { position: relative; margin: 1.3em 0 .5em; padding: 0; color: var(--ink); font: 500 max(16px, calc(var(--fs) * .28))/1.12 var(--type);
+      letter-spacing: -.01em; max-width: 52em; display: flex; flex-direction: column; gap: .55em; }
+    #big .thread.earlier { margin: 0 0 1.1em; }
+    #big .thread p { margin: 0; display: flex; flex-direction: column; gap: .15em; }
     #big .thread .rw { font-size: max(11px, calc(var(--sig) * .85)); font-weight: 500; letter-spacing: 0; opacity: .8; }
     #big .thread [data-id] { cursor: pointer; border-radius: 4px; }
     #big .thread [data-id]:hover .rt, #big .thread [data-id]:focus-visible .rt { text-decoration: underline; text-underline-offset: .12em; text-decoration-thickness: 1px; }
