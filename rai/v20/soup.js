@@ -123,10 +123,12 @@ addEventListener("cabz:dev", e => { dev = !!e.detail.on; if (typeof applyBig ===
 // in English, and so is what the microphone hears =================
 // v20: who you are is a mood, picked at the door (the emoji window, moodEl), and a name made from it; kept in
 // "volcano-id" { name, emoji }. A note carries both
-const readMe = () => { try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name) return { name: String(s.name).slice(0, 32), emoji: typeof s.emoji === "string" ? s.emoji.slice(0, 8) : "", trip: "" }; } catch {} return { name: "", emoji: "", trip: "" }; };
+// a made-up name kept the old way ("magma-hothead") is shown as the new one is ("Magma Hothead"); a typed one, as typed
+const prettyName = n => /^[a-z]+(-[a-z]+)+$/.test(n) ? n.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" ") : n;
+const readMe = () => { try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name) return { name: prettyName(String(s.name).slice(0, 32)), emoji: typeof s.emoji === "string" ? s.emoji.slice(0, 8) : "", trip: "" }; } catch {} return { name: "", emoji: "", trip: "" }; };
 let me = readMe();
 const signature = name => name || "anonymous";
-const sigOf = s => (s.emoji ? s.emoji + " " : "") + (s.name || "anonymous");
+const sigOf = s => (s.emoji ? s.emoji + " " : "") + (s.name ? (s.emoji ? prettyName(s.name) : s.name) : "anonymous");
 document.addEventListener("volcano:who", () => { me = readMe(); showWho(); });
 const idPanel = $("idPanel"), nm = $("nm");
 const ICON_YOU = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5c1.2-3.6 4-5.4 7-5.4s5.8 1.8 7 5.4"/></svg>';
@@ -194,7 +196,8 @@ const MOODS = [
 ];
 const VOLC = ["magma", "lava", "crater", "ember", "ash", "cinder", "geyser", "pumice", "basalt", "caldera", "sulfur", "obsidian", "tephra", "scoria"];
 const pickOf = a => a[Math.floor(Math.random() * a.length)];
-const nameFor = i => pickOf(VOLC) + "-" + pickOf(MOODS[i].w);
+const cap = w => w ? w[0].toUpperCase() + w.slice(1) : w;
+const nameFor = i => cap(pickOf(VOLC)) + " " + cap(pickOf(MOODS[i].w));   // two words, each with a capital: "Magma Hothead"
 const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 const meNow = { typing: false, open: null };    // what the others see of you: writing, and which note you have open
 function meChanged() { dispatchEvent(new CustomEvent("v20:me")); }
@@ -1579,7 +1582,7 @@ function drawAvatar(x, px, py, key, alpha = 1) {
   const a = avatar(key);
   x.save(); x.globalAlpha = alpha;
   const mode = document.documentElement.dataset.avatar, im = mode === "eva" ? evaOf(a) : null;
-  if (mode !== "eva") {                           // a cursor, the default (v20: no balls any more): an arrow as a pointer is drawn, in its colour, a black edge
+  if (!im) {                                      // a cursor, the default; also an EVA not loaded yet (v20: never a circle): an arrow as a pointer is drawn, in its colour, a black edge
     x.translate(Math.round(px), Math.round(py));
     x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 17); x.lineTo(4.2, 13); x.lineTo(7.2, 19.6); x.lineTo(9.8, 18.4); x.lineTo(6.9, 12); x.lineTo(12.4, 12); x.closePath();
     x.fillStyle = "#000"; x.fill(); x.lineWidth = 1; x.lineJoin = "round"; x.strokeStyle = "#fff"; x.stroke();   // v20: black arrows
@@ -1594,7 +1597,6 @@ function drawAvatar(x, px, py, key, alpha = 1) {
     const lx = (EVA_FACE[0] - .5) * w * f, ly = (EVA_FACE[1] - .5) * EVA_H, c = Math.cos(ang), sn = Math.sin(ang);
     face = [px + lx * c - ly * sn, py + lx * sn + ly * c];
   }
-  else { x.fillStyle = a.col; x.beginPath(); x.arc(px, py, 9, 0, Math.PI * 2); x.fill(); }
   x.restore();
   return face;
 }
