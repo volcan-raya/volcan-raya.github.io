@@ -3,9 +3,30 @@ window.CABZ = {
  "sections": [
   {
    "id": "",
-   "short": "volcan-raya",
-   "title": "rai & aya",
+   "short": "future-web volcan",
+   "title": "[aya x rai]",
    "projects": [
+    {
+     "id": "raya",
+     "name": "raya",
+     "title": "aya x rai, together",
+     "href": "raya/v18/",
+     "cursor": "normal",
+     "offset": true,
+     "versions": [
+      {
+       "id": "v18",
+       "label": "v18",
+       "date": "2026-11-19T12:00:00+01:00",
+       "msg": "aya's 3.04 (v14), the drawn volcano and its eruption, with rai's 1.04 (v17) soup: unread balls play by themselves now and then, a ball let go while moving is thrown",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "raya/v18/"
+      }
+     ]
+    },
     {
      "id": "rai",
      "name": "la-voiex-du-volcan",
@@ -248,7 +269,188 @@ window.CABZ = {
      "href": "aya/",
      "cursor": "normal",
      "offset": true,
-     "versions": []
+     "versions": [
+      {
+       "id": "v00",
+       "label": "v00",
+       "date": "2026-11-15T17:30:00+01:00",
+       "msg": "notification soup, after rai's 3.01 (v15): the balls push each other, the vents pass one by one at an eruption, a simulated other",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v00/",
+       "release": "1.00"
+      },
+      {
+       "id": "v01",
+       "label": "v01",
+       "date": "2026-11-15T18:00:00+01:00",
+       "msg": "v00, and a rant left open trembles as the eruption comes, letter by letter, until it is closed by force and the stop motion plays",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v01/",
+       "release": "1.01"
+      },
+      {
+       "id": "v02",
+       "label": "v02",
+       "date": "2026-11-15T18:10:00+01:00",
+       "msg": "v01 with only rai's own notes, ten of them, so it stays light",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v02/",
+       "release": "1.02"
+      },
+      {
+       "id": "v03",
+       "label": "v03",
+       "date": "2026-11-15T18:40:00+01:00",
+       "msg": "v02 with a volcanic eruption: letters thrown one by one, landing mixed into a new text, flowing, cooling, leaving a trace",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v03/",
+       "release": "2.00"
+      },
+      {
+       "id": "v04",
+       "label": "v04",
+       "date": "2026-11-15T18:50:00+01:00",
+       "msg": "v03 with the eruption outside: from the black triangle onto a black ground, the letters as lava",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v04/",
+       "release": "2.01"
+      },
+      {
+       "id": "v05",
+       "label": "v05",
+       "date": "2026-11-15T19:00:00+01:00",
+       "msg": "v04 without the ground: the triangle's sides go on down, scroll down into the mountain, the lava in many lines",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v05/",
+       "release": "2.02"
+      },
+      {
+       "id": "v06",
+       "label": "v06",
+       "date": "2026-11-15T19:40:00+01:00",
+       "msg": "v05 with a more volcanic eruption: strands of letters, fast jets and slow lobs, the mountain seen in depth",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v06/",
+       "release": "2.03"
+      },
+      {
+       "id": "v07",
+       "label": "v07",
+       "date": "2026-11-15T19:55:00+01:00",
+       "msg": "v06 with letters of many sizes, the old smoke gone, the smoke thrown in strands like the lava",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v07/",
+       "release": "2.04"
+      },
+      {
+       "id": "v08",
+       "label": "v08",
+       "date": "2026-11-15T20:10:00+01:00",
+       "msg": "v07 with readable, longer smoke, sinuous lava, and a try section in DEV",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v08/",
+       "release": "2.05"
+      },
+      {
+       "id": "v09",
+       "label": "v09",
+       "date": "2026-11-15T20:20:00+01:00",
+       "msg": "v08 with the smoke half readable, and DEV in folding sections",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v09/",
+       "release": "2.06"
+      },
+      {
+       "id": "v10",
+       "label": "v10",
+       "date": "2026-11-17T18:40:00+01:00",
+       "msg": "a new scene, from aya's drawings: the volcano above, the soup below, scrolled; replies under a rant; the balls burst into letters that run as snakes of lava",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v10/",
+       "release": "3.00"
+      },
+      {
+       "id": "v11",
+       "label": "v11",
+       "date": "2026-11-17T19:30:00+01:00",
+       "msg": "the close-up of the volcano; one gradient to the soup; colours from the drawing; the sky darkens before the eruption, clears after; balls out of the crater's opening",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v11/",
+       "release": "3.01"
+      },
+      {
+       "id": "v12",
+       "label": "v12",
+       "date": "2026-11-17T20:10:00+01:00",
+       "msg": "livelier colours; replies show live in the open rant; the balls burst like fireworks, further, the view drawing back; scrolling past the top draws it back too",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v12/",
+       "release": "3.02"
+      },
+      {
+       "id": "v13",
+       "label": "v13",
+       "date": "2026-11-17T22:10:00+01:00",
+       "msg": "v12 made light again: the same, without the lag",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v13/",
+       "release": "3.03"
+      },
+      {
+       "id": "v14",
+       "label": "v14",
+       "date": "2026-11-17T23:30:00+01:00",
+       "msg": "the eruption as a volcano, not fireworks: irregular pulses and silences; bursts, slow lobs, spills, far throws and overflows; letters gather and flow down in streams, cool and leave a trace; faint smoke",
+       "pages": [
+        "index.html"
+       ],
+       "live": true,
+       "href": "aya/v14/",
+       "release": "3.04"
+      }
+     ]
     }
    ]
   }

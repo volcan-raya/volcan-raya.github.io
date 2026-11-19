@@ -77,7 +77,9 @@
   const vDot = (v, i) => `<a class="dot${i === cur ? " cur" : ""}" href="${vHref(v)}" data-i="${i}" data-tooltip="${esc(versionText(v, i))}"${i === cur ? ' aria-current="true"' : ""}><span class="sr">${esc(versionText(v, i))}</span></a>`;
   // from the first version with a release of its own, the line forks
   const firstRelease = vs.findIndex((v) => v.release);
-  const fork = firstRelease > 0;
+  // a project that starts on a branch (aya: 1.00 first) forks from its start, when it has more than one branch
+  const majors = new Set(vs.map((v) => /^(\d+)\./.exec(v.release || "")?.[1]).filter(Boolean));
+  const fork = firstRelease > 0 || (firstRelease === 0 && majors.size > 1);
   const trunk = fork ? firstRelease : vs.length;
   // one lane a branch: releases with the same first number (1.00, 1.01…) go on along it, left to right
   // a new branch starts under the newest dot of the first lane at the time it was made (3.00 under 1.03), with no line
@@ -137,66 +139,37 @@
   };
   const projectTitle = (p) => p.strike && p.title.startsWith(p.strike + " ")
     ? `<s>${esc(p.strike)}</s>${esc(p.title.slice(p.strike.length))}` : esc(p.title);
+  // under each project, every version as a link, a row a branch: before the branches, then 1.x, 2.x… (as the bar's lanes)
+  const versionRows = (p) => {
+    if (!p.versions.length) return "";
+    const groups = [];
+    p.versions.forEach((v, i) => {
+      const key = /^(\d+)\./.exec(v.release || "")?.[1] ?? "";
+      let g = groups.find((x) => x.key === key);
+      if (!g) groups.push((g = { key, vs: [] }));
+      g.vs.push({ v, i });
+    });
+    const multi = groups.length > 1 || groups[0].key;
+    const here = p === project ? vs[cur] : null;
+    return `<li class="vs">${groups.map((g) => `<div class="vrow"><span class="k">${multi ? (g.key ? g.key + ".x" : "before") : ""}</span><span class="vl">${g.vs.map(({ v }) => {
+      const tip = `${v.label}${v.release ? " · " + v.release : ""} [${v.date ? ddmmyy(v.date) : "—"}]${v.msg ? " " + v.msg : ""}`;
+      return `<a href="${url(v.href || p.href)}" data-tooltip="${esc(tip)}"${v === here ? ' class="here" aria-current="page"' : ""}><b>${esc(v.release || v.label)}</b>${v.release ? `<small>${esc(v.label)}</small>` : ""}</a>`;
+    }).join("")}</span></div>`).join("")}</li>`;
+  };
   const panel = S.sections.map((s) => `
     <section>
-      <a class="sh${s === section && !project ? " here" : ""}" href="${url(s.id ? s.id + "/" : "")}"><b>${s.id ? (s.id.startsWith("cabz/") ? "cabz— / " : "") + esc(s.short) : BRAND_HTML}</b> ${esc(s.title)}</a>
+      <a class="sh${s === section && !project ? " here" : ""}" href="${url(s.id ? s.id + "/" : "")}"><b>${s.id ? (s.id.startsWith("cabz/") ? "cabz— / " : "") + esc(s.short) : s.short ? esc(s.short) : BRAND_HTML}</b> ${esc(s.title)}</a>
       <ol>${s.projects.map((p) => `
         <li><a href="${pHref(p)}"${p === project ? ' class="here" aria-current="page"' : ""}>
-          <span class="n">${s.id === PP ? versionMarks(p, true) : ""}${crossed(p, p === project ? (p.activeLabel || p.name) : p.name)}${s.id !== PP ? versionMarks(p, false) : ""}</span>
+          <span class="n">${s.id === PP ? versionMarks(p, true) : ""}${crossed(p, p === project ? (p.activeLabel || p.name) : p.name)}</span>
           <span class="t">${p.title.replace(/\s/g, "-") === p.name ? "" : projectTitle(p)}${p.note ? ` <em>${esc(p.note)}</em>` : ""}</span>
-        </a></li>`).join("")}
+        </a></li>${versionRows(p)}`).join("")}
       </ol>
     </section>`).join("");
 
-  // the design tokens (tokens.css: the same names and defaults). The index's design column changes them
-  // in this browser: what's changed is kept in localStorage and set on <html>, so every page follows,
-  // the bar included (custom properties cross into its shadow root)
-  const FONTS = [
-    ["Spectral", 'Spectral, Georgia, "Times New Roman", serif'],
-    ["Helvetica", '"Helvetica Neue", Helvetica, Arial, sans-serif'],
-    ["Menlo", "Menlo, ui-monospace, monospace"]
-  ];
-  const PALETTE = [["peach", "#efb4a5"], ["ink", "#222222"], ["sun", "#ff4500"], ["ray", "#e83700"], ["violet", "#b026ff"],
-    ["lilac", "#c16cff"], ["black", "#000000"], ["cream", "#f5f2e7"], ["deep", "#21363c"]];
-  const TOKENS = {
-    "grid-cols": "8", "grid-gap": "8px", "grid-margin": "24px",
-    "type-font": FONTS[0][1], "type-s": "13px", "type-m": "16px",
-    ...Object.fromEntries(PALETTE.map(([n, c]) => ["c-" + n, c])),
-    "ui-paper": "var(--c-peach)", "ui-ink": "var(--c-ink)"
-  };
-  const DESIGN_KEY = "cabz-design";
-  let design = { tokens: {}, grid: false };
-  try { design = { ...design, ...JSON.parse(localStorage.getItem(DESIGN_KEY) || "{}") }; } catch {}
-  const token = (k) => design.tokens[k] ?? TOKENS[k];
-  const applyTokens = () => {
-    for (const k in TOKENS) {
-      if (k in design.tokens) document.documentElement.style.setProperty("--" + k, design.tokens[k]);
-      else document.documentElement.style.removeProperty("--" + k);
-    }
-  };
-  applyTokens();
-
-
-  const range = (key, label, min, max) => `<li><label class="k" for="d-${key}">${label}</label><span class="v">
-    <input type="range" id="d-${key}" data-token="${key}" min="${min}" max="${max}" step="1"><output for="d-${key}"></output></span></li>`;
-  const swatches = (role) => PALETTE.map(([n, c]) => `<button class="sw" type="button" data-role="${role}" data-value="var(--c-${n})" style="--c: var(--c-${n}, ${c})" title="${n}" aria-label="${role}: ${n}"></button>`).join("");
-  const designColumn = `
-    <aside class="design" aria-label="design">
-      <p class="sh"><b>design</b> in this browser</p>
-      <ol>
-        <li><span class="k">grid</span><span class="v"><button class="btn" type="button" data-show-grid aria-pressed="false">show</button></span></li>
-        ${range("grid-cols", "columns", 1, 16)}${range("grid-gap", "gaps", 0, 48)}${range("grid-margin", "margins", 0, 120)}
-        <li class="h"><span class="k">type</span></li>
-        <li><span class="k">font</span><span class="v">${FONTS.map(([n, f]) => `<button class="btn font" type="button" data-font="${esc(f)}" style="font-family: ${esc(f)}">${n}</button>`).join("")}</span></li>
-        ${range("type-s", "small", 9, 24)}${range("type-m", "text", 10, 32)}
-        <li class="h"><span class="k">colours</span></li>
-        <li><span class="k">palette</span><span class="v">${PALETTE.map(([n]) => `<input class="sw" type="color" data-token="c-${n}" title="${n}" aria-label="palette: ${n}">`).join("")}</span></li>
-        <li><span class="k">paper</span><span class="v">${swatches("ui-paper")}</span></li>
-        <li><span class="k">ink</span><span class="v">${swatches("ui-ink")}</span></li>
-        <li class="h"><span class="k"></span></li>
-        <li><span class="k"></span><span class="v"><button class="btn" type="button" data-reset>reset</button><button class="btn" type="button" data-copy>copy css</button></span></li>
-      </ol>
-    </aside>`;
+  // the index's design column (grid, type, colours) is gone: what a browser kept from it is cleared, so nothing stays changed
+  try { if (localStorage.getItem("cabz-design")) { localStorage.removeItem("cabz-design");
+    ["grid-cols", "grid-gap", "grid-margin", "type-font", "type-s", "type-m", "ui-paper", "ui-ink"].forEach((k) => document.documentElement.style.removeProperty("--" + k)); } } catch {}
 
   // a phone, on a project that says so (projects.json "phone": first numbers of its branches): the bar is one thin line,
   // a link to the newest version of each of those branches, and dev; nothing else
@@ -296,8 +269,8 @@
   .panel { background: var(--nsky); padding-top: 32px; padding-bottom: 40px; row-gap: 32px;
     max-height: calc(100vh - var(--bar-h, 32px)); overflow: auto; border-bottom: 1px solid var(--nfg); }
   .panel[hidden] { display: none; }
-  /* the index: the projects in columns 1–4, the design column in 6–8, each flowing on its own */
-  .projects { grid-column: 1 / 5; display: grid; grid-template-columns: subgrid; row-gap: 32px; align-content: start; }
+  /* the index: the projects across the width, every version under its project */
+  .projects { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; row-gap: 32px; align-content: start; }
   .panel section { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-content: start; }
   .sh { grid-column: 1 / -1; justify-self: start; margin-bottom: 16px; opacity: 1; }
   .sh b { font-weight: 400; margin-right: 8px; }
@@ -311,6 +284,14 @@
   .panel li a.here .n::before { content: "→"; margin-right: 8px; }
   .panel .t { grid-column: 3 / -1; display: flex; align-items: center; gap: 8px; opacity: 1; white-space: nowrap; overflow: hidden; }
   .panel em { font-style: normal; }
+  .panel li.vs { border-top: 0; padding: 2px 0 10px; }
+  .vrow { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; padding: 2px 0; }
+  .vrow .k { grid-column: 1 / 3; padding-left: 16px; font-size: var(--type-s, 13px); opacity: .55; }
+  .vrow .vl { grid-column: 3 / -1; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--type-s, 13px); letter-spacing: .02em; }
+  .panel li .vl a { display: inline-flex; align-items: baseline; gap: 4px; grid-column: auto; padding: 0; }
+  .vl a b { font-weight: 400; }
+  .vl a small { font-size: inherit; opacity: .5; }
+  .vl a:hover b, .vl a.here b { text-decoration: underline; text-underline-offset: 3px; }
   .g { display: inline-flex; align-items: center; margin-left: 16px; flex: none; vertical-align: middle; }
   .g.before { margin-left: 0; margin-right: 16px; }
   .g u { width: 5px; height: 5px; border: 1px solid var(--nfg); border-radius: 50%; }
@@ -329,23 +310,6 @@
   }
   .tooltip[hidden] { display: none; }
 
-  /* the index's right side: the design tokens, live (columns 6–8, beside the projects) */
-  .design { grid-column: 6 / -1; display: grid; grid-template-columns: subgrid; align-content: start; }
-  .design .sh { margin: 0 0 16px; cursor: default; }
-  .design ol { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; list-style: none; margin: 0; padding: 0; }
-  .design li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; min-height: 32px; padding: 4px 0; border-top: 1px solid var(--nfg); }
-  .design li:last-child { border-bottom: 1px solid var(--nfg); }
-  .design li.h { border-top: 0; min-height: 0; padding: 24px 0 8px; }
-  .design li.h + li { border-top: 1px solid var(--nfg); }
-  .design .k { grid-column: 1; }
-  .design .v { grid-column: 2 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
-  .design output { flex: none; width: 6ch; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .design input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 40px; height: 20px; margin: 0; padding: 0; background: transparent; cursor: var(--cursor, pointer); }
-  .design input[type=range]::-webkit-slider-runnable-track { height: 1px; background: var(--nfg); }
-  .design input[type=range]::-moz-range-track { height: 1px; background: var(--nfg); }
-  .design input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 2px; height: 14px; margin-top: -7px; background: var(--nfg); border: 0; border-radius: 0; }
-  .design input[type=range]::-moz-range-thumb { width: 2px; height: 14px; background: var(--nfg); border: 0; border-radius: 0; }
-  .design input:focus-visible { outline: 1px solid var(--nfg); outline-offset: 3px; }
   /* the palette: rounds, like the versions; the chosen one ringed */
   .sw { flex: none; width: 15px; height: 15px; padding: 0; border: 1px solid var(--nfg); border-radius: 50%; background: var(--c); }
   .sw[aria-pressed="true"] { outline: 1px solid var(--nfg); outline-offset: 2px; }
@@ -353,18 +317,9 @@
   input.sw::-webkit-color-swatch-wrapper { padding: 0; }
   input.sw::-webkit-color-swatch { border: 0; border-radius: 50%; }
   input.sw::-moz-color-swatch { border: 0; border-radius: 50%; }
-  .design .btn { font-size: var(--type-s, 13px); }
-  .design .font { font-size: var(--type-s, 13px); }
-  /* the grid over the whole page: the columns tinted, the margins left clear */
-  .gridlines { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
-  .gridlines[hidden] { display: none; }
-  .gridlines i { display: block; height: 100%; background: color-mix(in srgb, var(--c-sun, #ff4500) 14%, transparent); }
   @media (max-width: 600px) {
     .left { grid-column: 1 / 5; gap: 8px; }
     .vg { grid-column: 5 / 7; gap: 8px; }
-    .design { grid-column: 1 / -1; }
-    .design .k { grid-column: 1 / 3; }
-    .design .v { grid-column: 3 / -1; }
     .tools { grid-column: 7 / -1; }
     .pg, .info, .warn, .latest, .steps { display: none; }
     ol.v li + li::before { width: 8px; }
@@ -372,6 +327,8 @@
     .projects { grid-column: 1 / -1; }
     .panel .n { grid-column: 1 / 5; }
     .panel .t { grid-column: 5 / -1; }
+    .vrow .k { grid-column: 1 / 3; padding-left: 0; }
+    .vrow .vl { grid-column: 3 / -1; }
   }
   @media (max-width: 600px) and (min-width: 0) { .tools { gap: 4px; } .btn { padding: 4px 6px; } }
   /* a phone: the trail keeps raíz and where you are, so the title and dev fit */
@@ -408,9 +365,8 @@
       <button class="btn dev" type="button" aria-pressed="false" hidden>dev</button>
     </div>
   </nav>
-  <div class="panel cols" id="panel" hidden><div class="projects">${panel}</div>${designColumn}</div>
+  <div class="panel cols" id="panel" hidden><div class="projects">${panel}</div></div>
 </div>
-<div class="gridlines cols" aria-hidden="true" hidden></div>
 
 <div class="tooltip" id="cabz-tooltip" role="tooltip" hidden></div>
 `;
@@ -510,52 +466,6 @@
     devBtn.hidden = false;
     devBtn.addEventListener("click", () => setDev(devBtn.getAttribute("aria-pressed") !== "true", true));
   }
-
-  // the design column (the index's right side): every control writes one token
-  const gridlines = sh.querySelector(".gridlines");
-  const designBox = sh.querySelector(".design");
-  const px = (v) => parseFloat(v) || 0;
-  const saveDesign = () => { try { localStorage.setItem(DESIGN_KEY, JSON.stringify(design)); } catch {} };
-  const syncDesign = () => {
-    applyTokens();
-    const cols = Math.max(1, Math.min(48, Math.round(px(token("grid-cols")))));
-    if (gridlines.children.length !== cols) gridlines.innerHTML = "<i></i>".repeat(cols);
-    gridlines.hidden = !design.grid;
-    designBox.querySelector("[data-show-grid]").setAttribute("aria-pressed", String(design.grid));
-    designBox.querySelectorAll("input[type=range]").forEach((input) => {
-      const v = token(input.dataset.token);
-      input.value = px(v);
-      input.nextElementSibling.textContent = input.dataset.token === "grid-cols" ? px(v) : px(v) + " px";
-    });
-    designBox.querySelectorAll("input[type=color]").forEach((input) => { input.value = token(input.dataset.token); });
-    designBox.querySelectorAll("[data-font]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.font === token("type-font"))));
-    designBox.querySelectorAll("[data-role]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.value === token(b.dataset.role))));
-    dispatchEvent(new CustomEvent("cabz:design", { detail: { tokens: { ...TOKENS, ...design.tokens } } }));
-  };
-  const setToken = (k, v) => {
-    if (String(v) === TOKENS[k]) delete design.tokens[k]; else design.tokens[k] = String(v);
-    saveDesign(); syncDesign();
-  };
-  designBox.addEventListener("input", (e) => {
-    const input = e.target, k = input.dataset.token;
-    if (!k) return;
-    setToken(k, input.type === "range" && k !== "grid-cols" ? input.value + "px" : input.value);
-  });
-  designBox.addEventListener("click", (e) => {
-    const b = e.target.closest("button");
-    if (!b) return;
-    if (b.matches("[data-show-grid]")) { design.grid = !design.grid; saveDesign(); syncDesign(); }
-    else if (b.dataset.font) setToken("type-font", b.dataset.font);
-    else if (b.dataset.role) setToken(b.dataset.role, b.dataset.value);
-    else if (b.matches("[data-reset]")) { design.tokens = {}; saveDesign(); syncDesign(); }
-    else if (b.matches("[data-copy]")) {
-      // the :root block of tokens.css with these values, to paste there and make them the site's
-      const css = ":root {\n" + Object.keys(TOKENS).map((k) => `  --${k}: ${token(k)};`).join("\n") + "\n}\n";
-      navigator.clipboard?.writeText(css).then(() => { b.textContent = "copied"; setTimeout(() => { b.textContent = "copy css"; }, 1200); },
-        () => { b.textContent = "copy failed"; });
-    }
-  });
-  syncDesign();
 
   const gridBtn = sh.querySelector(".grid-btn");
   const modePaths = [...gridBtn.querySelectorAll("path")];
