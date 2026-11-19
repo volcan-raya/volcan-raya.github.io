@@ -100,7 +100,7 @@
 html[data-look="aya"] #people { color: #fff1e6; }
 #people li { display: flex; gap: .35em; align-items: baseline; }
 #people .me { font-weight: 600; }
-#people .typing { animation: v20typing 1s steps(2) infinite; }
+#people .typing { font-weight: 800; animation: v20typing 1s steps(2) infinite; }   /* heavier, to be seen */
 @keyframes v20typing { 50% { opacity: .3; } }
 
 /* v20: your mood on the person's button; the send arrow there, faint until there is something to send (no microphone) */
