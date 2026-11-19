@@ -21,6 +21,11 @@ No Mebar, no Spectral: one sans everywhere. soup.js runs with `data-ver="v20" da
   replies, live ones too. A sorts by number of replies and takes the top 8 (eruption 1: the notes; eruption 2: their replies).
 - **Two kinds of ball only**, from now on: unread filled, read a ring. **`V.soup.ballLook()`** (B) → `{ fill, ring, lw }`,
   so A's eruption balls look the same as the soup's.
+  (B, done) `fill` and `ring` are CSS colours (the look's: aya's peach or rai's red, read live); `lw` is the ring's width
+  as a share of the ball's radius (1.5 / 21), at least one device pixel.
+- (B, done) `V.soup.threads()` includes the simulated others' replies (this visit only, never saved).
+- (B) Who is here is listed above `#venting` ("N people in the soup", ../../rai/shared/venting.js). That count is still
+  venting.js's own made-up 2 or 3, so it can disagree with the list (5 with the simulated others): to be decided.
 - **Nothing scrolls the background**: anything that scrolls on its own (the opened dialogue, the opening window) has
   `data-ui`; camera.js leaves the wheel and touches over `[data-ui]` alone.
 - **`V.camera.cam.s`** (0 in the soup … 1 outside) is the one number both read; `cam.soup` still says when the soup can

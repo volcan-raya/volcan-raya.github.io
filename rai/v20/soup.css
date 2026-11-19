@@ -55,36 +55,52 @@
 .pill.go { background: var(--red); color: #fff; }
 .pill:disabled { opacity: .4; cursor: default; }
 
-/* a note opened: only the note, huge, in the scene: over the field, under the badges, never taking the pointer.
-   Its box is set in DEV (soup.js): --fs --lh, and the margins in px from the edges, --side and --tb. The text starts
-   at the box's top left; a picture and a voice sit in its middle, the screen's */
-#big { position: absolute; inset: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .6s ease; }
+/* a note opened (v20): over the soup, which blurs and stops behind it (soup.js). One column from the top left: a picture
+   (left-aligned, as the text is), the words at one fixed size (--fs, DEV soup; never under 28 px), who and when, then
+   the thread. The column scrolls in itself and only itself (data-ui: the soup and the page never scroll with it); a
+   click outside it closes the note, on another ball (or its words) opens that one */
+#big { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .5s ease; }
 #big.on { opacity: 1; }
-#big .box { position: absolute; top: var(--tb); bottom: var(--tb); left: var(--side); right: var(--side); }
+#big .box { position: absolute; top: var(--tb); left: var(--side); width: min(calc(100% - 2 * var(--side)), 1100px); max-height: calc(100% - var(--tb) - 96px);
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; pointer-events: none; scrollbar-width: none; }
+#big.on .box { pointer-events: auto; }
+#big .box::-webkit-scrollbar { display: none; }
 #big.outlined .box { outline: 1px dashed #C16CFF; outline-offset: -1px; }
-/* the words: by default the sans, 500, as written, in DEV's ink (.sans, set by soup.js). DEV (soup, "messages") can
-   switch them to Mebar Display (mebar.css), the title's type: in capitals, the only letters it draws, black whatever
-   DEV's ink; what it doesn't draw falls back to the page's type, light (300; Mebar has only its one weight) */
-#big .words { position: absolute; left: 0; right: 0; top: 0; margin: 0; text-transform: uppercase;
-  color: #000; font: 300 var(--fs)/var(--lh) "Mebar Display", var(--type); letter-spacing: -.035em; overflow-wrap: normal; hyphens: none; white-space: normal; }
-/* Mebar's own letters thickened by an outline in their ink, under the fill (--mw, DEV soup "mebar weight") */
-#big .words .m { -webkit-text-stroke: var(--mw, 0) currentColor; paint-order: stroke fill; }
-#big.sans .words .m { -webkit-text-stroke: 0; }
-#big.sans .words { text-transform: none; color: var(--ink); font-weight: 500; font-family: var(--type); }
-#big .pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: var(--fit); object-position: 50% 50%; display: none; }
-#big .viz { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
-#big[data-kind="image"] .pic, #big[data-kind="voice"] .viz { display: block; }
-#big[data-kind="image"] .words, #big[data-kind="voice"]:not(.vwords) .words { display: none; }
-/* who wrote it, credited as a quote or an epigraph is (Chicago, APA: an em dash, then the author): — name, day, hour,
-   the larger unit first, all in one weight. It sits just under what was written or sent, lined up with its left: the
-   text's last line, or the picture's bottom edge as it is drawn in the box (--sx, --sy, soup.js) */
-#big .sig { position: absolute; left: var(--sx, 0px); top: var(--sy, 0px); transform: translateY(.9em); margin: 0;
-  display: flex; align-items: baseline; gap: .4em; color: var(--ink); font: 400 var(--sig)/1.2 var(--type); white-space: pre; }
-#big .sig { font-weight: 500; opacity: .8; }     /* who and when alike: one weight, between the bold and the light they were */
-#big .sig .who, #big .sig .when { font-weight: inherit; }
+#big .words { margin: 0; color: var(--ink); font: 500 max(28px, var(--fs))/var(--lh) var(--type); letter-spacing: -.035em; overflow-wrap: break-word; hyphens: none; }
+#big .pic { display: none; max-width: 100%; max-height: 55vh; width: auto; height: auto; object-fit: contain; object-position: left top; margin: 0 0 .5em; }
+#big[data-kind="image"] .pic { display: block; }
+#big .viz { display: none; }
+/* who wrote it, as a quote is credited: — 😤 name, day, hour */
+#big .sig { margin: .9em 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: .4em; color: var(--ink); font: 500 var(--sig)/1.25 var(--type); opacity: .8; }
 #big .sig .when { font-variant-numeric: tabular-nums; }
-#big .sig .who::before { content: "— "; }       /* as a quote is credited: — name, day, hour */
+#big .sig .who::before { content: "— "; }
 #big .sig.dated .who::after { content: ","; }
+@media (max-width: 600px) { #big .box { top: 64px; left: 16px; width: calc(100% - 32px); max-height: calc(100% - 64px - 92px); } }
+
+/* v20: the mood at the door: a small window, as the satisfaction survey by the toilets, five faces, happiest to angriest */
+#mood { position: fixed; z-index: 11; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box; width: min(360px, calc(100% - 32px));
+  padding: 18px 16px 14px; border-radius: 18px; background: #fff; color: #000; text-align: center; font: 500 17px/1.3 var(--type); transition: opacity .25s ease; }
+#mood.going { opacity: 0; }
+#mood .q { margin: 0 0 12px; }
+#mood .row { display: flex; justify-content: space-between; gap: 4px; }
+#mood button { flex: 1; aspect-ratio: 1; max-width: 60px; padding: 0; border: 0; border-radius: 14px; background: none; font-size: 34px; line-height: 1; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+#mood button:hover, #mood button:focus-visible { background: #f2f2f2; transform: scale(1.08); outline: none; }
+#mood button[aria-pressed="true"] { background: #ececec; }
+#mood .named { min-height: 1.3em; margin: 10px 0 0; font-size: 14px; font-weight: 400; color: #555; }
+@media (prefers-reduced-motion: reduce) { #mood, #mood button { transition: none; } }
+
+/* v20: who is here, above "N people in the soup" (shared/venting.js; soup.js puts it there), growing upwards */
+#people { position: fixed; z-index: 5; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: 40px; margin: 0; padding: 0; list-style: none; pointer-events: none;
+  display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 2px; color: #000; font: 400 13px/1.35 var(--type); }
+html[data-look="aya"] #people { color: #fff1e6; }
+#people li { display: flex; gap: .35em; align-items: baseline; }
+#people .me { font-weight: 600; }
+#people .typing { animation: v20typing 1s steps(2) infinite; }
+@keyframes v20typing { 50% { opacity: .3; } }
+
+/* v20: your mood on the person's button; the send arrow there, faint until there is something to send (no microphone) */
+.you.emo { font-size: 22px; line-height: 1; }
+.send:disabled { opacity: .35; cursor: default; }
 
 /* the soup's rows in DEV */
 .meter { height: 4px; background: rgba(255, 255, 255, .12); }

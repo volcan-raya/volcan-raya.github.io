@@ -4,6 +4,12 @@
 // Shared: one soup for 1.03 (v13) and 3.00 (v14), so a change here reaches both. The page says which it is on the
 // script tag: data-ver (its own settings in this browser, volcano-<ver>-…) and data-flat (3.00: no depth, the balls on
 // the screen, the black at the top a plain gradient drawn by its field.js). Everything else is the same.
+// v20 (3.04), after v18: a note opened as in v19 (the rest blurs and stops, the opened ball floats above, sharp), its
+// dialogue scrolling inside itself at one fixed size; another dialogue a click away (its ball or its words); pictures
+// left-aligned; no microphone (kept, off); two kinds of ball only (unseen filled, opened a ring); a mood asked at the
+// door (an emoji and a name from it, "volcano-id" { name, emoji }); everyone's cursor with their emoji, black arrows for
+// the others, only the emoji by the note when they open one, "…" while they write; who is here listed above the count;
+// four simulated others doing all of it. V.soup.ballLook() and V.soup.threads() for the outside (NOTES.md)
 (() => {
 "use strict";
 const ME = document.currentScript, FLAT = ME.hasAttribute("data-flat"), KEY = `volcano-${ME.dataset.ver || "v13"}-`;
@@ -25,14 +31,16 @@ document.body.insertAdjacentHTML("beforeend", `
 </div>`);
 // DEV: this file's rows, in the tabs "soup" and "text" (core.js makes the tabs)
 V.dev.tab("soup", `
-  <div class="full seg" role="group" aria-label="The type of an opened message">
-    <span class="k">messages</span>
-    <button class="t" type="button" data-bigfont="sans">sans</button>
-    <button class="t" type="button" data-bigfont="mebar">mebar</button>
+  <label class="full"><span class="k">opened text: size </span><span data-v="fs"></span><input type="range" data-big="fs" min="2" max="20" step=".25"></label>
+  <label class="full"><span class="k">opened: the blur behind </span><span id="blurV"></span><input type="range" id="blurK" min="0" max="24" step="1"></label>
+  <div class="full seg" role="group" aria-label="Simulated others">
+    <span class="k">simulated others</span>
+    <button class="t" type="button" data-simon="1">on</button>
+    <button class="t" type="button" data-simon="0">off</button>
   </div>
+  <span class="full"><button class="t" id="devMood" type="button">the emoji window again</button></span>
   <label class="full"><span class="k">cue: a ball plays by itself, on average every </span><span id="cueV"></span><input type="range" id="cueEvery" min="0" max="10" step=".5"></label>
   <label class="full"><span class="k">cue: at most at once </span><span id="cueMaxV"></span><input type="range" id="cueMax" min="1" max="6" step="1"></label>
-  <label class="full"><span class="k">mebar weight </span><span id="mebarWV"></span><input type="range" id="mebarW" min="0" max="40" step="1"></label>
   <span class="full"><span class="k">here </span><span id="here">…</span></span>
   <label class="full"><span class="k">replies: size of a ball </span><span id="satV"></span><input type="range" id="satSize" min="10" max="100" step="1"></label>
   <label class="full"><span class="k">replies: how far they go round </span><span id="orbV"></span><input type="range" id="orbSize" min="30" max="400" step="5"></label>
@@ -56,14 +64,8 @@ V.dev.tab("text", `
     <button class="t" type="button" data-try="image">picture</button>
     <button class="t" type="button" data-try="voice">voice</button>
   </div>
-  <label class="full"><span class="k">type size </span><span data-v="fs"></span><input type="range" data-big="fs" min="2" max="60" step=".5"></label>
   <label class="full"><span class="k">line height </span><span data-v="lh"></span><input type="range" data-big="lh" min=".7" max="1.5" step=".01"></label>
   <label class="full"><span class="k">signature size </span><span data-v="sig"></span><input type="range" data-big="sig" min="8" max="40" step="1"></label>
-  <div class="full seg" role="group" aria-label="Text size">
-    <span class="k">text</span>
-    <button class="t" type="button" data-bigset="tsize" data-val="fixed">at its size</button>
-    <button class="t" type="button" data-bigset="tsize" data-val="fit">shrink to fit</button>
-  </div>
   <label class="full"><span class="k">margin, sides </span><span data-v="side"></span><input type="range" data-big="side" min="0" max="400" step="1"></label>
   <label class="full"><span class="k">margin, top and bottom </span><span data-v="tb"></span><input type="range" data-big="tb" min="0" max="400" step="1"></label>
   <div class="full seg" role="group" aria-label="Ink of an opened note">
@@ -94,7 +96,7 @@ const marks = V.marks, notesEl = $("notes");
 // an opened note: one layer in the scene, over the field and under the badges, that never takes the pointer
 const bigEl = document.createElement("div");
 bigEl.id = "big"; bigEl.setAttribute("aria-live", "polite");
-bigEl.innerHTML = '<canvas class="viz" aria-hidden="true"></canvas><div class="box"><img class="pic" alt=""><p class="words"></p><p class="sig"><b class="who"></b><span class="when"></span></p></div><div class="thread"></div>';
+bigEl.innerHTML = '<canvas class="viz" aria-hidden="true"></canvas><div class="box" data-ui><img class="pic" alt=""><p class="words"></p><p class="sig"><b class="who"></b><span class="when"></span></p><div class="thread"></div></div>';
 $("field").after(bigEl);
 let dev = false;
 addEventListener("cabz:dev", e => { dev = !!e.detail.on; if (typeof applyBig === "function") applyBig(); });   // the "dev" square in the site bar (nav.js)
@@ -119,17 +121,22 @@ addEventListener("cabz:dev", e => { dev = !!e.detail.on; if (typeof applyBig ===
 
 // ================= identity: a name, or anonymous. No code and no language to choose (from 1.00 on): the notes are
 // in English, and so is what the microphone hears =================
-let me = { name: "", trip: "" };
-try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name) me = { name: String(s.name).slice(0, 20), trip: "" }; } catch {}
+// v20: who you are is a mood, picked at the door (the emoji window, moodEl), and a name made from it; kept in
+// "volcano-id" { name, emoji }. A note carries both
+const readMe = () => { try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name) return { name: String(s.name).slice(0, 32), emoji: typeof s.emoji === "string" ? s.emoji.slice(0, 8) : "", trip: "" }; } catch {} return { name: "", emoji: "", trip: "" }; };
+let me = readMe();
 const signature = name => name || "anonymous";
+const sigOf = s => (s.emoji ? s.emoji + " " : "") + (s.name || "anonymous");
+document.addEventListener("volcano:who", () => { me = readMe(); showWho(); });
 const idPanel = $("idPanel"), nm = $("nm");
 const ICON_YOU = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5c1.2-3.6 4-5.4 7-5.4s5.8 1.8 7 5.4"/></svg>';
 function showWho() {
   for (const b of document.querySelectorAll(".you")) {
-    b.innerHTML = ICON_YOU;                       // always the person, never the name; the name is in its tooltip
-    b.title = signature(me.name);
+    if (me.emoji) { b.textContent = me.emoji; b.classList.add("emo"); } else { b.innerHTML = ICON_YOU; b.classList.remove("emo"); }   // v20: your mood, its name in the tooltip
+    b.title = sigOf(me);
   }
-  $("devWho").textContent = signature(me.name);
+  $("devWho").textContent = sigOf(me);
+  if (typeof showPeople === "function") showPeople();
 }
 let idFrom = null;
 function openId(from) {
@@ -173,6 +180,119 @@ $("keep").form.addEventListener("submit", e => {
 // the language speech is heard in: English, as the notes are
 const lang = "en-US";
 
+// ================= v20: people. A mood at the door, an emoji by each cursor, who is here, who is writing =================
+// At the door a small window, like the satisfaction survey by the toilets: "how is your day going?", five faces from the
+// happiest to the angriest. The face you pick names you, from words about volcanoes and about losing it (😤 →
+// "magma-hothead"), more yours than a typed name. Kept in "volcano-id" { name, emoji }; a visitor who comes back sees
+// theirs there, and keeps it (the same face, or Esc) or picks again
+const MOODS = [
+  { e: "😄", w: ["sunbeam", "daydreamer", "giggler", "softie", "cheerleader"] },
+  { e: "🙂", w: ["chiller", "dozer", "easygoer", "nodder", "drifter"] },
+  { e: "😐", w: ["mumbler", "shrugger", "sulker", "sigher", "grumbler"] },
+  { e: "😤", w: ["hothead", "huffer", "fumer", "steamer", "grouch"] },
+  { e: "🤬", w: ["tantrum", "screamer", "maniac", "berserker", "ragemonster"] },
+];
+const VOLC = ["magma", "lava", "crater", "ember", "ash", "cinder", "geyser", "pumice", "basalt", "caldera", "sulfur", "obsidian", "tephra", "scoria"];
+const pickOf = a => a[Math.floor(Math.random() * a.length)];
+const nameFor = i => pickOf(VOLC) + "-" + pickOf(MOODS[i].w);
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+const meNow = { typing: false, open: null };    // what the others see of you: writing, and which note you have open
+function meChanged() { dispatchEvent(new CustomEvent("v20:me")); }
+function typingNow(c) {
+  const t = document.activeElement === c.input && !!c.input.value.trim();
+  if (t !== meNow.typing) { meNow.typing = t; meChanged(); showPeople(); }
+}
+const moodEl = document.createElement("div");
+moodEl.id = "mood"; moodEl.setAttribute("role", "dialog"); moodEl.setAttribute("aria-label", "how is your day going?"); moodEl.dataset.ui = ""; moodEl.hidden = true;
+moodEl.innerHTML = `<p class="q">how is your day going?</p><div class="row">${MOODS.map((m, i) => `<button type="button" data-mood="${i}" aria-label="${["very well", "well", "so so", "badly", "very badly"][i]}">${m.e}</button>`).join("")}</div><p class="named" aria-live="polite"></p>`;
+document.body.append(moodEl);
+const moodYou = moodEl.querySelector(".named");
+let moodT = 0;
+function openMood() {
+  clearTimeout(moodT); moodEl.hidden = false; moodEl.classList.remove("going");
+  moodYou.textContent = me.emoji ? `you are ${me.emoji} ${me.name}` : "";
+  moodEl.querySelectorAll("[data-mood]").forEach(b => b.setAttribute("aria-pressed", String(b.textContent === me.emoji)));
+}
+function closeMood() {
+  if (moodEl.hidden) return;
+  moodEl.classList.add("going"); clearTimeout(moodT);
+  moodT = setTimeout(() => { moodEl.hidden = true; moodEl.classList.remove("going"); }, reduce.matches ? 0 : 260);
+}
+moodEl.querySelectorAll("[data-mood]").forEach(b => b.addEventListener("click", () => {
+  const i = +b.dataset.mood, m = MOODS[i];
+  const name = me.emoji === m.e && me.name ? me.name : nameFor(i);   // the same face again keeps its name
+  me = { name, emoji: m.e, trip: "" };
+  try { localStorage.setItem("volcano-id", JSON.stringify({ name, emoji: m.e })); } catch {}
+  document.dispatchEvent(new CustomEvent("volcano:who"));
+  moodYou.textContent = `you are ${m.e} ${name}`;
+  moodEl.querySelectorAll("[data-mood]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  meChanged(); clearTimeout(moodT); moodT = setTimeout(closeMood, 1500);
+}));
+addEventListener("keydown", e => { if (e.key === "Escape" && !moodEl.hidden && me.emoji) closeMood(); });
+document.addEventListener("pointerdown", e => { if (!moodEl.hidden && me.emoji && !moodEl.contains(e.target)) closeMood(); });
+openMood();                                     // at the door, every visit
+
+// who is here, above "N people in the soup": you, the simulated others, the real ones (playhtml), each with their
+// face, the list growing upwards; "…" by whoever is writing
+const peopleEl = document.createElement("ul");
+peopleEl.id = "people"; peopleEl.setAttribute("aria-label", "who is here");
+document.body.append(peopleEl);
+let realOthers = [], peopleKey = "";
+function showPeople() {
+  const list = [];
+  if (me.name) list.push({ e: me.emoji, n: me.name, t: meNow.typing, me: true });
+  for (const m of sims) list.push({ e: m.emoji, n: m.name, t: !!m.typing });
+  for (const o of realOthers) list.push({ e: o.emoji, n: o.name || "anonymous", t: !!o.typing });
+  const key = JSON.stringify(list);
+  if (key === peopleKey) return;
+  peopleKey = key; peopleEl.textContent = "";
+  for (const p of list) {                        // built as text: names from elsewhere are never html
+    const li = document.createElement("li"), e = document.createElement("span"), n = document.createElement("span");
+    e.className = "e"; e.textContent = p.e || "·"; n.textContent = p.n; li.append(e, n);
+    if (p.me) li.className = "me";
+    if (p.t) { const d = document.createElement("span"); d.className = "typing"; d.textContent = "…"; li.append(d); }
+    peopleEl.append(li);
+  }
+}
+setInterval(() => {                              // over the count (shared/venting.js), wherever it is on this screen
+  const v = $("venting"), r = v && v.getBoundingClientRect();
+  if (r && r.height && !v.getAnimations().length) peopleEl.style.bottom = Math.round(innerHeight - r.top + 6) + "px";   // once it has come in
+  peopleEl.hidden = !(C.cam && C.cam.soup > .5);
+  showPeople();
+}, 300);
+
+// an emoji, and the "…" of someone writing, as drawn by a cursor (canvas)
+function drawEmoji(x, e, px, py, size = 16) {
+  if (!e) return;
+  x.font = `${size}px ${EMOJI_FONT}`; x.textAlign = "left"; x.textBaseline = "bottom"; x.fillText(e, px, py);
+}
+function drawDots(x, px, py, t) {                // a small bubble, its three dots taking turns, as in a chat
+  const w = 24, h = 13, a = x.globalAlpha;
+  x.fillStyle = "#fff"; x.beginPath(); x.roundRect ? x.roundRect(px, py - h, w, h, 6.5) : x.rect(px, py - h, w, h); x.fill();
+  for (let k = 0; k < 3; k++) {
+    x.globalAlpha = a * (.3 + .7 * Math.max(0, Math.sin(t * 6 - k * .9)));
+    x.fillStyle = "#000"; x.beginPath(); x.arc(px + 6 + k * 6, py - h / 2, 1.7, 0, Math.PI * 2); x.fill();
+  }
+  x.globalAlpha = a;
+}
+// your own cursor carries your face, just above it (the system's arrow stays yours)
+{
+  const cv = document.createElement("canvas"), cx = cv.getContext("2d");
+  cv.setAttribute("aria-hidden", "true"); cv.style.cssText = "position:fixed;inset:0;width:100%;height:100%;z-index:10;pointer-events:none";
+  document.body.append(cv);
+  let ptr = null;
+  addEventListener("pointermove", e => { ptr = e.pointerType === "touch" ? null : [e.clientX, e.clientY]; }, { passive: true });
+  document.documentElement.addEventListener("pointerleave", () => { ptr = null; });
+  const frame = () => {
+    const d = Math.min(2, devicePixelRatio || 1), w = Math.round(innerWidth * d), h = Math.round(innerHeight * d);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    cx.setTransform(d, 0, 0, d, 0, 0); cx.clearRect(0, 0, innerWidth, innerHeight);
+    if (ptr && me.emoji && moodEl.hidden) drawEmoji(cx, me.emoji, ptr[0] + 1, ptr[1] - 2, 15);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
 // ================= notes: the same as v05's, kept in ../sentences.json =================
 // Reading: ../api.php?kind=sentences (shared, can write) → ../sentences.json (read-only) → a few built-in notes.
 // New notes go to ../api.php, or stay in this browser when there is no api.php. A reply is a sentence with "re": <the note's id>.
@@ -183,7 +303,8 @@ const SENT_LOCAL_KEY = "lapilli-sentences-local";
 // shows is decided here. A comment is always its words.
 const mediumOf = volcanoNote.mediumOf;
 const noteLabel = s => ({ image: "a picture", voice: "a voice" })[mediumOf(s)] || shortNote(s.s);
-let arriving = new Set();                       // v18: notes just come from someone else (loadSentences)
+let arriving = new Set();
+const simReplies = [];                          // v20: replies by the simulated others, never saved                       // v18: notes just come from someone else (loadSentences)
 let sentences = [], replies = new Map(), sentMode = "none", sentLoaded = false, knownIds = new Set();
 // aya v02: which notes are in the soup. ten: these ten of rai's (texts and pictures), with their replies; all: all of
 // rai's 44
@@ -200,7 +321,7 @@ async function loadSentences() {
     if (o.medium === "voice") return;          // no voices in 1.02: they were spoken by a made-up voice, not recorded
     seen.add(String(o.id));
     out.push({ id: String(o.id), s: o.s.trim().slice(0, 240), t: Number(o.t) || 0,
-      name: typeof o.name === "string" ? o.name.slice(0, 20) : "", trip: typeof o.trip === "string" ? o.trip.slice(0, 8) : "",
+      name: typeof o.name === "string" ? o.name.slice(0, 32) : "", emoji: typeof o.emoji === "string" ? o.emoji.slice(0, 8) : "", trip: typeof o.trip === "string" ? o.trip.slice(0, 8) : "",
       i: Number.isFinite(o.i) ? clamp(o.i, 0, 1) : null, re: typeof o.re === "string" ? o.re : null,
       medium: ["voice", "text", "image"].includes(o.medium) ? o.medium : "text",
       img: typeof o.img === "string" && /^(perref\/|uploads\/|data:image\/)/.test(o.img) ? o.img : null });
@@ -226,6 +347,7 @@ async function loadSentences() {
   sentences = out.filter(s => !s.re);
   replies = new Map();
   for (const r of out.filter(s => s.re).sort((a, b) => a.t - b.t)) addReply(r);
+  for (const r of simReplies) if (sentences.some(n => n.id === r.re)) addReply(r);   // v20: the simulated others', this visit only
   sentLoaded = true;
   syncBadges(); showStatus();
 }
@@ -236,11 +358,11 @@ async function saveSentence(text, I, re = null, medium = "text", img = null) {
   if ((!t && !img) || t.split(" ").length > 40) return;
   if (re) { medium = null; img = null; }       // replies are just words
   const i = I == null ? null : Math.round(clamp(I, 0, 1) * 100) / 100;
-  const o = { id: "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), s: t, t: Date.now(), name: me.name, trip: me.trip, i, re, medium, img };
+  const o = { id: "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), s: t, t: Date.now(), name: me.name, emoji: me.emoji, trip: me.trip, i, re, medium, img };
   let saved = null;
   if (sentMode === "shared") {
     try {
-      const r = await fetch(UP + "api.php?kind=sentences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ s: t, name: me.name, trip: me.trip, i, re, medium, img }) });
+      const r = await fetch(UP + "api.php?kind=sentences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ s: t, name: me.name, emoji: me.emoji, trip: me.trip, i, re, medium, img }) });
       const j = await r.json();
       if (r.ok && j && j.sentence) saved = { ...o, ...j.sentence };
     } catch {}
@@ -355,7 +477,9 @@ function markRead(b) { readMap[b.s.id] = Math.max(1, readMap[b.s.id] || 0); stor
 const driftOf = (b, t, calm) => FLAT ? [(Math.sin(t * .035 * b.sp + b.ph) * .05 + Math.sin(t * .011 + b.ph * 2) * .02) * calm,   // flat: smaller, on the screen
   (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .04 + Math.sin(t * .9 * b.sp + b.ph) * .006) * calm, 0] : [(Math.sin(t * .035 * b.sp + b.ph) * .2 + Math.sin(t * .011 + b.ph * 2) * .08) * calm,
   Math.sin(t * .021 * b.sp + b.ph * 2.2) * .3 * calm, (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .1 + Math.sin(t * .9 * b.sp + b.ph) * .01) * calm];   // seen from above: the bob in depth is up and down
-function updateBadges(dt, t) {
+let simT = 0;
+function updateBadges(dt) {
+  dt *= 1 - flatE; simT += dt; const t = simT;   // v20: opened, the rest of the soup stops
   const calm = reduce.matches ? .5 : 1, exy = 1 - Math.exp(-dt / 1.1), ez = 1 - Math.exp(-dt / 1.6);
   for (const b of badges.values()) {
     b.readT = clamp(b.readT + (b.read ? dt : -dt) / 2, 0, 1);   // two seconds, as in v05
@@ -459,7 +583,7 @@ function badgeColour(b) {
 }
 let hovered = null, lastDraw = 0;
 function showCue() {
-  $("cueEvery").value = cueEvery; $("cueV").textContent = cueEvery ? cueEvery + " s" : "never"; store.set(KEY + "cue2", cueEvery);
+  $("cueEvery").value = cueEvery; $("cueV").textContent = cueEvery ? cueEvery + " s" : "never"; store.set(KEY + "cue3", cueEvery);
   $("cueMax").value = cueMax; $("cueMaxV").textContent = cueMax; store.set(KEY + "cuemax", cueMax);
 }
 queueMicrotask(() => {
@@ -471,7 +595,7 @@ queueMicrotask(() => {
 // through. They start at random, with no rhythm (the gaps between them are as a Geiger counter's: mostly short, now and
 // then long), so two or three can play at once, never more than cueMax, and never two side by side. DEV, soup: "cue",
 // the gap on average (0: never), and "at once"
-let cueEvery = store.get(KEY + "cue2", 2.5), cueMax = store.get(KEY + "cuemax", 3), cueNext = 0;
+let cueEvery = store.get(KEY + "cue3", 0), cueMax = store.get(KEY + "cuemax", 3), cueNext = 0;
 const cues = new Map();                       // ball → when it started
 const CUE_LEN = () => reduce.matches ? 8.5 : 8.5 / 2.5;   // one loop of a sign (../shared/notification.js: LOOP / SPEED)
 function cue(t) {
@@ -485,7 +609,7 @@ function cue(t) {
     && b.sx > b.R && b.sx < W - b.R && b.sy > b.R && b.sy < H - b.R && !near(b));
   if (pool.length) cues.set(pool[Math.floor(Math.random() * pool.length)], t);
 }
-const sinceOf = (b, t) => b === hovered ? t - b.sigT0 : cues.has(b) ? t - cues.get(b) : null;
+const sinceOf = () => null;   // v20: two kinds of ball only, unseen filled and opened a ring; nothing plays in them
 // ================= the links =================
 // as in Obsidian's graph: a thin line from each reply to the note it answers, and nothing else. In the balls' own red;
 // it stops at each ball's edge, so a seen ball drawn as a ring stays empty inside. Faint, fading with the balls into
@@ -511,25 +635,53 @@ function drawLinks(x) {
   }
   x.globalAlpha = 1;
 }
+// v20 (v19's): opened, the rest of the soup is drawn once to a layer and blurred as a whole, never fainter; the opened
+// ball floats above it, sharp, with a ring. The one under the pointer comes out of the blur with its first words beside
+// it: a click on the ball or the words opens that dialogue instead (DEV, soup: "the blur behind")
+let flatK = 0, flatE = 0, blurK = store.get(KEY + "blur", 8), peek = null;
+// the rest of the soup, opened, on a canvas of its own under the balls' one, blurred by CSS (a canvas's own filter is
+// not in every Safari)
+const layer = document.createElement("canvas"), lctx = layer.getContext("2d");
+layer.setAttribute("aria-hidden", "true"); layer.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;display:none";
+marks.before(layer);
 function drawInside(x) {
-  const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W } = V.size(); lastDraw = now;
+  const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W, H, MDPR } = V.size(); lastDraw = now;
   cue(now / 1000);
-  drawLinks(x);
-  // the further a ball is, the softer: in focus up close, a little blurred with depth (1.03, seen down into the soup;
-  // flat 3.00 has no depth). Up to BLUR px, from FOCUS on, full at FOCUS + 4 of the soup's units
-  for (const b of vis) {
-    const bl = FLAT ? 0 : BLUR * smooth(FOCUS, FOCUS + 4, b.d);
-    x.filter = bl > .3 ? `blur(${bl.toFixed(1)}px)` : "none";
-    drawBall(x, b, now, dt, TYPE);
+  peek = null;
+  if (flatE < .01) {
+    if (layer.style.display !== "none") { layer.style.display = "none"; lctx.clearRect(0, 0, layer.width, layer.height); }
+    drawLinks(x);
+    for (const b of vis) drawBall(x, b, now, dt, TYPE);
+    x.filter = "none"; x.globalAlpha = 1;
+    drawFocusLabel(x, W, TYPE);
+    return;
   }
-  x.filter = "none";
-  x.globalAlpha = 1;
-  // what it is, next to the one the keyboard is on
-  drawFocusLabel(x, W, TYPE);
+  if (layer.width !== marks.width || layer.height !== marks.height) { layer.width = marks.width; layer.height = marks.height; }
+  lctx.setTransform(MDPR, 0, 0, MDPR, 0, 0); lctx.clearRect(0, 0, W, H);
+  drawLinks(lctx);
+  for (const b of vis) if (b !== picked && b !== hovered) drawBall(lctx, b, now, dt, TYPE);
+  layer.style.display = "block";
+  layer.style.filter = reduce.matches || !blurK ? "none" : `blur(${(blurK * flatE).toFixed(1)}px)`;
+  if (hovered && hovered !== picked && vis.includes(hovered)) { drawBall(x, hovered, now, dt, TYPE); peek = drawPeek(x, hovered, W, TYPE); }
+  if (picked && vis.includes(picked)) {
+    drawBall(x, picked, now, dt, TYPE);
+    x.globalAlpha = flatE; x.strokeStyle = `rgb(${DOT.join(",")})`; x.lineWidth = 1.5;
+    x.beginPath(); x.arc(picked.sx, picked.sy, picked.R + 5, 0, Math.PI * 2); x.stroke(); x.globalAlpha = 1;
+  }
 }
+// the first words of a dialogue, beside its ball, while a note is open: where they are, so they can be clicked
+function drawPeek(x, b, W, TYPE) {
+  const txt = b.s.s ? (b.s.s.length > 46 ? b.s.s.slice(0, 44).trimEnd() + "…" : b.s.s) : "a picture";
+  x.font = `500 14px ${TYPE}`; x.textBaseline = "middle";
+  const w = x.measureText(txt).width, flip = b.sx + b.R + 12 + w > W - 12, lx = flip ? b.sx - b.R - 12 - w : b.sx + b.R + 12;
+  x.fillStyle = getComputedStyle(bigEl).getPropertyValue("--ink") || "#000"; x.textAlign = "left";
+  x.fillText(txt, lx, b.sy);
+  return { b, x: lx - 6, y: b.sy - 14, w: w + 12, h: 28 };
+}
+const inPeek = (px, py) => peek && px >= peek.x && px <= peek.x + peek.w && py >= peek.y && py <= peek.y + peek.h;
 const BLUR = 1.5, FOCUS = 1.6;
 function drawBall(x, b, now, dt, TYPE) {
-  volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc, count: false });
+  volcanoNote.draw(x, b, { rgb: DOT, seen: "outline",   /* v20: unseen filled, opened a ring */ alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc, count: false });
 }
 function drawFocusLabel(x, W, TYPE) {
   const pk = [...badges.values()].find(b => b.focus);
@@ -560,11 +712,12 @@ function drop() {
 const THROW = 1400;   // a throw goes on about a third of this, in px
 function settle(b) {                          // where it is becomes its home, now and on the next visits
   b.coast = false;
-  const [dx, dy, dz] = driftOf(b, performance.now() / 1000, reduce.matches ? .5 : 1);
+  const [dx, dy, dz] = driftOf(b, simT, reduce.matches ? .5 : 1);
   placed[b.s.id] = [b.x, b.y, b.z]; store.set(PLACED_KEY, placed);   // its home on the next visits
   b.hx = b.x - dx; b.hy = b.y - dy; b.hz = b.z - dz;   // and now, so it drifts on from where it was dropped
 }
 function pointerDown(px, py) {
+  if (bigEl.classList.contains("on")) return false;   // v20: opened, the soup is still: a press is a click
   const b = hitAt(px, py);
   if (!b) return false;
   grab = { b, on: false, off: [px - b.sx, py - b.sy], v: [0, 0, 0], sv: [0, 0], t: 0, at: null }; b.hold = true; b.coast = false;
@@ -587,11 +740,14 @@ function pointerMove(px, py, dragged) {
   return true;
 }
 function hover(px, py) {
-  const h = px == null ? null : pick(px, py);
+  let h = px == null ? null : pick(px, py);
+  if (!h && px != null && inPeek(px, py)) h = peek.b;   // v20: on the words beside a ball, it stays the one
   if (h !== hovered) { if (hovered && !hovered.focus) hovered.hold = false; hovered = h; if (h) { h.hold = true; h.sigT0 = performance.now() / 1000; } }
 }
 function click(px, py) {                        // a tap: a badge opens; anywhere else closes what is open
-  const b = pick(px, py);
+  const open = bigEl.classList.contains("on");
+  const b = pick(px, py) || (open && inPeek(px, py) ? peek.b : null);
+  if (open && b === picked) { closeNote(); return; }   // v20: the opened ball again closes it; another one (or its words) opens that one
   if (b) openNote(b);
   else { if (!idPanel.hidden) closeId(); closeNote(); }
 }
@@ -638,9 +794,11 @@ function makeComposer(host, placeholder, onSend, attach = false) {
     });
     att.querySelector("button").addEventListener("click", () => { setPicture(c, null); c.input.focus({ preventScroll: true }); });
   }
+  if (!MIC) { c.mic.hidden = true; c.send.hidden = false; c.send.disabled = true; }   // v20: no microphone; the arrow, faint until there is something to send
   c.input.addEventListener("input", () => updateSend(c));
-  c.input.addEventListener("focus", () => { active = c; });
-  c.you.addEventListener("click", () => idPanel.hidden ? openId(c.you) : closeId());
+  c.input.addEventListener("focus", () => { active = c; typingNow(c); });
+  c.input.addEventListener("blur", () => typingNow(c));
+  c.you.addEventListener("click", () => openMood());   // v20: your mood, not a typed name
   c.mic.addEventListener("click", () => soon(c.mic));   // not yet: see soon()
   form.addEventListener("submit", async e => {
     e.preventDefault();
@@ -682,8 +840,10 @@ function setPicture(c, data) {                  // a picture is the whole post: 
   }
   updateSend(c);
 }
+const MIC = false;                              // v20: no microphone for now (startMic and the rest kept, unused)
 function updateSend(c) {                        // as in Telegram: the mic becomes a send button once there is something to send
   const has = !!c.input.value.trim() || !!c.img || c.going, rec = listening && micComp === c;
+  if (!MIC) { c.mic.hidden = true; c.send.hidden = false; c.send.disabled = !has; typingNow(c); return; }
   c.send.hidden = !has; c.mic.hidden = has && !rec;
 }
 const composerEl = $("composer"), coarse = matchMedia("(pointer: coarse)");
@@ -725,14 +885,14 @@ function setComposer(on) {                      // there whenever the soup can b
 // a picture and a voice sit in its middle, which is the middle of the screen
 // The voice's tallest bar: 50% is the box's height, so it can go to twice the box. The text: at its size, or, to see a
 // long one whole, shrunk until it fits the box (never bigger than its size)
-const BIG_KEY = KEY + "big3";
-const BIG0 = { fs: 14, lh: .92, side: 40, tb: 90, ink: "black", fit: "contain", vw: "off", show: "off", wh: 23, bars: 88, bw: 7, tsize: "fit", sig: 14 };
+const BIG_KEY = KEY + "big4";
+const BIG0 = { fs: 6, lh: 1, side: 40, tb: 90, ink: "black", fit: "contain", vw: "off", show: "off", wh: 23, bars: 88, bw: 7, tsize: "fixed", sig: 14 };   // v20: one fixed size, in vw (never under 28 px)
 const saved = store.get(BIG_KEY, {}) || {};
 if (saved.wh != null && !saved.v3) {           // kept before the tallest bar was counted against half the box: the same look
   saved.wh = Math.max(3, Math.round(saved.wh / 2));
   if (saved.bars === 90) saved.bars = 88;        // the old default goes to the new one
 }
-let big = { ...BIG0, ...saved, v3: 1 };
+let big = { ...BIG0, ...saved, v3: 1, tsize: "fixed" };
 const INK = { black: [0, 0, 0], white: [255, 255, 255], red: [196, 0, 12] };
 const boxEl = bigEl.querySelector(".box"), sigEl = bigEl.querySelector(".sig"), wordsEl = bigEl.querySelector(".words"), picEl = bigEl.querySelector(".pic"), vizEl = bigEl.querySelector(".viz");
 function applyBig() {
@@ -750,15 +910,7 @@ function applyBig() {
   fitWords(); placeSig();
 }
 // shrink to fit: the largest size, up to the chosen one, at which the whole text is inside the box
-function fitWords() {
-  wordsEl.style.fontSize = "";
-  if (big.tsize !== "fit" || !wordsEl.textContent || getComputedStyle(wordsEl).display === "none") return;
-  const bw = boxEl.clientWidth, bh = boxEl.clientHeight, fits = px => { wordsEl.style.fontSize = px + "px"; return wordsEl.scrollHeight <= bh + 1 && wordsEl.scrollWidth <= bw + 1; };
-  let lo = 4, hi = parseFloat(getComputedStyle(bigEl).getPropertyValue("--fs")) * innerWidth / 100;
-  if (fits(hi)) return;
-  for (let k = 0; k < 14; k++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; }
-  fits(lo);
-}
+function fitWords() { wordsEl.style.fontSize = ""; }   // v20: the main text at one fixed size, always (no more shrink to fit): the dialogue scrolls
 addEventListener("resize", () => fitWords());
 // the words, with the letters Mebar draws (A to S, mebar.css) in spans of their own, so only they are thickened
 // (DEV, soup: "mebar weight", an outline in the ink round each, as Mebar has one weight); built as text, never as html
@@ -771,15 +923,12 @@ function setWords(t) {
     else wordsEl.append(run);
   }
 }
-let mebarW = store.get(KEY + "mebarw2", 9);   // thousandths of an em
-function showMebarW() { bigEl.style.setProperty("--mw", mebarW / 1000 + "em"); $("mebarW").value = mebarW; $("mebarWV").textContent = mebarW ? "+" + mebarW : "as drawn"; store.set(KEY + "mebarw2", mebarW); }
-$("mebarW").addEventListener("input", e => { mebarW = +e.target.value; showMebarW(); });
-showMebarW();
+// v20: no Mebar (and no Spectral): the sans everywhere
 // the type of an opened message: the sans by default, or Mebar Display (DEV, soup; kept in this browser). Mebar is the
 // title's; here only to try. A new key since 13/11/26, so every browser starts on the sans
-let bigFont = store.get(KEY + "bigfont4", "sans") === "mebar" ? "mebar" : "sans";
+let bigFont = "sans";
 function setBigFont(f) {
-  bigFont = f; store.set(KEY + "bigfont4", f); bigEl.classList.toggle("sans", f === "sans");
+  bigFont = "sans"; bigEl.classList.add("sans");
   document.querySelectorAll("[data-bigfont]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.bigfont === f)));
   requestAnimationFrame(() => { fitWords(); placeSig(); });
 }
@@ -807,34 +956,24 @@ function pseudoOf(s) {
 }
 function sign(s) {
   const z = n => String(n).padStart(2, "0"), d = s.t > 1e11 ? new Date(s.t) : null;
-  sigEl.querySelector(".who").textContent = s.name || pseudoOf(s);
+  sigEl.querySelector(".who").textContent = sigOf(s);
   sigEl.querySelector(".when").textContent = d ? `${z(d.getDate())}.${z(d.getMonth() + 1)}.${String(d.getFullYear()).slice(2)}, ${z(d.getHours())}:${z(d.getMinutes())}` : "";
   sigEl.classList.toggle("dated", !!d);
 }
 // where the note's top left is, in the box: the text's is the box's; a picture's is where it is drawn, fitted in the box
 // and centred in it
 const inkCtx = document.createElement("canvas").getContext("2d");
-function placeSig() {
-  let x = 0, y = 0;
-  const first = bigEl.dataset.kind !== "image" && [...(wordsEl.textContent || "").trim()][0];
-  if (first && getComputedStyle(wordsEl).display !== "none") {   // where the first letter's ink starts, past its blank
-    const cs = getComputedStyle(wordsEl);
-    inkCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-    x = Math.max(0, -inkCtx.measureText(cs.textTransform === "uppercase" ? first.toLocaleUpperCase() : first).actualBoundingBoxLeft);
-  }
-  // and under it: the text's last line, a picture's bottom edge as it is drawn, or the box's bottom for a voice
-  const kind = bigEl.dataset.kind, bw = boxEl.clientWidth, bh = boxEl.clientHeight;
-  if (kind === "image") {
-    y = bh;
-    if (picEl.naturalWidth && big.fit === "contain") {
-      const k = Math.min(bw / picEl.naturalWidth, bh / picEl.naturalHeight);
-      x = (bw - picEl.naturalWidth * k) / 2; y = (bh + picEl.naturalHeight * k) / 2;
-    }
-  } else if (getComputedStyle(wordsEl).display !== "none" && wordsEl.textContent) y = wordsEl.offsetTop + wordsEl.offsetHeight;
-  else y = bh;
-  sigEl.style.setProperty("--sx", x + "px"); sigEl.style.setProperty("--sy", y + "px");
-}
+function placeSig() {}   // v20: the signature follows the words, in the column (soup.css)
 picEl.addEventListener("load", placeSig);
+// v20: the column takes the pointer (it scrolls in itself), but a ball under it, or the words beside one, still answer:
+// the pointer over them shows which, a click opens that dialogue. Anywhere else on the column, nothing
+boxEl.addEventListener("pointermove", e => { if (e.pointerType !== "touch") hover(...V.at(e)); });
+boxEl.addEventListener("pointerleave", () => hover(null));
+boxEl.addEventListener("click", e => {
+  if (getSelection && String(getSelection()).length) return;   // selecting words, not clicking
+  const [px, py] = V.at(e), b = pick(px, py) || (inPeek(px, py) ? peek.b : null);
+  if (b && b !== picked) openNote(b);
+});
 addEventListener("resize", placeSig);
 let picked = null, hideT = 0;
 function openNote(b) {
@@ -846,12 +985,13 @@ function openNote(b) {
   setWords(me === "image" ? "" : s.s);
   sign(s);
   if (me === "image") { picEl.src = imgSrc(s.img); picEl.alt = s.s || "a picture"; } else { picEl.removeAttribute("src"); picEl.alt = ""; }
-  bigEl.classList.add("on");
+  bigEl.classList.add("on"); boxEl.scrollTop = 0;
   showThread(b);                                 // aya v10: its replies, at once, under it
   fitWords(); placeSig(); placeThread();
   if (me === "text" && !b.fake) morphOpen(b); else morphStop();   // v18: the balls grow and break into the words
   if (me === "voice") startVoice(s);
   if (!b.fake) { markRead(b); barMode(true); }
+  meNow.open = picked ? picked.s.id : null; meChanged();   // v20: the others see your emoji by the note you opened
   if (!coarse.matches && !composerEl.hidden && !typing()) mainComp.input.focus({ preventScroll: true });
 }
 function closeNote() {
@@ -863,6 +1003,7 @@ function closeNote() {
     hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; threadEl.textContent = ""; boxEl.style.bottom = ""; } }, 700);
   }
   picked = null; barMode(false);
+  meNow.open = null; meChanged();
   if (listening && micComp === mainComp && was) stopMic();
 }
 
@@ -873,7 +1014,7 @@ function closeNote() {
 // them; then each breaks into dots, which fly to that ink and settle as its letters; then the real words come in under
 // them. Closing, the reverse: the words break into dots, gather into the balls at full size, which shrink back to their
 // places in the soup. DEV, soup: "opening" (the morph, or the fade it was before)
-let morphOn = store.get(KEY + "morph", true);
+let morphOn = store.get(KEY + "morph2", false);   // v20: off by default, a note opens as in v19
 document.documentElement.dataset.transitions = morphOn ? "on" : "off";   // the toggle top right (index.html) shows it
 const mCv = document.createElement("canvas");
 mCv.id = "morph"; mCv.setAttribute("aria-hidden", "true");
@@ -999,7 +1140,7 @@ function morphFrame(now) {
   requestAnimationFrame(morphFrame);
 }
 V.dev.tab("soup", `<span class="full seg" id="morphSeg"><span class="k">opening a note</span><button class="t" type="button" data-morph="1">balls into words</button><button class="t" type="button" data-morph="0">fade</button></span>`);
-const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph", morphOn); document.documentElement.dataset.transitions = morphOn ? "on" : "off"; };
+const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph2", morphOn); document.documentElement.dataset.transitions = morphOn ? "on" : "off"; };
 addEventListener("v18:morph", () => { morphOn = !morphOn; if (!morphOn) morphStop(); showMorph(); });
 document.querySelectorAll("[data-morph]").forEach(b => b.addEventListener("click", () => { morphOn = b.dataset.morph === "1"; showMorph(); }));
 showMorph();
@@ -1215,7 +1356,7 @@ showTop();
 // fitted in what is left, then the thread is put under its signature
 const threadEl = bigEl.querySelector(".thread");
 function showThread(b) {
-  threadEl.textContent = ""; boxEl.style.bottom = "";
+  threadEl.textContent = "";
   const rs = b && !b.parent ? (replies.get(b.s.id) || []) : [];
   if (!rs.length) { threadEl.hidden = true; return; }
   threadEl.hidden = false;
@@ -1223,20 +1364,11 @@ function showThread(b) {
     const p = document.createElement("p"), t = document.createElement("span"), w = document.createElement("span");
     t.className = "rt"; t.textContent = r.s || (r.img ? "(a picture)" : "");
     const d = r.t ? new Date(r.t) : null, z = n => String(n).padStart(2, "0");
-    w.className = "rw"; w.textContent = "— " + (r.name || pseudoOf(r)) + (d ? `, ${z(d.getDate())}.${z(d.getMonth() + 1)}, ${z(d.getHours())}:${z(d.getMinutes())}` : "");
+    w.className = "rw"; w.textContent = "— " + sigOf(r) + (d ? `, ${z(d.getDate())}.${z(d.getMonth() + 1)}, ${z(d.getHours())}:${z(d.getMinutes())}` : "");
     p.append(t, w); threadEl.append(p);
   }
-  threadEl.style.left = big.side + "px"; threadEl.style.right = big.side + "px"; threadEl.style.top = "0px";
-  const th = threadEl.offsetHeight;
-  boxEl.style.bottom = `${big.tb + th + 40}px`;
 }
-function placeThread() {
-  if (threadEl.hidden) return;
-  const br = bigEl.getBoundingClientRect(), sr = sigEl.getBoundingClientRect();
-  const sx = parseFloat(sigEl.style.getPropertyValue("--sx")) || 0;
-  threadEl.style.top = Math.round(sr.bottom - br.top + 14) + "px";
-  threadEl.style.left = Math.round(boxEl.getBoundingClientRect().left - br.left + sx + 2) + "px";
-}
+function placeThread() {}   // v20: the thread is in the column, under the signature
 addEventListener("resize", () => { if (bigEl.classList.contains("on") && picked) { showThread(picked); fitWords(); placeSig(); placeThread(); } });
 // aya v12: a reply that comes while its rant is open (yours, or someone's, or a simulated other's) is added to the thread
 // straight away, without closing and opening it again
@@ -1248,7 +1380,9 @@ setInterval(() => {
   if (n === threadN) return;
   threadN = n;
   if (quakeOn) return;                             // trembling before the eruption: left as it is
+  const atEnd = boxEl.scrollTop + boxEl.clientHeight >= boxEl.scrollHeight - 40;
   showThread(picked); fitWords(); placeSig(); placeThread();
+  if (atEnd) boxEl.scrollTo({ top: boxEl.scrollHeight, behavior: reduce.matches ? "auto" : "smooth" });
   const last = threadEl.lastElementChild;
   if (last && !reduce.matches) last.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 420, easing: "ease-out" });
 }, 250);
@@ -1256,7 +1390,7 @@ setInterval(() => {
   const css = document.createElement("style");
   css.textContent = `
     /* rai v18: the words in the soup's own ink again (aya v14 lightened them for her dark scene) */
-    #big .thread { position: absolute; margin: 0; padding: 4px 0 0 18px; border-left: 1.5px solid var(--ink); color: var(--ink);
+    #big .thread { position: relative; margin: 28px 0 8px; padding: 4px 0 0 18px; border-left: 1.5px solid var(--ink); color: var(--ink);
       font: 400 16px/1.3 var(--type); max-width: 640px; }
     #big .thread::before { content: ""; position: absolute; left: -1.5px; top: -12px; height: 12px; border-left: 1.5px solid var(--ink); }
     #big .thread p { position: relative; margin: 0 0 12px; display: flex; flex-direction: column; gap: 2px; }
@@ -1311,12 +1445,12 @@ function updateQuake(dt) {
 // pushes the ones it meets in turn, then stays where it stops (settle: its home from then on, in this browser). Balls at
 // rest never push each other, so the soup does not shiver. In screen px (vis), each frame after projectBadges.
 // DEV, aya: "bumping" on / off, and "push", how hard a push sends a ball on (100%: as hard as it was hit)
-const aya = { bump: store.get("aya-v00-bump", true), push: store.get("aya-v00-push", 100), sims: store.get("aya-v00-sims", 1), grabs: store.get("aya-v00-grabs", 45) };
+const aya = { bump: store.get("aya-v00-bump", true), push: store.get("aya-v00-push", 100), sims: store.get(KEY + "sims", 4), grabs: store.get("aya-v00-grabs", 45) };
 const handOf = b => (grab && grab.on && grab.b === b) ? grab.sv : b.simGrab ? b.simGrab.sv : null;   // px/s of the hand moving it
 const fixedOf = b => b === picked || !!handOf(b);
 function bump(dt) {
   for (const b of badges.values()) if (b.bumped > 0) b.bumped -= dt;
-  if (!aya.bump || dt <= 0 || C.cam.soup < .5) return;
+  if (!aya.bump || dt <= 0 || C.cam.soup < .5 || flatE > .01) return;   // v20: and nothing pushes while a note is open
   const [ux, uy] = C.unit(), list = vis.filter(b => !(b.fly > 0) && b.seen > .3 && b.R > 1);
   const moving = b => fixedOf(b) || b.coast || b.bumped > 0;
   const vel = b => { const h = handOf(b); return h ? [h[0], h[1]] : b === picked ? [0, 0] : [b.vx * ux, -b.vy * uy]; };   // px/s on the screen (y down)
@@ -1379,9 +1513,12 @@ function bump(dt) {
 const SIM_NAMES = ["someone", "anonymous", "another", "a stranger", "someone else"];
 const sims = [];
 let simSeq = 0;
+// v20: what they say when they answer
+const SIM_SAYS = ["same here, honestly", "this is so real", "sending you calm lava vibes", "I'd scream too", "breathe. then throw something soft",
+  "you're not alone in this", "ugh, I feel this", "that's not fair at all", "deep breath, then complain louder", "the volcano hears you", "omg yes", "I'm furious on your behalf"];
 function makeSim() {
-  const { W, H } = V.size(), i = simSeq++;
-  return { i, name: SIM_NAMES[i % SIM_NAMES.length], x: rand(W * .15, W * .85), y: H + 30, vx: 0, vy: 0, tx: rand(W * .2, W * .8), ty: rand(H * .3, H * .75),
+  const { W, H } = V.size(), i = simSeq++, mi = Math.floor(Math.random() * MOODS.length);
+  return { i, name: nameFor(mi), emoji: MOODS[mi].e, typing: false, open: null, openT: 0, x: rand(W * .15, W * .85), y: H + 30, vx: 0, vy: 0, tx: rand(W * .2, W * .8), ty: rand(H * .3, H * .75),
     mode: "wander", t: rand(.5, 2), b: null, off: [0, 0], sv: [0, 0], px: 0, py: 0, down: 0, a: 0, nz: rand(0, 99) };
 }
 function simsFit() {
@@ -1414,13 +1551,19 @@ function updateSims(dt, t) {
     if (b && (!badges.has(b.s.id) || b === picked || (grab && grab.b === b) || b.fly > 0 || !vis.includes(b))) { letGo(m, false); m.mode = "wander"; m.t = rand(.3, 1); }
     // rai v18: let go of while the soup was away (out of the volcano and back), it has no ball: it wanders again
     if (!m.b && m.mode !== "wander" && m.mode !== "pause") { m.mode = "wander"; m.t = rand(.3, 1); }
+    if (flatE > .01 && m.mode === "drag") { letGo(m, false); m.down = 0; m.mode = "pause"; m.t = rand(.6, 1.6); }   // v20: a note open, the soup is still
+    if (m.mode !== "open") { m.typing = false; m.open = null; }
     m.t -= dt;
     if (m.mode === "wander") {                  // somewhere, then a pause, then a ball or somewhere else
       if (Math.hypot(m.tx - m.x, m.ty - m.y) < 10 || m.t < -6) { m.mode = "pause"; m.t = rand(.2, 1.4); }
     } else if (m.mode === "pause") {
       if (m.t <= 0) {
         const free = vis.filter(c => !takenBy(c) && c.R > 4 && c.sx > 30 && c.sx < W - 30 && c.sy > 60 && c.sy < H - 90);
-        if (free.length && Math.random() < .7) {   // the nearer ones more likely
+        const notes = free.filter(c => !c.parent);
+        if (notes.length && Math.random() < .4) {   // v20: to a note, to open it (and maybe answer)
+          const c = notes[Math.floor(Math.random() * notes.length)];
+          m.b = c; c.simOn = m; m.mode = "toOpen"; m.t = 7;
+        } else if (free.length && Math.random() < .7) {   // the nearer ones more likely
           free.sort((p, q) => Math.hypot(p.sx - m.x, p.sy - m.y) - Math.hypot(q.sx - m.x, q.sy - m.y));
           const c = free[Math.min(free.length - 1, Math.floor(Math.random() ** 2 * Math.min(8, free.length)))];
           m.b = c; c.simOn = m; m.mode = "toBall"; m.t = 6;
@@ -1444,6 +1587,19 @@ function updateSims(dt, t) {
           } else aim(m, rand(W * .1, W * .9), rand(H * .2, H * .8));
         } else { letGo(m, false); m.mode = "wander"; m.t = rand(2, 5); aim(m, clamp(m.x + rand(-300, 300), 20, W - 20), clamp(m.y + rand(-200, 200), 60, H - 80)); }
       }
+    } else if (m.mode === "toOpen") {           // v20: there, it opens it: its cursor goes, its face stays by the note
+      aim(m, b.sx, b.sy);
+      if (Math.hypot(m.tx - m.x, m.ty - m.y) < Math.max(6, b.R * .5)) {
+        m.mode = "open"; m.open = b; m.openT = 0; m.t = rand(4, 8); m.replied = false;
+        m.typeAt = Math.random() < .65 ? rand(.8, 2.2) : -1; m.typeLen = rand(2, 4); m.typed = 0;
+      } else if (m.t <= 0) { letGo(m, false); m.mode = "wander"; m.t = 3; aim(m, rand(W * .1, W * .9), rand(H * .2, H * .8)); }
+    } else if (m.mode === "open") {             // reading; now and then it writes ("…") and answers
+      aim(m, b.sx, b.sy); m.open = b; m.openT += dt;
+      if (m.typeAt >= 0 && !m.replied && m.openT >= m.typeAt) {
+        m.typing = true; m.typed += dt;
+        if (m.typed >= m.typeLen) { simReply(m, b); m.typing = false; m.replied = true; m.t = Math.max(m.t, 1.8); }
+      }
+      if (m.t <= 0 && !m.typing) { m.open = null; letGo(m, false); m.mode = "wander"; m.t = rand(2, 4); aim(m, clamp(m.x + rand(-300, 300), 20, W - 20), clamp(m.y + rand(-200, 200), 60, H - 80)); }
     } else if (m.mode === "drag") {
       if (Math.hypot(m.tx - m.x, m.ty - m.y) < 14 || m.t <= 0) {
         letGo(m, Math.random() < .5); m.down = 0;
@@ -1467,6 +1623,15 @@ function updateSims(dt, t) {
       [q.x, q.y] = C.unproject(m.x - m.off[0], m.y - m.off[1]); q.z = 0; q.vx = q.vy = q.vz = 0;
     }
   }
+}
+// v20: a simulated other's answer: in this visit only (never saved), under the note, live if it is open
+function simReply(m, b) {
+  const root = b.parent || b;
+  if (!badges.has(root.s.id)) return;
+  const r = { id: "sim-" + Date.now().toString(36) + m.i, s: pickOf(SIM_SAYS), t: Date.now(), name: m.name, emoji: m.emoji, trip: "", i: null, re: root.s.id, medium: null, img: null };
+  simReplies.push(r); addReply(r); knownIds.add(r.id); arriving.add(r.id);
+  syncBadges(); showStatus();
+  if (VO.addPressure) VO.addPressure(VO.PER_NOTE * .5);
 }
 // v18: how the others are seen, the simulated ones and the real ones alike: a cursor (the default), a ball, or an evangelion (eva.png, aya's
 // pixel EVA-01, in one colour: its ball's). Which one: the toggle under the soup's (index.html, html[data-avatar]).
@@ -1532,7 +1697,7 @@ function drawAvatar(x, px, py, key, alpha = 1) {
   if (mode !== "eva" && mode !== "balls") {        // a cursor, the default: an arrow as a pointer is drawn, in its colour, a black edge
     x.translate(Math.round(px), Math.round(py));
     x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 17); x.lineTo(4.2, 13); x.lineTo(7.2, 19.6); x.lineTo(9.8, 18.4); x.lineTo(6.9, 12); x.lineTo(12.4, 12); x.closePath();
-    x.fillStyle = a.col; x.fill(); x.lineWidth = 1.2; x.lineJoin = "round"; x.strokeStyle = "#000"; x.stroke();
+    x.fillStyle = "#000"; x.fill(); x.lineWidth = 1; x.lineJoin = "round"; x.strokeStyle = "#fff"; x.stroke();   // v20: black arrows
     x.restore(); return;
   }
   if (im) {
@@ -1543,8 +1708,22 @@ function drawAvatar(x, px, py, key, alpha = 1) {
   else { x.fillStyle = a.col; x.beginPath(); x.arc(px, py, 9, 0, Math.PI * 2); x.fill(); }
   x.restore();
 }
-function drawSims(x) {                           // v18: no name any more: drawn as a real other is (a cursor, a ball or an evangelion)
-  for (const m of sims) if (m.a > 0) drawAvatar(x, m.x, m.y, "sim" + m.i, m.a);
+// v20: each with its face above its arrow; one that has a note open is only its face, just outside that note's ball;
+// "…" beside it while it writes
+function drawOther(x, px, py, key, emoji, typing, open, alpha = 1) {
+  const t = performance.now() / 1000;
+  x.globalAlpha = alpha;
+  if (open && vis.includes(open)) {
+    const ex = open.sx + open.R * .72 + 3, ey = open.sy - open.R * .72 - 1;
+    drawEmoji(x, emoji, ex, ey, 18); if (typing) drawDots(x, ex + 24, ey - 3, t);
+  } else {
+    drawAvatar(x, px, py, key, alpha); x.globalAlpha = alpha;
+    drawEmoji(x, emoji, px - 3, py - 2, 15); if (typing) drawDots(x, px + 17, py - 5, t);
+  }
+  x.globalAlpha = 1;
+}
+function drawSims(x) {
+  for (const m of sims) if (m.a > 0) drawOther(x, m.x, m.y, "sim" + m.i, m.emoji, m.typing, m.mode === "open" ? m.open : null, m.a);
   x.globalAlpha = 1;
 }
 V.dev.tab("aya", `
@@ -1566,7 +1745,8 @@ function showAya() {
   $("push").value = aya.push; $("pushV").textContent = aya.push + "%";
   $("simsN").value = aya.sims; $("simsV").textContent = aya.sims ? aya.sims + (aya.sims === 1 ? " other" : " others") : "none";
   $("grabsK").value = aya.grabs; $("grabsV").textContent = aya.grabs + "% of the time";
-  store.set("aya-v00-bump", aya.bump); store.set("aya-v00-push", aya.push); store.set("aya-v00-sims", aya.sims); store.set("aya-v00-grabs", aya.grabs);
+  store.set("aya-v00-bump", aya.bump); store.set("aya-v00-push", aya.push); store.set(KEY + "sims", aya.sims);
+  document.querySelectorAll("[data-simon]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.simon === "1") === aya.sims > 0))); store.set("aya-v00-grabs", aya.grabs);
   if (window.__ayaHere) window.__ayaHere();
 }
 document.querySelectorAll("[data-bump]").forEach(b => b.addEventListener("click", () => { aya.bump = b.dataset.bump === "1"; showAya(); }));
@@ -1576,7 +1756,12 @@ showNotes();
 $("push").addEventListener("input", e => { aya.push = +e.target.value; showAya(); });
 $("simsN").addEventListener("input", e => { aya.sims = +e.target.value; showAya(); });
 $("grabsK").addEventListener("input", e => { aya.grabs = +e.target.value; showAya(); });
+document.querySelectorAll("[data-simon]").forEach(b => b.addEventListener("click", () => { aya.sims = b.dataset.simon === "1" ? 4 : 0; showAya(); }));
 showAya();
+const showBlur = () => { $("blurK").value = blurK; $("blurV").textContent = blurK ? blurK + " px" : "none"; store.set(KEY + "blur", blurK); };
+$("blurK").addEventListener("input", e => { blurK = +e.target.value; showBlur(); });
+showBlur();
+$("devMood").addEventListener("click", () => openMood());
 
 // ================= what the others call (see core.js) =================
 V.soup = {
@@ -1584,8 +1769,9 @@ V.soup = {
   top: () => ({ from: soupTop.from, to: soupTop.full }),   // flat: the black at the top, for field.js
   update(dt, t) {
     setComposer(C.cam.soup > .5);
+    flatK = clamp(flatK + (bigEl.classList.contains("on") ? dt : -dt) / .6, 0, 1); flatE = smooth(0, 1, flatK);   // v20: one calm movement each way
     updateSims(dt, t);                          // aya v00: the simulated others move first, carrying what they hold
-    updateBadges(dt, t);
+    updateBadges(dt);
     projectBadges();
     bump(dt);                                   // aya v00: then the balls that touch push each other
     updateVoice(dt);
@@ -1609,7 +1795,11 @@ V.soup = {
   burstList() {                                 // aya v10: each ball, with its words, for the eruption (volcano.js)
     return [...badges.values()].filter(b => mediumOf(b.s) === "text" && b.s.s).map(b => ({ text: String(b.s.s), reply: !!b.parent, R: b.R || 12 }));
   },
-  balls: () => vis.map(b => ({ id: b.s.id, x: b.sx, y: b.sy, R: b.R, reply: !!b.parent })),   // aya v00: for testing
+  balls: () => vis.map(b => ({ id: b.s.id, x: b.sx, y: b.sy, R: b.R, reply: !!b.parent, kind: mediumOf(b.s), read: b.read })),   // aya v00: for testing
+  // v20, for the eruptions (window A): the two kinds of ball, and every text note with its replies, live ones too
+  ballLook: () => ({ fill: `rgb(${DOT.join(",")})`, ring: `rgb(${DOT.join(",")})`, lw: 1.5 / 21 }),   // lw: the ring's width as a share of the ball's radius (at least 1 px)
+  threads: () => sentences.filter(n => mediumOf(n) === "text" && n.s).map(n => ({ id: n.id, s: n.s, name: n.name || "", emoji: n.emoji || "",
+    replies: (replies.get(n.id) || []).map(r => ({ id: r.id, s: r.s, name: r.name || "", emoji: r.emoji || "" })) })),
   texts: () => [...sentences.filter(s => mediumOf(s) === "text").map(s => s.s), ...[...replies.values()].flat().map(r => r.s)].filter(Boolean),
   readLevel,
 };
@@ -1647,24 +1837,34 @@ setInterval(loadSentences, 90 * 1000);         // people elsewhere keep venting
     }, { passive: true });
     document.documentElement.addEventListener("pointerleave", () => send(null));
     addEventListener("blur", () => send(null));
+    // v20: who you are, whether you are writing, and the note you have open
+    const sendWho = () => { try { pr.setMyPresence("who", { name: me.name, emoji: me.emoji, typing: meNow.typing, open: meNow.open }); } catch {} };
+    sendWho(); addEventListener("v20:me", sendWho); document.addEventListener("volcano:who", sendWho);
     // drawing
     function frame() {
       const { W, H, MDPR } = V.size(), cam = C.cam;
       if (pCv.width !== Math.round(W * MDPR)) { pCv.width = Math.round(W * MDPR); pCv.height = Math.round(H * MDPR); }
       const x = pCtx; x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
       const here = cam ? (cam.soup > .5 ? "in" : cam.s >= .999 ? "out" : null) : null;
-      const seen = new Set();
+      const seen = new Set(), others = [];
       let all = []; try { all = [...pr.getPresences()]; } catch {}
       for (const [id, e] of all) {
-        if (e.isMe || !e.pointer || !here || e.pointer.where !== here) continue;
+        if (e.isMe) continue;
+        const w = e.who && typeof e.who === "object" ? e.who : null;
+        const who = { name: w && typeof w.name === "string" ? w.name.slice(0, 32) : "", emoji: w && typeof w.emoji === "string" ? w.emoji.slice(0, 8) : "", typing: !!(w && w.typing), open: w && typeof w.open === "string" ? w.open : null };
+        if (e.here || e.pointer || w) others.push(who);
+        const ob = who.open && here === "in" ? badges.get(who.open) : null;
+        if (ob && vis.includes(ob)) { drawOther(x, 0, 0, id, who.emoji, who.typing, ob); continue; }   // v20: only their face, by the note they opened
+        if (!e.pointer || !here || e.pointer.where !== here) continue;
         const p = e.pointer;
         const [tx, ty] = p.where === "in" ? (() => { const q = C.project(p.u, p.v, 0); return [q.x, q.y]; })() : [p.u * W, p.v * H];
         if (!Number.isFinite(tx) || !Number.isFinite(ty)) continue;
         seen.add(id);
         const s = shown.get(id) || { x: tx, y: ty };
         s.x += (tx - s.x) * .25; s.y += (ty - s.y) * .25; shown.set(id, s);
-        drawAvatar(x, s.x, s.y, id);
+        drawOther(x, s.x, s.y, id, who.emoji, who.typing, null);
       }
+      realOthers = others;
       for (const id of shown.keys()) if (!seen.has(id)) shown.delete(id);
       requestAnimationFrame(frame);
     }
