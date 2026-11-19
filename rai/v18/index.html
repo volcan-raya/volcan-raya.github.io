@@ -167,11 +167,13 @@ html[data-look="rai"] #look span { background: linear-gradient(180deg, #ffb075, 
 html[data-look="aya"] #look span { background: #ff4500; color: #000; }
 #look:focus-visible { outline: 1.5px solid #000; outline-offset: 3px; border-radius: 4px; }
 #avatar { position: fixed; z-index: 6; top: 45px; right: 16px; padding: 0; border: 0; background: none; cursor: pointer; }
-/* v18: how the others are seen, balls or evangelions: like the soup's, it shows the other one, a click away */
+/* v18: how the others are seen, cursors, balls or evangelions: like the soup's, it shows the next one, a click away */
 #avatar span { display: grid; place-items: center; width: 48px; aspect-ratio: 16 / 9; border: .75px solid #000; border-radius: 2px; background: #fff1e6; overflow: hidden; }
 #avatar img { display: block; height: 24px; width: auto; }
 #avatar i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin: 0 1.5px; }
-html[data-avatar="eva"] #avatar img, html:not([data-avatar="eva"]) #avatar .dots { display: none; }
+/* it shows the next one: cursors → balls → evangelions → cursors */
+#avatar .dots, #avatar img, #avatar .arr { display: none; }
+html[data-avatar="cursor"] #avatar .dots, html[data-avatar="balls"] #avatar img, html[data-avatar="eva"] #avatar .arr { display: block; }
 #avatar:focus-visible { outline: 1.5px solid #000; outline-offset: 3px; border-radius: 4px; }
 html[data-look="aya"] #big { --ink: rgb(255, 241, 230) !important; }   /* her soup is dark: its words in a light ink */
 html[data-look="aya"] #venting { color: #fff1e6; }
@@ -188,10 +190,10 @@ html[data-look="aya"][data-out] #venting { color: #000; }   /* outside, on her c
 <script>
 // v18: the look, before anything is drawn: aya's unless this browser chose rai's (the toggle, top right)
 (() => { let k = "aya"; try { k = localStorage.getItem("volcano-v18-look") === "rai" ? "rai" : "aya"; } catch {} document.documentElement.dataset.look = k; })();
-(() => { let k = "balls"; try { k = localStorage.getItem("volcano-v18-avatar") === "eva" ? "eva" : "balls"; } catch {} document.documentElement.dataset.avatar = k; })();
+(() => { let k = "cursor"; try { const v = localStorage.getItem("volcano-v18-avatar2"); if (v === "balls" || v === "eva") k = v; } catch {} document.documentElement.dataset.avatar = k; })();
 </script>
 <button id="look" type="button" aria-label="the other soup"><span>soup</span></button>
-<button id="avatar" type="button" aria-label="the others: balls or evangelions"><span><img src="eva.png" alt=""><b class="dots"><i style="background:#2f6bff"></i><i style="background:#14c46e"></i><i style="background:#ff4fb3"></i></b></span></button>
+<button id="avatar" type="button" aria-label="the others: cursors, balls or evangelions"><span><b class="dots"><i style="background:#2f6bff"></i><i style="background:#14c46e"></i><i style="background:#ff4fb3"></i></b><img src="eva.png" alt=""><svg class="arr" width="13" height="20" viewBox="-1 -1 14 22"><path d="M0 0L0 17L4.2 13L7.2 19.6L9.8 18.4L6.9 12L12.4 12Z" fill="#2f6bff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg></span></button>
 <script>
 document.getElementById("look").addEventListener("click", () => {
   const k = document.documentElement.dataset.look === "aya" ? "rai" : "aya";
@@ -200,9 +202,9 @@ document.getElementById("look").addEventListener("click", () => {
   dispatchEvent(new CustomEvent("v18:look", { detail: k }));
 });
 document.getElementById("avatar").addEventListener("click", () => {
-  const k = document.documentElement.dataset.avatar === "eva" ? "balls" : "eva";
+  const k = { cursor: "balls", balls: "eva", eva: "cursor" }[document.documentElement.dataset.avatar] || "balls";
   document.documentElement.dataset.avatar = k;
-  try { localStorage.setItem("volcano-v18-avatar", k); } catch {}
+  try { localStorage.setItem("volcano-v18-avatar2", k); } catch {}
 });
 </script>
 <h1 id="title"><span>NOTIFICATION SOUP</span></h1>

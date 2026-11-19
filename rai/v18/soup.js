@@ -1454,7 +1454,7 @@ function updateSims(dt, t) {
     }
   }
 }
-// v18: how the others are seen, the simulated ones and the real ones alike: a ball, or an evangelion (eva.png, aya's
+// v18: how the others are seen, the simulated ones and the real ones alike: a cursor (the default), a ball, or an evangelion (eva.png, aya's
 // pixel EVA-01, in one colour: its ball's). Which one: the toggle under the soup's (index.html, html[data-avatar]).
 // Each other gets a colour at random, in this browser: two people see the room in different colours
 const AV_COLS = ["#2f6bff", "#14c46e", "#ff4fb3", "#8a5cff", "#12c6d8", "#a6e01c", "#ffd21f", "#c04dff", "#00a3ff", "#ff7ad9"];
@@ -1514,7 +1514,13 @@ const EVA_H = 90;                                // px tall on the screen, its m
 function drawAvatar(x, px, py, key, alpha = 1) {
   const a = avatar(key);
   x.save(); x.globalAlpha = alpha;
-  const im = document.documentElement.dataset.avatar === "eva" ? evaOf(a) : null;
+  const mode = document.documentElement.dataset.avatar, im = mode === "eva" ? evaOf(a) : null;
+  if (mode !== "eva" && mode !== "balls") {        // a cursor, the default: an arrow as a pointer is drawn, in its colour, a black edge
+    x.translate(Math.round(px), Math.round(py));
+    x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 17); x.lineTo(4.2, 13); x.lineTo(7.2, 19.6); x.lineTo(9.8, 18.4); x.lineTo(6.9, 12); x.lineTo(12.4, 12); x.closePath();
+    x.fillStyle = a.col; x.fill(); x.lineWidth = 1.2; x.lineJoin = "round"; x.strokeStyle = "#000"; x.stroke();
+    x.restore(); return;
+  }
   if (im) {
     const w = EVA_H * im.width / im.height, ang = evaTurn(a, px, py);
     x.translate(px, py); x.rotate(ang); x.scale(evaFace(a), 1);   // facing its way (evaTurn)
@@ -1523,7 +1529,7 @@ function drawAvatar(x, px, py, key, alpha = 1) {
   else { x.fillStyle = a.col; x.beginPath(); x.arc(px, py, 9, 0, Math.PI * 2); x.fill(); }
   x.restore();
 }
-function drawSims(x) {                           // v18: no arrow and no name any more: a ball (or an evangelion), as a real other
+function drawSims(x) {                           // v18: no name any more: drawn as a real other is (a cursor, a ball or an evangelion)
   for (const m of sims) if (m.a > 0) drawAvatar(x, m.x, m.y, "sim" + m.i, m.a);
   x.globalAlpha = 1;
 }
