@@ -839,6 +839,7 @@ function openNote(b) {
   bigEl.classList.add("on");
   showThread(b);                                 // aya v10: its replies, at once, under it
   fitWords(); placeSig(); placeThread();
+  if (me === "text" && !b.fake) morphOpen(b); else morphStop();   // v18: the balls grow and break into the words
   if (me === "voice") startVoice(s);
   if (!b.fake) { markRead(b); barMode(true); }
   if (!coarse.matches && !composerEl.hidden && !typing()) mainComp.input.focus({ preventScroll: true });
@@ -847,12 +848,147 @@ function closeNote() {
   const was = picked;
   stopVoice();
   if (bigEl.classList.contains("on")) {
+    if (was && bigEl.dataset.kind === "text") morphClose(was); else morphStop();   // v18: the words gather back into the balls
     bigEl.classList.remove("on");
     hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; threadEl.textContent = ""; boxEl.style.bottom = ""; } }, 700);
   }
   picked = null; barMode(false);
   if (listening && micComp === mainComp && was) stopMic();
 }
+
+// ================= v18: opening a note, the balls become its words =================
+// After solarbol's index morph (sampleGlyph, its dots settling into each name), turned the other way round: clicking a
+// note, its ball and the balls of its replies grow where they are, each until its surface is about the surface of the ink
+// of the words it is about to be (the note's in the open rant, each reply's in the thread under it), drifting towards
+// them; then each breaks into dots, which fly to that ink and settle as its letters; then the real words come in under
+// them. Closing, the reverse: the words break into dots, gather into the balls at full size, which shrink back to their
+// places in the soup. DEV, soup: "opening" (the morph, or the fade it was before)
+let morphOn = store.get(KEY + "morph", true);
+const mCv = document.createElement("canvas");
+mCv.id = "morph"; mCv.setAttribute("aria-hidden", "true");
+mCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;display:none";
+bigEl.after(mCv);
+const mCtx = mCv.getContext("2d");
+{
+  const css = document.createElement("style");
+  css.textContent = `
+    #big .words, #big .thread, #big .sig { transition: opacity .35s ease; }
+    #big.morphing .words, #big.morphing .thread, #big.morphing .sig { opacity: 0; transition: none; }`;
+  document.head.append(css);
+}
+// the ink of an element's text as it is laid out: each character drawn where the page put it (a Range per character,
+// so wrapping, sizes and capitals are the page's own), then read back. Returns its surface in px² and dots on its ink
+function inkOf(el, maxDots) {
+  const box = el.getBoundingClientRect(), o = mCv.getBoundingClientRect();
+  if (!box.width || !box.height) return null;
+  const cs = getComputedStyle(el), up = cs.textTransform === "uppercase";
+  const cv = document.createElement("canvas"), w = Math.ceil(box.width) + 4, h = Math.ceil(box.height) + 4;
+  cv.width = w; cv.height = h;
+  const x = cv.getContext("2d", { willReadFrequently: true });
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), range = document.createRange();
+  for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+    const pcs = getComputedStyle(t.parentElement);
+    x.font = `${pcs.fontStyle} ${pcs.fontWeight} ${pcs.fontSize} ${pcs.fontFamily}`;
+    const m = x.measureText("Hg"), asc = m.fontBoundingBoxAscent || parseFloat(pcs.fontSize) * .8, des = m.fontBoundingBoxDescent || parseFloat(pcs.fontSize) * .2;
+    const str = t.textContent;
+    for (let i = 0; i < str.length; i++) {
+      if (/\s/.test(str[i])) continue;
+      range.setStart(t, i); range.setEnd(t, i + 1);
+      const r = range.getBoundingClientRect(); if (!r.width) continue;
+      const y = r.top - box.top + 2 + (r.height - asc - des) / 2 + asc;
+      x.fillText(up ? str[i].toUpperCase() : str[i], r.left - box.left + 2, y);
+    }
+  }
+  let data; try { data = x.getImageData(0, 0, w, h).data; } catch { return null; }
+  let ink = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] > 128) ink++;
+  if (!ink) return null;
+  const g = Math.max(1, Math.round(Math.sqrt(ink / maxDots))), dots = [];
+  for (let yy = 0; yy < h; yy += g) for (let xx = 0; xx < w; xx += g) if (data[(yy * w + xx) * 4 + 3] > 128) dots.push([box.left - o.left - 2 + xx, box.top - o.top - 2 + yy]);
+  return { area: ink, dots, g, cx: box.left - o.left + box.width / 2, cy: box.top - o.top + box.height / 2, ink: cs.color };
+}
+let morph = null;
+function morphStop() { morph = null; mCv.style.display = "none"; bigEl.classList.remove("morphing"); }
+function morphActors(b) {
+  const list = [[b, wordsEl, 7000]];
+  if (!b.parent) {
+    const rs = replies.get(b.s.id) || [], ps = [...threadEl.querySelectorAll(".rt")];
+    rs.forEach((r, i) => { const rb = badges.get(r.id); if (rb && ps[i]) list.push([rb, ps[i], 600]); });
+  }
+  const out = [];
+  for (const [ball, el, max] of list) {
+    const t = inkOf(el, max); if (!t) continue;
+    // each dot starts somewhere inside the grown ball (an even spread over its disc), always the same for the same dot
+    const seeds = t.dots.map((_, i) => { const u = ((i * 2654435761) >>> 0) / 4294967296, v = ((i * 40503 + 12345) % 65536) / 65536; return [Math.sqrt(u), v * Math.PI * 2, ((i * 7919) % 1000) / 1000]; });
+    out.push({ b: ball, ...t, RT: Math.sqrt(t.area / Math.PI), seeds });
+  }
+  return out;
+}
+const MORPH = { grow: 620, fly: 760, text: 300 };
+function morphOpen(b) {
+  if (!morphOn || reduce.matches) { morphStop(); return; }
+  const actors = morphActors(b);
+  if (!actors.length) { morphStop(); return; }
+  bigEl.classList.add("morphing");
+  morph = { dir: 1, t0: performance.now(), actors };
+  mCv.style.display = "block";
+  requestAnimationFrame(morphFrame);
+}
+function morphClose(b) {
+  if (!morphOn || reduce.matches) { morphStop(); return; }
+  const actors = morphActors(b);                  // read while the words are still laid out
+  bigEl.classList.add("morphing");
+  if (!actors.length) { morphStop(); return; }
+  morph = { dir: -1, t0: performance.now(), actors };
+  mCv.style.display = "block";
+  requestAnimationFrame(morphFrame);
+}
+const ease = u => u < .5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;
+function morphFrame(now) {
+  if (!morph) return;
+  const { W, H, MDPR } = V.size();
+  if (mCv.width !== Math.round(W * MDPR)) { mCv.width = Math.round(W * MDPR); mCv.height = Math.round(H * MDPR); }
+  const x = mCtx; x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
+  const T = MORPH.grow + MORPH.fly, el = now - morph.t0;
+  // the time on the way to the words: opening it runs forward; closing, backwards from the words to the balls
+  const k = morph.dir > 0 ? el : T - el * (T / (T * .85));   // closing a little quicker
+  const ballRgb = `rgb(${DOT.join(",")})`;
+  for (const a of morph.actors) {
+    const bx = a.b.sx ?? a.cx, by = a.b.sy ?? a.cy, R0 = Math.max(2, a.b.R || 6);
+    const gT = ease(clamp(k / MORPH.grow, 0, 1));                       // growing
+    const fT = clamp((k - MORPH.grow) / MORPH.fly, 0, 1);               // flying into the letters
+    const R = lerp(R0, a.RT, gT);
+    const cx = lerp(bx, lerp(bx, a.cx, .45), gT), cy = lerp(by, lerp(by, a.cy, .45), gT);   // drifting towards its words
+    if (fT <= 0) {
+      x.fillStyle = ballRgb; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill();
+      continue;
+    }
+    // the ball, already broken: what is left of it fades as its dots leave
+    if (fT < .25) { x.globalAlpha = 1 - fT / .25; x.fillStyle = ballRgb; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1; }
+    const r = Math.max(.8, a.g * .45);                                   // round dots, as solarbol's
+    x.fillStyle = fT > .6 ? a.ink : ballRgb;
+    x.globalAlpha = morph.dir > 0 ? 1 - clamp((el - T) / MORPH.text, 0, 1) : 1;
+    x.beginPath();
+    for (let i = 0; i < a.dots.length; i++) {
+      const [rr, ang, j] = a.seeds[i];
+      const d = ease(clamp((fT - j * .3) / .7, 0, 1));                   // each dot leaves a little after the one before
+      const sx = cx + Math.cos(ang) * rr * R, sy = cy + Math.sin(ang) * rr * R;
+      const px = lerp(sx, a.dots[i][0], d), py = lerp(sy, a.dots[i][1], d);
+      x.moveTo(px + r, py); x.arc(px, py, r, 0, Math.PI * 2);
+    }
+    x.fill();
+    x.globalAlpha = 1;
+  }
+  if (morph.dir > 0) {
+    if (el >= T - 60) bigEl.classList.remove("morphing");                 // the words come in under the dots
+    if (el >= T + MORPH.text) { morphStop(); return; }
+  } else if (k <= 0) { morphStop(); return; }
+  requestAnimationFrame(morphFrame);
+}
+V.dev.tab("soup", `<span class="full seg" id="morphSeg"><span class="k">opening a note</span><button class="t" type="button" data-morph="1">balls into words</button><button class="t" type="button" data-morph="0">fade</button></span>`);
+const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph", morphOn); };
+document.querySelectorAll("[data-morph]").forEach(b => b.addEventListener("click", () => { morphOn = b.dataset.morph === "1"; showMorph(); }));
+showMorph();
 
 // a voice is heard, not read. The notes keep no recording, so the stored words are spoken once, and what is seen is a
 // voice message's waveform, huge, as in Telegram: a row of bars made from the words themselves (each syllable a swell,
@@ -1405,4 +1541,60 @@ V.soup = {
 showWho(); applyBig();
 loadSentences();
 setInterval(loadSentences, 90 * 1000);         // people elsewhere keep venting
+
+// ================= v18: the others' pointers, as balls =================
+// Everyone in the same playhtml room (index.html) shares where their pointer is: in the soup as a place in the soup (so
+// it lands on the same balls whatever the screen), outside as a share of the screen. Each other person is a ball of a
+// colour of their own, none of the page's (no orange, red, peach or black): blues, greens, pinks… Yours stays the
+// system's arrow. A pointer that leaves the window, or a person who leaves, is gone
+{
+  const COLS = ["#2f6bff", "#14c46e", "#ff4fb3", "#8a5cff", "#12c6d8", "#a6e01c", "#ffd21f", "#c04dff"];
+  const colOf = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLS[h % COLS.length]; };
+  const pCv = document.createElement("canvas");
+  pCv.setAttribute("aria-hidden", "true");
+  pCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none";
+  mCv.after(pCv);
+  const pCtx = pCv.getContext("2d"), shown = new Map();   // id → { x, y } as drawn, eased towards where they are
+  (async () => {
+    const ph = await window.playhtmlReady; let pr = null;
+    try { pr = ph && ph.presence; } catch {}
+    if (!pr) return;
+    // sending: at most 15 times a second, and null when the pointer leaves the window
+    let last = 0, pending = null, timer = 0;
+    const send = v => { pending = v; const now = performance.now(), wait = Math.max(0, 66 - (now - last));
+      clearTimeout(timer); timer = setTimeout(() => { last = performance.now(); try { pr.setMyPresence("pointer", pending); } catch {} }, wait); };
+    addEventListener("pointermove", e => {
+      if (e.pointerType === "touch") return;
+      const cam = C.cam; if (!cam) return;
+      const r = V.marks.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, { W, H } = V.size();
+      if (cam.soup > .5) { const [u, v] = C.unproject(px, py); send({ where: "in", u, v }); }
+      else if (cam.s >= .999) send({ where: "out", u: px / W, v: py / H });
+      else send(null);
+    }, { passive: true });
+    document.documentElement.addEventListener("pointerleave", () => send(null));
+    addEventListener("blur", () => send(null));
+    // drawing
+    function frame() {
+      const { W, H, MDPR } = V.size(), cam = C.cam;
+      if (pCv.width !== Math.round(W * MDPR)) { pCv.width = Math.round(W * MDPR); pCv.height = Math.round(H * MDPR); }
+      const x = pCtx; x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
+      const here = cam ? (cam.soup > .5 ? "in" : cam.s >= .999 ? "out" : null) : null;
+      const seen = new Set();
+      let all = []; try { all = [...pr.getPresences()]; } catch {}
+      for (const [id, e] of all) {
+        if (e.isMe || !e.pointer || !here || e.pointer.where !== here) continue;
+        const p = e.pointer;
+        const [tx, ty] = p.where === "in" ? (() => { const q = C.project(p.u, p.v, 0); return [q.x, q.y]; })() : [p.u * W, p.v * H];
+        if (!Number.isFinite(tx) || !Number.isFinite(ty)) continue;
+        seen.add(id);
+        const s = shown.get(id) || { x: tx, y: ty };
+        s.x += (tx - s.x) * .25; s.y += (ty - s.y) * .25; shown.set(id, s);
+        x.fillStyle = colOf(id); x.beginPath(); x.arc(s.x, s.y, 9, 0, Math.PI * 2); x.fill();
+      }
+      for (const id of shown.keys()) if (!seen.has(id)) shown.delete(id);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+}
 })();
