@@ -657,7 +657,7 @@ function drawLinks(x, inCon = false) {
 // v20 (v19's): opened, the rest of the soup is drawn once to a layer and blurred as a whole, never fainter; the opened
 // conversation's constellation floats above it, sharp, every ball filled, the opened one a slightly different red. Only
 // that constellation can be pointed at (DEV, soup: "the blur behind")
-const PICKED = [232, 28, 14];                    // v20: the opened message's ball, a slightly different red from the rest of its constellation
+const PICKED = [232, 28, 14];                    // v20: a ball under the pointer, a slightly different red (the opened one keeps its red, and its ring)
 let flatK = 0, flatE = 0, blurK = store.get(KEY + "blur", 8);
 // the rest of the soup, opened, on a canvas of its own under the balls' one, blurred by CSS (a canvas's own filter is
 // not in every Safari)
@@ -693,9 +693,9 @@ function drawInside(x) {
   x = conCtx;                                     // over the opened note
   vis = all.filter(b => con.has(b)); drawLinks(x, true);
   for (const b of vis) {                          // the open constellation: every ball filled, read or not; the clicked one in its own red
-    x.globalAlpha = 1; x.fillStyle = b === picked || b === hovered ? `rgb(${PICKED.join(",")})` : `rgb(${DOT.join(",")})`;
+    x.globalAlpha = 1; x.fillStyle = b === hovered ? `rgb(${PICKED.join(",")})` : `rgb(${DOT.join(",")})`;   // only the pointer changes a ball's colour
     x.beginPath(); x.arc(b.sx, b.sy, b.R, 0, Math.PI * 2); x.fill();
-    if (b === picked) { x.strokeStyle = `rgb(${PICKED.join(",")})`; x.lineWidth = RING.lw; x.beginPath(); x.arc(b.sx, b.sy, b.R + RING.gap + RING.lw / 2, 0, Math.PI * 2); x.stroke(); }
+    if (b === picked) { x.strokeStyle = `rgb(${DOT.join(",")})`; x.lineWidth = RING.lw; x.beginPath(); x.arc(b.sx, b.sy, b.R + RING.gap + RING.lw / 2, 0, Math.PI * 2); x.stroke(); }
   }
   vis = all;
   layer.style.display = "block";
@@ -1015,8 +1015,8 @@ function showPic(s) {
 }
 // v20: the column takes the pointer (it scrolls in itself), but a ball under it, or the words beside one, still answer:
 // the pointer over them shows which, a click opens that dialogue. Anywhere else on the column, nothing
-boxEl.addEventListener("pointermove", e => { if (e.pointerType !== "touch") hover(...V.at(e)); });
-boxEl.addEventListener("pointerleave", () => hover(null));
+boxEl.addEventListener("pointermove", e => { if (e.pointerType !== "touch") { hover(...V.at(e)); boxEl.style.cursor = hovered ? "pointer" : ""; } });   // the hand over a ball that can be clicked
+boxEl.addEventListener("pointerleave", () => { hover(null); boxEl.style.cursor = ""; });
 boxEl.addEventListener("click", e => {
   if (getSelection && String(getSelection()).length) return;   // selecting words, not clicking
   const [px, py] = V.at(e), b = pick(px, py);
