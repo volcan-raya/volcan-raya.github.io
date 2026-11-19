@@ -30,4 +30,36 @@ Stage only your own files. `git pull --rebase` before every push. Never force-pu
 
 ## Asks (changes to core.js / field.js, or to the other window's files)
 
-- (none yet)
+### For B (soup.js / soup.css), from A, 19/11/26
+
+1. **soup.js reads the name only once, at load.** The name step now runs *after* that, so until a reload `me.name`
+   stays what it was and a note is posted under the old name. Please listen:
+   `document.addEventListener("volcano:who", () => { me = { name: V.who.name, trip: "" }; showWho(); })`.
+   And after the name panel saves (`$("keep").form` submit), fire `document.dispatchEvent(new CustomEvent("volcano:who"))`
+   so intro.js and DEV follow.
+2. **An unnamed note carries `V.who.device`** ("Mac", "iPhone"…), as the brief says.
+3. **Asking at the first vent:** when `V.intro.askAt === "vent"` and `!V.who.name`, open your name panel at the first
+   vent (once per visit). With `"never"`, never ask. (`"dive"`, the default, is asked outside by intro.js.)
+4. **No Mebar any more** (the user, 19/11/26: "remove mebar typography, we'll stay all with the same sans font").
+   index.html no longer loads ../shared/mebar.css; please take out the Mebar choice ("opening a note" type, "mebar weight")
+   and soup.css's Mebar rule (#big … "Mebar Display"), so everything is in the sans.
+
+### Shared (core.js), for the user to agree
+
+- core.js's `TABS` has no "intro": intro.js adds its own tab button to the bar and core's showTab does the rest, so
+  nothing breaks, but the open tab isn't remembered across a reload when it is "intro". Ask: add "intro" to TABS.
+- core.js still stores under `volcano-v17-devtab` / `volcano-v17-font`, so v19 shares those two settings with v17.
+  Ask: v19 keys.
+- (not either window's) ../shared/venting.js's "N people in the soup" line runs past the right edge (the page is wider
+  than the screen in a measure, since v17 at least; the body's overflow hides it).
+
+## What A built (v19 intro)
+
+- The page opens outside at `S_MAX` (v17's farthest), the name field under the volcano. Enter (or the arrow) → the dive:
+  `V.camera.dive(speed)`, along v17's way in (s from 3.3 to 0) by the clock, ~13 s at ×1, slower in the hole so the title
+  holds ~3.5 s. Any wheel, pinch, key or the DEV camera slider takes over at once.
+- The title in the black: `#title`, the sans, light, 80% of the width (all but 16px a side on a phone), orange `#FF4500`
+  or white. v17's floor title behind DEV "on the floor".
+- `V.camera`: new `S_MAX, dive(speed), replay("outside"|"floor"), diving(), titleMode(mode, color)`.
+- `V.intro`: `askAt`, `replay()`, `facts()` (the facts as words).
+- Reduced motion: fades through `#veil`: outside → the black with the title → the soup.

@@ -2,7 +2,7 @@
 // drag, keys. A touch on a ball in the soup is the soup's (soup.js). What the files say to each other is in core.js.
 (() => {
 "use strict";
-const { clamp, lerp, smooth, $, reduce } = V;
+const { clamp, lerp, smooth, $, reduce, store } = V;
 const VOL = V.volcano.VOL;
 
 // The way in is one number, s:
@@ -44,10 +44,13 @@ const bottomY = () => {
   const { W, H } = V.size(), across = 1 / Math.max(1, W - 2 * sideOf()), up = ink ? ink.h / ink.w / Math.max(1, H * TALL) : 0;
   return FLOOR_Y + F * TITLE_W * Math.max(across, up);
 };
-// the opening: from the floor up to rest, slow, faster, slow, as the title is left behind (none with reduced motion)
-// it holds HOLD s on the title, by the clock (the first frames of a page can stutter), then rises over dur s
-let opening = reduce.matches ? null : { start: 0, hold: 2, dur: 2.8 };
-let travel = reduce.matches ? 0 : S_BOT, aim = travel, glide = false, cam = null, yaw = 0, yawAim = 0, pitch = 0, pitchAim = 0;
+// v19: the page opens outside, at S_MAX, the volcano whole; then the dive (intro.js asks for it): along the way in, by
+// itself, to rest. v17's opening, from the floor up to rest with the title lying there, is DEV's "title on the floor"
+// (intro.js): slow, faster, slow, as the title is left behind (none with reduced motion); it holds HOLD s on the title,
+// by the clock (the first frames of a page can stutter), then rises over dur s
+const FLOOR = store.get("volcano-v19-intro-floor", false);
+let opening = FLOOR && !reduce.matches ? { start: 0, hold: 2, dur: 2.8 } : null;
+let travel = FLOOR ? (reduce.matches ? 0 : S_BOT) : S_MAX, aim = travel, glide = false, cam = null, yaw = 0, yawAim = 0, pitch = 0, pitchAim = 0;
 // in the chamber the head is straight down; dip lifts it towards level (a drag), and goes back to 0 as you scroll out
 let dip = 0, dipAim = 0;
 const onRail = () => travel > .02 && travel < S_RAIL - .02;
@@ -104,8 +107,8 @@ function unproject(sx, sy, d) {
   return [0, 1, 2].map(i => [cam.x, cam.y, cam.z][i] + f[i] * d + rt[i] * lx + up[i] * ly);
 }
 // moving: everything eases towards the aim; asked for, it glides there more slowly
-function goTo(s, slow = false) { opening = null; aim = clamp(s, S_BOT, S_MAX); glide = slow; if (slow && reduce.matches) travel = aim; }
-function push(ds) { opening = null; aim = clamp(aim + ds, S_BOT, S_MAX); glide = false; }
+function goTo(s, slow = false) { opening = null; stopDive(); aim = clamp(s, S_BOT, S_MAX); glide = slow; if (slow && reduce.matches) travel = aim; }
+function push(ds) { opening = null; stopDive(); aim = clamp(aim + ds, S_BOT, S_MAX); glide = false; }
 function updateTravel(dt) {
   if (fling) {                                  // a spin let go goes on, slowing down
     const k = Math.exp(-dt * 5);
@@ -117,6 +120,7 @@ function updateTravel(dt) {
   pitch += (pitchAim - pitch) * (1 - Math.exp(-dt * 12));
   if (travel > .05) dipAim = 0;                 // out of the soup: straight down again, so the way back in is too
   dip += (dipAim - dip) * (1 - Math.exp(-dt * 12));
+  if (diving) { diveStep(dt); return; }
   if (opening) {                                // rising off the floor, unless you scroll first
     if (!inkReady) return;                      // it waits for the title to be there
     const now = performance.now() / 1000; if (!opening.start) opening.start = now;
@@ -128,6 +132,43 @@ function updateTravel(dt) {
   const rate = glide ? 2.4 : 10;
   travel += (aim - travel) * (1 - Math.exp(-dt * rate));   // no cap: when you stop scrolling, it settles at once where you left it
   if (Math.abs(aim - travel) < 1e-4) { travel = aim; glide = false; }
+}
+
+// ================= v19: the dive, from outside to rest =================
+// along the way in itself (s from S_MAX to 0: the zoom, the rail over the summit, down the hole), by the clock. It sets
+// off slowly (RAMP s to its pace), keeps a steady pace outside, slows in the hole so the title has its time in the black,
+// and comes to rest as a scroll does. Its pace is in s per second, ×speed (DEV, intro). Any wheel, pinch or key takes
+// over at once, where it is: push() and goTo() stop it
+let diving = null;
+const RAMP = 2.4, PACE_OUT = .5, PACE_HOLE = .19;
+const pace = s => lerp(PACE_HOLE, PACE_OUT, smooth(1, 2, s)) * (.22 + .78 * smooth(0, .3, s));
+function diveStep(dt) {
+  diving.t += dt;
+  travel -= pace(travel) * diving.speed * smooth(0, RAMP, diving.t + .25) * dt;
+  if (travel <= .004) { travel = 0; diving = null; }
+  aim = travel;
+}
+function stopDive() { if (diving) { diving = null; aim = travel; } veilTo(0); clearTimeout(veilT); }
+// reduced motion: no flight. The outside fades to the black with the title in it, then to the soup
+const veil = $("veil");
+let veilT = 0;
+function veilTo(o, ms = 600) { if (!veil) return; veil.style.transitionDuration = ms + "ms"; veil.style.opacity = o; }
+function dive(speed = 1) {
+  opening = null; stopDive();
+  if (reduce.matches) {
+    const at = (ms, f) => new Promise(r => { veilT = setTimeout(() => { f(); r(); }, ms); });
+    veilTo(1); at(700, () => { travel = aim = .72; veilTo(0); })
+      .then(() => at(2400, () => veilTo(1)))
+      .then(() => at(700, () => { travel = aim = 0; veilTo(0); }));
+    return;
+  }
+  diving = { t: 0, speed };
+}
+function replay(mode) {
+  stopDive(); fling = null; yaw = yawAim = 0; dip = dipAim = 0;
+  if (mode === "floor") { travel = aim = reduce.matches ? 0 : S_BOT; opening = reduce.matches ? null : { start: 0, hold: 2, dur: 2.8 }; }
+  else { opening = null; travel = aim = S_MAX; }
+  camera();                                     // this frame's camera now, so nothing reads the old one
 }
 
 // ================= moving: wheel, pinch, keys =================
@@ -218,7 +259,8 @@ addEventListener("keydown", e => {
   if (e.key === "+" || e.key === "=") { push(-.22); e.preventDefault(); }
   else if (e.key === "-" || e.key === "_") { push(.22); e.preventDefault(); }
   else if (e.key === "0") { goTo(0, true); e.preventDefault(); }
-  else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { yawAim += e.key === "ArrowLeft" ? -.25 : .25; e.preventDefault(); }
+  else if (diving && /^Arrow|^Page|^ |^Home|^End/.test(e.key)) { stopDive(); }
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") { yawAim += e.key === "ArrowLeft" ? -.25 : .25; e.preventDefault(); }
   else if (e.key === "ArrowUp" || e.key === "ArrowDown") { tilt(e.key === "ArrowUp" ? 70 : -70); e.preventDefault(); }
 });
 
@@ -231,7 +273,7 @@ const camIn = $("camera"), camVal = $("camVal");
 $("lens").addEventListener("input", () => { lensK = +$("lens").value; $("lensVal").textContent = lensK.toFixed(2); lens(); });
 $("home").addEventListener("click", () => goTo(0, true));
 camIn.max = S_MAX; camIn.min = S_BOT;
-camIn.addEventListener("input", () => { travel = aim = +camIn.value; glide = false; });
+camIn.addEventListener("input", () => { opening = null; stopDive(); travel = aim = +camIn.value; glide = false; });
 // DEV: two numbers. Where the camera is on its way, the raw position the wheel moves (0 at the title on the soup's
 // floor, 1 at rest over the soup, 2 at the rim, 3.43 where it starts to swing out to the side), and where it
 // looks, its pitch: -90° straight down, 0° level, 90° straight up
@@ -276,16 +318,43 @@ function measureInk() {
   // weight on top and the screen's lower half taken by the composer make the true middle look low
   const bottom = base + m.actualBoundingBoxDescent, cy = (top + bottom) / 2 + INK_LIFT * (bottom - top);
   ink = { w: right - left || w, h: bottom - top, dx: w / 2 - (left + right) / 2, dy: h / 2 - cy };
+  // v19: where the capitals' middle is, down from the box's top, as laid out: the baseline (a marker of no height on it)
+  // less half the capitals' height. The title in the black is centred on it
+  let mk = titleEl.querySelector(".base");
+  if (!mk) { mk = document.createElement("i"); mk.className = "base"; mk.setAttribute("aria-hidden", "true"); mk.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline"; (titleEl.querySelector(".t") || titleEl).append(mk); }
+  ink.capMid = mk.offsetTop - x.measureText("H").actualBoundingBoxAscent / 2;
+  ink.midX = (left + right) / 2;
   if (eyes) eyes.style.left = `${(left + right) / 2}px`;   // the eyes over the letters' middle, not the box's
 }
 // it shows only once Mebar Display is in and measured, so it never lands in one place and jumps to another
 let inkReady = false;
 const fontsIn = () => { measureInk(); inkReady = true; };
-(document.fonts ? Promise.race([Promise.all([document.fonts.load('300 120px "Mebar Display"'), document.fonts.load('400 120px "Mebar Eyes"', "V")]).then(() => document.fonts.ready), new Promise(r => setTimeout(r, 3000))]) : Promise.resolve()).then(fontsIn);
+// v19: in the page's sans, no Mebar (19/11/26: one sans for everything)
+(document.fonts ? Promise.race([document.fonts.load('300 120px "Inter Tight"').then(() => document.fonts.ready), new Promise(r => setTimeout(r, 3000))]) : Promise.resolve()).then(fontsIn);
 document.fonts?.addEventListener?.("loadingdone", () => { if (inkReady) measureInk(); });
+// v19: the title is in the black of the hole instead, flat on the screen, centred: it comes in as the black fills the
+// screen and goes as the soup's colour comes through, a little nearer as you go down (on the way out, the same,
+// backwards). Orange (the soup's) or white (the volcano's), DEV intro. v17's title on the floor: DEV, "on the floor"
+let titleMode = FLOOR ? "floor" : "dive";
+const TITLE_INK = { orange: "#FF4500", white: "#fff" };
+function setTitleMode(mode, color) {
+  titleMode = mode;
+  if (!titleEl) return;
+  titleEl.parentElement.classList.toggle("dive", mode === "dive");
+  titleEl.parentElement.style.color = mode === "dive" ? TITLE_INK[color] || TITLE_INK.orange : "";
+  titleEl.style.filter = "none";
+}
+function placeDiveTitle() {
+  const s = cam.s, o = inkReady ? smooth(.93, .8, s) * (1 - smooth(.6, .28, s)) : 0;
+  titleEl.style.opacity = o.toFixed(3);
+  if (o <= 0) return;
+  const { W, H } = V.size(), k = Math.min(W * .8, W - 32) / ink.w * (1 + .07 * smooth(.93, .28, s));   // the scene's middle (#title moves with the scene, as the floor's did)
+  titleEl.style.transform = `translate(${(W / 2).toFixed(1)}px, ${(H / 2).toFixed(1)}px) scale(${k.toFixed(4)}) translate(${(-ink.midX).toFixed(2)}px, ${(-ink.capMid).toFixed(2)}px)`;   // the capitals' middle on the scene's
+}
 function placeTitle() {
   if (!titleEl) return;
   if (!ink) measureInk();
+  if (titleMode === "dive") { placeDiveTitle(); return; }
   const a = cam.in ? project(0, FLOOR_Y, 0) : null, b = a && project(1, FLOOR_Y, 0), h = cam.y - FLOOR_Y;
   const o = a && b && inkReady ? 1 - smooth(2.2, 4.8, h) : 0;
   titleEl.style.opacity = o.toFixed(3);
@@ -298,6 +367,7 @@ function placeTitle() {
 }
 V.camera = {
   get cam() { return cam; }, project, unproject, NEAR: .14, z0: Z0, goTo, lens, screen: () => ({ PX, PY }),
+  S_MAX, dive, replay, diving: () => !!diving, titleMode: setTitleMode,
   update(dt) { updateTravel(dt); camera(); placeTitle(); },
   dragging: () => !!(orbit && dragged), showDev,
 };
