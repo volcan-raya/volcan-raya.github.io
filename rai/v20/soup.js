@@ -628,26 +628,28 @@ const sinceOf = () => null;   // v20: two kinds of ball only, unseen filled and 
 // it stops at each ball's edge, so a seen ball drawn as a ring stays empty inside. Faint, fading with the balls into
 // the depth; the ones of the ball under the pointer, or of the note open, come forward and the rest step back. How
 // strong: DEV, soup, "links" (0: none)
-let linksK = store.get(KEY + "links", 30);
+let linksK = store.get(KEY + "links2", 100);   // v20: solid by default, as a read ball's ring
 const RING = { gap: 5, lw: 1.5 };              // v20: the ring round the opened ball, outside it; links stop at its outer edge
 const ringOn = b => b === picked && bigEl.classList.contains("on");
 const edgeOf = b => ringOn(b) ? b.R + RING.gap + RING.lw : b.R;
-function drawLinks(x) {
+// v20: a link as thick as a read ball's ring (notification.js: 1.5 px at a radius of 21, never under a device pixel):
+// the reply's, in the soup; the note's, the main ball's, in an open conversation (inCon). Solid, as the ring is
+const ringW = R => Math.max(1 / Math.min(2, devicePixelRatio || 1), 1.5 * R / 21);
+function drawLinks(x, inCon = false) {
   if (linksK <= 0 || vis.length < 2) return;
-  const on = new Set(vis), focus = hovered || picked, base = linksK / 100;
+  const on = new Set(vis), base = linksK / 100;
   x.lineCap = "butt"; x.strokeStyle = `rgb(${DOT.join(",")})`;
   for (const a of vis) {
     const c = a.parent;
     if (!c || !on.has(c)) continue;
     const dx = c.sx - a.sx, dy = c.sy - a.sy, L = Math.hypot(dx, dy);
     if (L <= a.R + c.R + 1) continue;          // touching: nothing between them to draw
-    const lit = false;                          // v20: the links stay as they are under the pointer and when a note is open: only the ball's colour changes
     const fade = Math.min(a.seen, c.seen) * smooth(1.5, 7, Math.min(a.R, c.R));
     const k = base * fade;
     if (k < .01) continue;
     const ux = dx / L, uy = dy / L, ra = edgeOf(a), rc = edgeOf(c);   // v20: at the opened ball, the line stops at its ring
     if (L <= ra + rc + 1) continue;
-    x.globalAlpha = Math.min(1, k); x.lineWidth = lit ? 1.25 : .75;
+    x.globalAlpha = Math.min(1, k); x.lineWidth = ringW(inCon ? c.R : a.R);   // c: the note, a: its reply
     x.beginPath(); x.moveTo(a.sx + ux * ra, a.sy + uy * ra); x.lineTo(c.sx - ux * rc, c.sy - uy * rc); x.stroke();
   }
   x.globalAlpha = 1;
@@ -689,7 +691,7 @@ function drawInside(x) {
   if (conCv.width !== marks.width || conCv.height !== marks.height) { conCv.width = marks.width; conCv.height = marks.height; }
   conCtx.setTransform(MDPR, 0, 0, MDPR, 0, 0); conShown = true;
   x = conCtx;                                     // over the opened note
-  vis = all.filter(b => con.has(b)); drawLinks(x);
+  vis = all.filter(b => con.has(b)); drawLinks(x, true);
   for (const b of vis) {                          // the open constellation: every ball filled, read or not; the clicked one in its own red
     x.globalAlpha = 1; x.fillStyle = b === picked || b === hovered ? `rgb(${PICKED.join(",")})` : `rgb(${DOT.join(",")})`;
     x.beginPath(); x.arc(b.sx, b.sy, b.R, 0, Math.PI * 2); x.fill();
@@ -1219,7 +1221,7 @@ function showSat() {
 }
 $("satSize").addEventListener("input", e => { sat.size = +e.target.value; showSat(); });
 $("orbSize").addEventListener("input", e => { sat.orbit = +e.target.value; showSat(); });
-const showLinks = () => { $("linksK").value = linksK; $("linksV").textContent = linksK + "%"; store.set(KEY + "links", linksK); };
+const showLinks = () => { $("linksK").value = linksK; $("linksV").textContent = linksK + "%"; store.set(KEY + "links2", linksK); };
 $("linksK").addEventListener("input", e => { linksK = +e.target.value; showLinks(); });
 showLinks();
 showSat();
