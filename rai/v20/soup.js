@@ -269,9 +269,8 @@ function drawEmoji(x, e, px, py, size = 16) {
   if (!e) return;
   x.font = `${size}px ${EMOJI_FONT}`; x.textAlign = "left"; x.textBaseline = "bottom"; x.fillText(e, px, py);
 }
-function drawDots(x, px, py, t) {                // a small bubble, its three dots taking turns, as in a chat
-  const w = 24, h = 13, a = x.globalAlpha;
-  x.fillStyle = "#fff"; x.beginPath(); x.roundRect ? x.roundRect(px, py - h, w, h, 6.5) : x.rect(px, py - h, w, h); x.fill();
+function drawDots(x, px, py, t) {                // three black dots taking turns, as in a chat (no bubble: black, orange and the reds only)
+  const h = 13, a = x.globalAlpha;
   for (let k = 0; k < 3; k++) {
     x.globalAlpha = a * (.3 + .7 * Math.max(0, Math.sin(t * 6 - k * .9)));
     x.fillStyle = "#000"; x.beginPath(); x.arc(px + 6 + k * 6, py - h / 2, 1.7, 0, Math.PI * 2); x.fill();
@@ -1324,7 +1323,7 @@ setInterval(() => {
     #big .thread { position: relative; margin: 1.3em 0 .5em; padding: 0; color: var(--ink); font: 500 max(16px, calc(var(--fs) * .28))/1.12 var(--type);
       letter-spacing: -.01em; max-width: 52em; display: flex; flex-direction: column; gap: .55em; }
     #big .thread.earlier { margin: 0 0 1.1em; }
-    #big .thread p { margin: 0; display: flex; flex-direction: column; gap: .15em; }
+    #big .thread p { margin: 0; display: flex; flex-direction: column; gap: .15em; width: fit-content; max-width: 100%; }   /* a reply is clickable only as wide as its words */
     #big .thread .rw { font-size: max(11px, calc(var(--sig) * .85)); font-weight: 500; letter-spacing: 0; opacity: .8; }
     #big .thread [data-id] { cursor: pointer; border-radius: 4px; }
     #big .thread [data-id]:hover .rt, #big .thread [data-id]:focus-visible .rt { text-decoration: underline; text-underline-offset: .12em; text-decoration-thickness: 1px; }
