@@ -96,7 +96,7 @@ const marks = V.marks, notesEl = $("notes");
 // an opened note: one layer in the scene, over the field and under the badges, that never takes the pointer
 const bigEl = document.createElement("div");
 bigEl.id = "big"; bigEl.setAttribute("aria-live", "polite");
-bigEl.innerHTML = '<canvas class="viz" aria-hidden="true"></canvas><div class="box" data-ui><img class="pic" alt=""><p class="words"></p><p class="sig"><b class="who"></b><span class="when"></span></p><div class="thread"></div></div>';
+bigEl.innerHTML = '<canvas class="viz" aria-hidden="true"></canvas><div class="box" data-ui><div class="thread earlier"></div><img class="pic" alt=""><p class="words"></p><p class="sig"><b class="who"></b><span class="when"></span></p><div class="thread"></div></div>';
 $("field").after(bigEl);
 let dev = false;
 addEventListener("cabz:dev", e => { dev = !!e.detail.on; if (typeof applyBig === "function") applyBig(); });   // the "dev" square in the site bar (nav.js)
@@ -573,8 +573,8 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];   // rai v18: the soup's red again, on the orange (aya v07's)
 // v18: aya's look, the crater's peach on her dark red (aya v11); rai's, the soup's red. Changed in place: DOT is read every frame
 const DOTS = { aya: [251, 179, 129], rai: [196, 0, 12] };
-const setDot = k => DOT.splice(0, 3, ...(DOTS[k] || DOTS.aya));
-setDot(document.documentElement.dataset.look); addEventListener("v18:look", e => setDot(e.detail));
+const setDot = k => DOT.splice(0, 3, ...(DOTS[k] || DOTS.rai));
+setDot("rai");   // v20: one look, rai's (aya's gradient is gone)
 // a seen ball, over 2 s, still whole to touch, on every page on this soup:
 let seenLook = "outline";   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
 function badgeColour(b) {
@@ -663,10 +663,9 @@ function drawInside(x) {
   layer.style.display = "block";
   layer.style.filter = reduce.matches || !blurK ? "none" : `blur(${(blurK * flatE).toFixed(1)}px)`;
   if (hovered && hovered !== picked && vis.includes(hovered)) { drawBall(x, hovered, now, dt, TYPE); peek = drawPeek(x, hovered, W, TYPE); }
-  if (picked && vis.includes(picked)) {
-    drawBall(x, picked, now, dt, TYPE);
-    x.globalAlpha = flatE; x.strokeStyle = `rgb(${DOT.join(",")})`; x.lineWidth = 1.5;
-    x.beginPath(); x.arc(picked.sx, picked.sy, picked.R + 5, 0, Math.PI * 2); x.stroke(); x.globalAlpha = 1;
+  if (picked && vis.includes(picked)) {           // the opened message's ball: filled, a full intense red, no ring
+    x.globalAlpha = 1; x.fillStyle = "rgb(255, 0, 0)";
+    x.beginPath(); x.arc(picked.sx, picked.sy, picked.R, 0, Math.PI * 2); x.fill();
   }
 }
 // the first words of a dialogue, beside its ball, while a note is open: where they are, so they can be clicked
@@ -885,8 +884,8 @@ function setComposer(on) {                      // there whenever the soup can b
 // a picture and a voice sit in its middle, which is the middle of the screen
 // The voice's tallest bar: 50% is the box's height, so it can go to twice the box. The text: at its size, or, to see a
 // long one whole, shrunk until it fits the box (never bigger than its size)
-const BIG_KEY = KEY + "big4";
-const BIG0 = { fs: 6, lh: 1, side: 40, tb: 90, ink: "black", fit: "contain", vw: "off", show: "off", wh: 23, bars: 88, bw: 7, tsize: "fixed", sig: 14 };   // v20: one fixed size, in vw (never under 28 px)
+const BIG_KEY = KEY + "big5";
+const BIG0 = { fs: 7.5, lh: 1, side: 40, tb: 90, ink: "black", fit: "contain", vw: "off", show: "off", wh: 23, bars: 88, bw: 7, tsize: "fixed", sig: 14 };   // v20: one fixed size, in vw (never under 28 px)
 const saved = store.get(BIG_KEY, {}) || {};
 if (saved.wh != null && !saved.v3) {           // kept before the tallest bar was counted against half the box: the same look
   saved.wh = Math.max(3, Math.round(saved.wh / 2));
@@ -979,16 +978,18 @@ let picked = null, hideT = 0;
 function openNote(b) {
   if (C.cam.soup <= .5 && !b.fake) return;
   stopVoice(); clearTimeout(hideT);
+  const was = picked;
   picked = b.fake ? null : b;
-  const s = b.s, me = mediumOf(s);
+  const s = b.s, me = mediumOf(s), same = was && picked && rootOf(was) === rootOf(picked);   // another message of the same conversation
   bigEl.dataset.kind = me;
   setWords(me === "image" ? "" : s.s);
   sign(s);
   if (me === "image") { picEl.src = imgSrc(s.img); picEl.alt = s.s || "a picture"; } else { picEl.removeAttribute("src"); picEl.alt = ""; }
-  bigEl.classList.add("on"); boxEl.scrollTop = 0;
-  showThread(b);                                 // aya v10: its replies, at once, under it
+  bigEl.classList.add("on");
+  showThread(b);                                 // v20: the whole conversation round it
   fitWords(); placeSig(); placeThread();
-  if (me === "text" && !b.fake) morphOpen(b); else morphStop();   // v18: the balls grow and break into the words
+  if (same) (picEl.src && me === "image" ? picEl : wordsEl).scrollIntoView({ block: "center", behavior: reduce.matches ? "auto" : "smooth" });
+  else boxEl.scrollTop = 0;
   if (me === "voice") startVoice(s);
   if (!b.fake) { markRead(b); barMode(true); }
   meNow.open = picked ? picked.s.id : null; meChanged();   // v20: the others see your emoji by the note you opened
@@ -998,152 +999,15 @@ function closeNote() {
   const was = picked;
   stopVoice();
   if (bigEl.classList.contains("on")) {
-    if (was && bigEl.dataset.kind === "text") morphClose(was); else morphStop();   // v18: the words gather back into the balls
     bigEl.classList.remove("on");
-    hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; threadEl.textContent = ""; boxEl.style.bottom = ""; } }, 700);
+    hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; threadEl.textContent = ""; earlierEl.textContent = ""; } }, 700);
   }
   picked = null; barMode(false);
   meNow.open = null; meChanged();
   if (listening && micComp === mainComp && was) stopMic();
 }
 
-// ================= v18: opening a note, the balls become its words =================
-// After solarbol's index morph (sampleGlyph, its dots settling into each name), turned the other way round: clicking a
-// note, its ball and the balls of its replies grow where they are, each until its surface is about the surface of the ink
-// of the words it is about to be (the note's in the open rant, each reply's in the thread under it), drifting towards
-// them; then each breaks into dots, which fly to that ink and settle as its letters; then the real words come in under
-// them. Closing, the reverse: the words break into dots, gather into the balls at full size, which shrink back to their
-// places in the soup. DEV, soup: "opening" (the morph, or the fade it was before)
-let morphOn = store.get(KEY + "morph2", false);   // v20: off by default, a note opens as in v19
-document.documentElement.dataset.transitions = morphOn ? "on" : "off";   // the toggle top right (index.html) shows it
-const mCv = document.createElement("canvas");
-mCv.id = "morph"; mCv.setAttribute("aria-hidden", "true");
-mCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none";   // always there (clear): measured while hidden, it would say 0, 0
-bigEl.after(mCv);
-const mCtx = mCv.getContext("2d");
-{
-  const css = document.createElement("style");
-  css.textContent = `
-    #big .words, #big .thread, #big .sig { transition: opacity .35s ease; }
-    #big.morphing .words, #big.morphing .thread, #big.morphing .sig { opacity: 0; transition: none; }`;
-  document.head.append(css);
-}
-// the ink of an element's text as it is laid out: each character drawn where the page put it (a Range per character,
-// so wrapping, sizes and capitals are the page's own), then read back. Returns its surface in px² and dots on its ink
-function inkOf(el, maxDots) {
-  const box = el.getBoundingClientRect(), o = mCv.getBoundingClientRect();
-  if (!box.width || !box.height) return null;
-  const cs = getComputedStyle(el), up = cs.textTransform === "uppercase";
-  const cv = document.createElement("canvas"), w = Math.ceil(box.width) + 4, h = Math.ceil(box.height) + 4;
-  cv.width = w; cv.height = h;
-  const x = cv.getContext("2d", { willReadFrequently: true });
-  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), range = document.createRange();
-  for (let t = walker.nextNode(); t; t = walker.nextNode()) {
-    const pcs = getComputedStyle(t.parentElement);
-    x.font = `${pcs.fontStyle} ${pcs.fontWeight} ${pcs.fontSize} ${pcs.fontFamily}`;
-    const m = x.measureText("Hg"), asc = m.fontBoundingBoxAscent || parseFloat(pcs.fontSize) * .8, des = m.fontBoundingBoxDescent || parseFloat(pcs.fontSize) * .2;
-    const str = t.textContent;
-    for (let i = 0; i < str.length; i++) {
-      if (/\s/.test(str[i])) continue;
-      range.setStart(t, i); range.setEnd(t, i + 1);
-      const r = range.getBoundingClientRect(); if (!r.width) continue;
-      const y = r.top - box.top + 2 + (r.height - asc - des) / 2 + asc;
-      x.fillText(up ? str[i].toUpperCase() : str[i], r.left - box.left + 2, y);
-    }
-  }
-  let data; try { data = x.getImageData(0, 0, w, h).data; } catch { return null; }
-  let ink = 0;
-  for (let i = 3; i < data.length; i += 4) if (data[i] > 128) ink++;
-  if (!ink) return null;
-  const g = Math.max(1, Math.round(Math.sqrt(ink / maxDots))), dots = [];
-  for (let yy = 0; yy < h; yy += g) for (let xx = 0; xx < w; xx += g) if (data[(yy * w + xx) * 4 + 3] > 128) dots.push([box.left - o.left - 2 + xx + g / 2, box.top - o.top - 2 + yy + g / 2]);
-  return { area: ink, dots, g, cx: box.left - o.left + box.width / 2, cy: box.top - o.top + box.height / 2, ink: cs.color };
-}
-let morph = null;
-function morphStop() { morph = null; mCtx.clearRect(0, 0, mCv.width, mCv.height); bigEl.classList.remove("morphing"); if (typeof morphText === "function") morphText(null); }
-function morphActors(b) {
-  const list = [[b, wordsEl, 7000]];
-  if (!b.parent) {
-    const rs = replies.get(b.s.id) || [], ps = [...threadEl.querySelectorAll(".rt")];
-    rs.forEach((r, i) => { const rb = badges.get(r.id); if (rb && ps[i]) list.push([rb, ps[i], 600]); });
-  }
-  const out = [];
-  for (const [ball, el, max] of list) {
-    const t = inkOf(el, max); if (!t) continue;
-    // each dot starts somewhere inside the grown ball (an even spread over its disc), always the same for the same dot
-    const seeds = t.dots.map((_, i) => { const u = ((i * 2654435761) >>> 0) / 4294967296, v = ((i * 40503 + 12345) % 65536) / 65536; return [Math.sqrt(u), v * Math.PI * 2, ((i * 7919) % 1000) / 1000]; });
-    out.push({ b: ball, ...t, RT: Math.sqrt(t.area / Math.PI), seeds });
-  }
-  return out;
-}
-function morphOpen(b) {
-  if (!morphOn || reduce.matches) { morphStop(); return; }
-  const actors = morphActors(b);
-  if (!actors.length) { morphStop(); return; }
-  bigEl.classList.add("morphing");
-  morph = { dir: 1, t0: performance.now(), actors };
-  requestAnimationFrame(morphFrame);
-}
-function morphClose(b) {
-  if (!morphOn || reduce.matches) { morphStop(); return; }
-  const actors = morphActors(b);                  // read while the words are still laid out
-  bigEl.classList.add("morphing");
-  if (!actors.length) { morphStop(); return; }
-  morph = { dir: -1, t0: performance.now(), actors };
-  requestAnimationFrame(morphFrame);
-}
-const MORPH = { dur: 1500 };
-// one movement with no phases: from the first instant the ball grows as it travels towards its words AND lets its
-// dots go, the first at once, the last halfway; each dot leaves from where it is in the moving ball and flies to its
-// letter. The colour goes the whole way at the same pace, from the ball's to the words' (black on the orange, light on
-// aya's dark); the ball fades as it empties; the real words come in while the last dots land, and those go as they do
-const ease = u => u < .5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;
-const easeOut = u => 1 - (1 - u) ** 3;
-const rgbOf = c => (String(c).match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
-const mixRgb = (A, B, f) => `rgb(${Math.round(A[0] + (B[0] - A[0]) * f)},${Math.round(A[1] + (B[1] - A[1]) * f)},${Math.round(A[2] + (B[2] - A[2]) * f)})`;
-const SHADES = 10;
-function morphText(o) {                           // the real words, as much as the morph says (null: as the page has them)
-  for (const el of [wordsEl, threadEl, sigEl]) { el.style.transition = o == null ? "" : "none"; el.style.opacity = o == null ? "" : String(o); }
-}
-function morphFrame(now) {
-  if (!morph) return;
-  const { W, H, MDPR } = V.size();
-  if (mCv.width !== Math.round(W * MDPR)) { mCv.width = Math.round(W * MDPR); mCv.height = Math.round(H * MDPR); }
-  const x = mCtx; x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
-  const T = MORPH.dur, el = now - morph.t0;
-  const u = clamp(morph.dir > 0 ? el / T : 1 - el / (T * .8), 0, 1);   // closing: the same way back, a little quicker
-  const ball = DOT.slice(0, 3), REL = .5, FLY = .5;
-  const textIn = smooth(.8, 1, u), dotsOut = 1 - smooth(.86, 1, u);
-  morphText(textIn);
-  for (const a of morph.actors) {
-    const ink = a.inkRgb || (a.inkRgb = rgbOf(a.ink));
-    const bx = a.b.sx ?? a.cx, by = a.b.sy ?? a.cy, R0 = Math.max(2, a.b.R || 6);
-    const g = easeOut(u);                                               // growing and travelling, quickest at first, never still
-    const R = lerp(R0, a.RT, g), cx = lerp(bx, a.cx, g * .6), cy = lerp(by, a.cy, g * .6);
-    const left = 1 - clamp(u / REL, 0, 1);                              // how much of the ball is still a ball
-    if (left > 0) { x.globalAlpha = left * (2 - left); x.fillStyle = mixRgb(ball, ink, g); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill(); }
-    const r = Math.max(.8, a.g * .45), paths = Array.from({ length: SHADES }, () => new Path2D());
-    for (let i = 0; i < a.dots.length; i++) {
-      const [rr, ang, j] = a.seeds[i], start = j * REL;
-      if (u <= start) continue;
-      const d = ease(clamp((u - start) / FLY, 0, 1));
-      const sx = cx + Math.cos(ang) * rr * R, sy = cy + Math.sin(ang) * rr * R;
-      const px = lerp(sx, a.dots[i][0], d), py = lerp(sy, a.dots[i][1], d);
-      const P = paths[Math.min(SHADES - 1, Math.floor(Math.max(g, d) * SHADES))];
-      P.moveTo(px + r, py); P.arc(px, py, r, 0, Math.PI * 2);
-    }
-    x.globalAlpha = dotsOut;
-    paths.forEach((P, k) => { x.fillStyle = mixRgb(ball, ink, (k + .5) / SHADES); x.fill(P); });
-    x.globalAlpha = 1;
-  }
-  if (morph.dir > 0 ? u >= 1 : u <= 0) { morphStop(); return; }
-  requestAnimationFrame(morphFrame);
-}
-V.dev.tab("soup", `<span class="full seg" id="morphSeg"><span class="k">opening a note</span><button class="t" type="button" data-morph="1">balls into words</button><button class="t" type="button" data-morph="0">fade</button></span>`);
-const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph2", morphOn); document.documentElement.dataset.transitions = morphOn ? "on" : "off"; };
-addEventListener("v18:morph", () => { morphOn = !morphOn; if (!morphOn) morphStop(); showMorph(); });
-document.querySelectorAll("[data-morph]").forEach(b => b.addEventListener("click", () => { morphOn = b.dataset.morph === "1"; showMorph(); }));
-showMorph();
+// (v20: the morph, balls into words, is gone: too loud. A note opens as in v19)
 
 // a voice is heard, not read. The notes keep no recording, so the stored words are spoken once, and what is seen is a
 // voice message's waveform, huge, as in Telegram: a row of bars made from the words themselves (each syllable a swell,
@@ -1354,19 +1218,35 @@ showTop();
 // When a note is opened, its replies are there below it, without being clicked: smaller, each with who and when, on a
 // line going down from the rant, the thread. Room is made for them first (the box's bottom goes up), then the rant is
 // fitted in what is left, then the thread is put under its signature
-const threadEl = bigEl.querySelector(".thread");
+// v20: the whole conversation, whichever of its balls was clicked: the note and every reply, in their order. The one
+// clicked is the quotation, large (the words, or the picture); the others are smaller, above it and under it, each
+// with who and when, on the thread's line. A click on any of them makes that one the large one, and its ball the red one
+const threadEl = bigEl.querySelector(".thread:not(.earlier)"), earlierEl = bigEl.querySelector(".thread.earlier");
+const rootOf = b => b && (b.parent || b);
+function smallItem(m) {
+  const p = document.createElement("p"), w = document.createElement("span");
+  p.dataset.id = m.id; p.tabIndex = 0; p.setAttribute("role", "button");
+  if (!m.re && mediumOf(m) === "image" && m.img) { const im = document.createElement("img"); im.className = "rimg"; im.alt = m.s || "a picture"; im.src = imgSrc(m.img); p.append(im); }
+  else { const t = document.createElement("span"); t.className = "rt"; t.textContent = m.s || "(a picture)"; p.append(t); }
+  const d = m.t ? new Date(m.t) : null, z = n => String(n).padStart(2, "0");
+  w.className = "rw"; w.textContent = "— " + sigOf(m) + (d ? `, ${z(d.getDate())}.${z(d.getMonth() + 1)}, ${z(d.getHours())}:${z(d.getMinutes())}` : "");
+  p.append(w);
+  return p;
+}
 function showThread(b) {
-  threadEl.textContent = "";
-  const rs = b && !b.parent ? (replies.get(b.s.id) || []) : [];
-  if (!rs.length) { threadEl.hidden = true; return; }
-  threadEl.hidden = false;
-  for (const r of rs) {
-    const p = document.createElement("p"), t = document.createElement("span"), w = document.createElement("span");
-    t.className = "rt"; t.textContent = r.s || (r.img ? "(a picture)" : "");
-    const d = r.t ? new Date(r.t) : null, z = n => String(n).padStart(2, "0");
-    w.className = "rw"; w.textContent = "— " + sigOf(r) + (d ? `, ${z(d.getDate())}.${z(d.getMonth() + 1)}, ${z(d.getHours())}:${z(d.getMinutes())}` : "");
-    p.append(t, w); threadEl.append(p);
-  }
+  threadEl.textContent = ""; earlierEl.textContent = "";
+  const root = rootOf(b);
+  const all = root && !b.fake ? [root.s, ...(replies.get(root.s.id) || [])] : [];
+  const at = all.findIndex(m => m.id === b.s.id);
+  all.slice(0, Math.max(0, at)).forEach(m => earlierEl.append(smallItem(m)));
+  all.slice(at + 1).forEach(m => threadEl.append(smallItem(m)));
+  earlierEl.hidden = !earlierEl.children.length; threadEl.hidden = !threadEl.children.length;
+}
+// a message in the conversation, clicked (or Enter on it): it becomes the large one, its ball the red one
+const goTo = e => { const p = e.target.closest("[data-id]"); if (!p) return false; const ball = badges.get(p.dataset.id); if (ball && ball !== picked) openNote(ball); return true; };
+for (const el of [threadEl, earlierEl]) {
+  el.addEventListener("click", e => { if (goTo(e)) e.stopPropagation(); });
+  el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { if (goTo(e)) e.preventDefault(); } });
 }
 function placeThread() {}   // v20: the thread is in the column, under the signature
 addEventListener("resize", () => { if (bigEl.classList.contains("on") && picked) { showThread(picked); fitWords(); placeSig(); placeThread(); } });
@@ -1374,8 +1254,8 @@ addEventListener("resize", () => { if (bigEl.classList.contains("on") && picked)
 // straight away, without closing and opening it again
 let threadN = -1, threadOf = null;
 setInterval(() => {
-  if (!picked || !bigEl.classList.contains("on") || picked.parent) { threadOf = null; return; }
-  const n = (replies.get(picked.s.id) || []).length;
+  if (!picked || !bigEl.classList.contains("on")) { threadOf = null; return; }
+  const n = (replies.get(rootOf(picked).s.id) || []).length;
   if (threadOf !== picked) { threadOf = picked; threadN = n; return; }   // just opened: openNote drew it
   if (n === threadN) return;
   threadN = n;
@@ -1391,12 +1271,17 @@ setInterval(() => {
   css.textContent = `
     /* rai v18: the words in the soup's own ink again (aya v14 lightened them for her dark scene) */
     #big .thread { position: relative; margin: 28px 0 8px; padding: 4px 0 0 18px; border-left: 1.5px solid var(--ink); color: var(--ink);
-      font: 400 16px/1.3 var(--type); max-width: 640px; }
+      font: 400 20px/1.3 var(--type); max-width: 720px; }
     #big .thread::before { content: ""; position: absolute; left: -1.5px; top: -12px; height: 12px; border-left: 1.5px solid var(--ink); }
     #big .thread p { position: relative; margin: 0 0 12px; display: flex; flex-direction: column; gap: 2px; }
     #big .thread p::before { content: ""; position: absolute; left: -18px; top: .7em; width: 10px; border-top: 1.5px solid var(--ink); }
     #big .thread .rw { font-size: 11px; opacity: .7; }
-    @media (max-width: 600px) { #big .thread { font-size: 14px; } }
+    #big .thread.earlier { margin: 0 0 28px; }
+    #big .thread [data-id] { cursor: pointer; border-radius: 4px; }
+    #big .thread [data-id]:hover .rt, #big .thread [data-id]:focus-visible .rt { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    #big .thread [data-id]:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
+    #big .thread .rimg { display: block; max-width: min(100%, 220px); max-height: 140px; object-fit: contain; object-position: left top; }
+    @media (max-width: 600px) { #big .thread { font-size: 16px; } }
   `;
   document.head.append(css);
 }
@@ -1694,20 +1579,26 @@ function drawAvatar(x, px, py, key, alpha = 1) {
   const a = avatar(key);
   x.save(); x.globalAlpha = alpha;
   const mode = document.documentElement.dataset.avatar, im = mode === "eva" ? evaOf(a) : null;
-  if (mode !== "eva" && mode !== "balls") {        // a cursor, the default: an arrow as a pointer is drawn, in its colour, a black edge
+  if (mode !== "eva") {                           // a cursor, the default (v20: no balls any more): an arrow as a pointer is drawn, in its colour, a black edge
     x.translate(Math.round(px), Math.round(py));
     x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 17); x.lineTo(4.2, 13); x.lineTo(7.2, 19.6); x.lineTo(9.8, 18.4); x.lineTo(6.9, 12); x.lineTo(12.4, 12); x.closePath();
     x.fillStyle = "#000"; x.fill(); x.lineWidth = 1; x.lineJoin = "round"; x.strokeStyle = "#fff"; x.stroke();   // v20: black arrows
     x.restore(); return;
   }
+  let face = null;
   if (im) {
-    const w = EVA_H * im.width / im.height, ang = evaTurn(a, px, py);
-    x.translate(px, py); x.rotate(ang); x.scale(evaFace(a), 1);   // facing its way (evaTurn)
+    const w = EVA_H * im.width / im.height, ang = evaTurn(a, px, py), f = evaFace(a);
+    x.translate(px, py); x.rotate(ang); x.scale(f, 1);   // facing its way (evaTurn)
     x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(im, -w / 2, -EVA_H / 2, w, EVA_H);
+    // v20: where its face is in eva.png (38, 72 of 152 × 419), turned and mirrored as it is: the face goes there
+    const lx = (EVA_FACE[0] - .5) * w * f, ly = (EVA_FACE[1] - .5) * EVA_H, c = Math.cos(ang), sn = Math.sin(ang);
+    face = [px + lx * c - ly * sn, py + lx * sn + ly * c];
   }
   else { x.fillStyle = a.col; x.beginPath(); x.arc(px, py, 9, 0, Math.PI * 2); x.fill(); }
   x.restore();
+  return face;
 }
+const EVA_FACE = [38 / 152, 72 / 419];
 // v20: each with its face above its arrow; one that has a note open is only its face, just outside that note's ball;
 // "…" beside it while it writes
 function drawOther(x, px, py, key, emoji, typing, open, alpha = 1) {
@@ -1717,8 +1608,11 @@ function drawOther(x, px, py, key, emoji, typing, open, alpha = 1) {
     const ex = open.sx + open.R * .72 + 3, ey = open.sy - open.R * .72 - 1;
     drawEmoji(x, emoji, ex, ey, 18); if (typing) drawDots(x, ex + 24, ey - 3, t);
   } else {
-    drawAvatar(x, px, py, key, alpha); x.globalAlpha = alpha;
-    drawEmoji(x, emoji, px - 3, py - 2, 15); if (typing) drawDots(x, px + 17, py - 5, t);
+    const face = drawAvatar(x, px, py, key, alpha); x.globalAlpha = alpha;
+    if (face) {                                  // an EVA: its face is the emoji
+      if (emoji) { x.font = `17px ${EMOJI_FONT}`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(emoji, face[0], face[1]); }
+      if (typing) drawDots(x, face[0] + 12, face[1] - 6, t);
+    } else { drawEmoji(x, emoji, px - 3, py - 2, 15); if (typing) drawDots(x, px + 17, py - 5, t); }
   }
   x.globalAlpha = 1;
 }
@@ -1817,7 +1711,7 @@ setInterval(loadSentences, 90 * 1000);         // people elsewhere keep venting
   const pCv = document.createElement("canvas");
   pCv.setAttribute("aria-hidden", "true");
   pCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none";
-  mCv.after(pCv);
+  bigEl.after(pCv);
   const pCtx = pCv.getContext("2d"), shown = new Map();   // id → { x, y } as drawn, eased towards where they are
   (async () => {
     const ph = await window.playhtmlReady; let pr = null;

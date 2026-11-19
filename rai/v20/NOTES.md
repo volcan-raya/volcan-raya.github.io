@@ -53,3 +53,6 @@ Never force-push, reset, stash or checkout files you don't own.
 - **The eruption** (volcano.js, `ER.mode` "v20", DEV volcano): waves for the top 8 notes, balls → lanes of words for
   their replies. It calls `V.soup.threads()` and `V.soup.ballLook()` **if they exist**, and falls back to notes.js
   (`AYA_NOTES`) and v18's ball colour until then, so B can add them whenever.
+- (B, 19/11/26, the user's request "from v20 on") **index.html touched by B**: the SOUP (look) and MORPH toggles removed,
+  `data-look` fixed to "rai" (aya's gradient gone, so field.js's `ayaLook()` is always false now), the avatar toggle
+  cursors ↔ evangelions only (no balls), its arrow black. The morph code is gone from soup.js.
