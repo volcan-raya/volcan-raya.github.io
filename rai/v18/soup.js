@@ -1502,10 +1502,18 @@ function evaTurn(a, px, py) {
     const bx = ux * lean, by = uy * lean - (1 - lean), target = Math.hypot(bx, by) > 1e-3 ? Math.atan2(bx, -by) : m.ang;
     m.av += (wrap(target - m.ang) * 38 - m.av * 7.5) * dt;              // the spring: stiffness and damping
     m.ang = wrap(m.ang + m.av * dt);
+    // it faces the way it goes: the drawing looks left, so going right it is mirrored. Upside down (its head turned
+    // past the side, going down), left and right swap, so it is mirrored back. Only for a clear sideways move (no
+    // flicker going straight up or down), and turning round as a figure does, through its edge, not at once
+    const c = Math.cos(m.ang); m.down = m.down ? c < .2 : c < -.35;    // head-down, with room either side (lying on its side it doesn't flicker)
+    if (Math.abs(m.vx) > 60) m.faceAim = (m.vx > 0 ? -1 : 1) * (m.down ? -1 : 1);
+    m.fv = (m.fv || 0) + (((m.faceAim ?? 1) - (m.face ?? 1)) * 60 - (m.fv || 0) * 11) * dt;
+    m.face = Math.max(-1, Math.min(1, (m.face ?? 1) + m.fv * dt));
   }
   m.x = px; m.y = py;
   return m.ang;
 }
+const evaFace = a => (a.m && a.m.face) ?? 1;
 const EVA_H = 90;                                // px tall on the screen, its middle at the pointer
 function drawAvatar(x, px, py, key, alpha = 1) {
   const a = avatar(key);
@@ -1513,7 +1521,7 @@ function drawAvatar(x, px, py, key, alpha = 1) {
   const im = document.documentElement.dataset.avatar === "eva" ? evaOf(a) : null;
   if (im) {
     const w = EVA_H * im.width / im.height, ang = evaTurn(a, px, py);
-    x.translate(px, py); x.rotate(ang);
+    x.translate(px, py); x.rotate(ang); x.scale(evaFace(a), 1);   // facing its way (evaTurn)
     x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(im, -w / 2, -EVA_H / 2, w, EVA_H);
   }
   else { x.fillStyle = a.col; x.beginPath(); x.arc(px, py, 9, 0, Math.PI * 2); x.fill(); }
