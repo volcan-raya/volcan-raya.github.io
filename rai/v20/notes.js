@@ -1,0 +1,950 @@
+// aya v02: the notes of this version, kept here, in its own folder: rai's own 44 (n01 … n44) and their replies
+// (r001 …), as they were in ../../rai/sentences.json on 15/11/26, without what others added since. A script and not a
+// .json, so the page reads it even opened from the disk. The pictures are in perref/, next to it.
+// soup.js shows ten of them by default (PICK), or all 44 (DEV, aya: "notes").
+window.AYA_NOTES = [
+{
+"id": "n01",
+"s": "my landlord has ignored the leak in my ceiling for three weeks",
+"t": 1790847210632,
+"i": 0.25,
+"medium": "image",
+"img": "perref/cff-sargans-perturbation.jpg"
+},
+{
+"id": "r001",
+"s": "ugh, that's infuriating",
+"t": 1790889189083,
+"re": "n01",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "n02",
+"s": "why does every printer know exactly when I'm in a hurry",
+"t": 1790901699584,
+"name": "tom",
+"trip": "x3pfa9",
+"i": 0.44,
+"medium": "image",
+"img": "perref/retard-anzeigetafel.jpg"
+},
+{
+"id": "n03",
+"s": "I said I'm fine eleven times today and I was not fine once",
+"t": 1790907114172,
+"i": 0.28,
+"medium": "text"
+},
+{
+"id": "n04",
+"s": "the 7:42 train was cancelled again and nobody even apologised",
+"t": 1790916279674,
+"i": 0.69,
+"medium": "voice"
+},
+{
+"id": "r010",
+"s": "hugs from a stranger",
+"t": 1790923481343,
+"re": "n04"
+},
+{
+"id": "r003",
+"s": "I understand you completely",
+"t": 1790936120230,
+"re": "n02",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r009",
+"s": "tell them. you're allowed",
+"t": 1790942912847,
+"re": "n04"
+},
+{
+"id": "r004",
+"s": "I'd be furious too",
+"t": 1790943525267,
+"re": "n02"
+},
+{
+"id": "r002",
+"s": "tell them. you're allowed",
+"t": 1790946921936,
+"re": "n01",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r008",
+"s": "nobody deserves that",
+"t": 1790952256634,
+"re": "n04",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "n05",
+"s": "group project, four people, one of them is doing all the work and it's me",
+"t": 1790963783042,
+"name": "noé",
+"trip": "e2vbt6",
+"i": 0.45,
+"medium": "image",
+"img": "perref/vols-annules.jpg"
+},
+{
+"id": "r005",
+"s": "same here, hang in there",
+"t": 1790966614657,
+"re": "n03",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "r007",
+"s": "ugh, I feel this in my bones",
+"t": 1790967267989,
+"re": "n03"
+},
+{
+"id": "r006",
+"s": "same. exactly this.",
+"t": 1790968889579,
+"re": "n03",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "r012",
+"s": "breathe. then throw something soft",
+"t": 1791007811783,
+"re": "n05"
+},
+{
+"id": "n06",
+"s": "my phone is at 3% and so am I",
+"t": 1791045888505,
+"name": "lu",
+"trip": "h8rmc4",
+"i": 0.54,
+"medium": "image",
+"img": "perref/kings-cross-tout-annule.jpg"
+},
+{
+"id": "r011",
+"s": "you're not alone in this",
+"t": 1791060854543,
+"re": "n05",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "n07",
+"s": "I hate Mondays, and Tuesdays too",
+"t": 1791061883206,
+"name": "ines",
+"trip": "q9dz3s",
+"i": 0.79,
+"medium": "image",
+"img": "perref/boite-oeufs-par-terre.jpg"
+},
+{
+"id": "r015",
+"s": "I hope tomorrow is lighter for you",
+"t": 1791063516627,
+"re": "n06"
+},
+{
+"id": "r013",
+"s": "I understand you completely",
+"t": 1791067622085,
+"re": "n05"
+},
+{
+"id": "r016",
+"s": "wishing you a quiet evening",
+"t": 1791093070573,
+"re": "n07",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "r019",
+"s": "tell them. you're allowed",
+"t": 1791104564593,
+"re": "n07",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "r018",
+"s": "you're not alone in this",
+"t": 1791107264404,
+"re": "n07"
+},
+{
+"id": "n08",
+"s": "someone ate my lunch from the office fridge. it had my NAME on it",
+"t": 1791114690232,
+"i": 0.94,
+"medium": "voice"
+},
+{
+"id": "r021",
+"s": "same here, hang in there",
+"t": 1791117863174,
+"re": "n08",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "n09",
+"s": "I've rewritten this email nine times and it still sounds passive aggressive",
+"t": 1791132570882,
+"i": 0.86,
+"medium": "voice"
+},
+{
+"id": "r017",
+"s": "same here, hang in there",
+"t": 1791133034230,
+"re": "n07"
+},
+{
+"id": "r020",
+"s": "wishing you a quiet evening",
+"t": 1791142019164,
+"re": "n08",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r014",
+"s": "breathe. then throw something soft",
+"t": 1791147015196,
+"re": "n06",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "r024",
+"s": "I read this three times, it's so true",
+"t": 1791165915470,
+"re": "n09",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "n10",
+"s": "I'm sick of being interrupted when I talk",
+"t": 1791171307059,
+"i": 0.76,
+"medium": "voice"
+},
+{
+"id": "r023",
+"s": "I literally just said this out loud",
+"t": 1791184954268,
+"re": "n09",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "n11",
+"s": "my neighbour practices the trumpet at 6am. the same four notes",
+"t": 1791209503747,
+"name": "noé",
+"trip": "e2vbt6",
+"i": 0.7,
+"medium": "text"
+},
+{
+"id": "r022",
+"s": "you're not alone in this",
+"t": 1791211841701,
+"re": "n08",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "n12",
+"s": "deadline tomorrow, motivation somewhere in another country",
+"t": 1791222649309,
+"i": 0.26,
+"medium": "image",
+"img": "perref/oeuf-ecrase.jpg"
+},
+{
+"id": "r027",
+"s": "you should send this to them. or not. but you should",
+"t": 1791237370134,
+"re": "n11",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r025",
+"s": "same. exactly this.",
+"t": 1791244810930,
+"re": "n11",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "n13",
+"s": "I miss my grandmother's kitchen so much it hurts",
+"t": 1791251293791,
+"name": "noé",
+"trip": "e2vbt6",
+"i": 0.23,
+"medium": "image",
+"img": "perref/tartine-par-terre.jpg"
+},
+{
+"id": "n14",
+"s": "rent went up again. my salary didn't get the memo",
+"t": 1791252073894,
+"name": "ines",
+"trip": "q9dz3s",
+"i": 0.78,
+"medium": "voice"
+},
+{
+"id": "n15",
+"s": "why is it always raining exactly when I leave the house",
+"t": 1791255903836,
+"i": 0.67,
+"medium": "text"
+},
+{
+"id": "n16",
+"s": "I hate that I still check if he's online",
+"t": 1791258003425,
+"name": "noé",
+"trip": "e2vbt6",
+"i": 0.55,
+"medium": "text"
+},
+{
+"id": "r029",
+"s": "it gets better. slowly, annoyingly, but it does",
+"t": 1791276040183,
+"re": "n16"
+},
+{
+"id": "r026",
+"s": "ok this one made me laugh and then cry",
+"t": 1791301503209,
+"re": "n11",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r028",
+"s": "me too, every single time",
+"t": 1791314134328,
+"re": "n15",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "n17",
+"s": "I'm fed up with pretending everything's fine",
+"t": 1791421831366,
+"name": "noé",
+"trip": "e2vbt6",
+"i": 0.31,
+"medium": "image",
+"img": "perref/velo-roue-volee.jpg"
+},
+{
+"id": "n18",
+"s": "my code works and I don't know why. that's worse than when it doesn't",
+"t": 1791446513391,
+"name": "noé",
+"trip": "e2vbt6",
+"i": 0.76
+},
+{
+"id": "r032",
+"s": "you're not alone in this",
+"t": 1791463770836,
+"re": "n17"
+},
+{
+"id": "r030",
+"s": "ugh, that's infuriating",
+"t": 1791487099882,
+"re": "n17"
+},
+{
+"id": "n19",
+"s": "the wifi drops every time I join a call. every. single. time.",
+"t": 1791491539874,
+"name": "lu",
+"trip": "h8rmc4",
+"i": 0.75,
+"medium": "image",
+"img": "perref/cereales-renversees.jpg"
+},
+{
+"id": "n20",
+"s": "I'm tired of being the friend who always remembers birthdays",
+"t": 1791496126364,
+"name": "ines",
+"trip": "q9dz3s",
+"i": 0.91,
+"medium": "voice"
+},
+{
+"id": "r031",
+"s": "I literally just said this out loud",
+"t": 1791507254832,
+"re": "n17"
+},
+{
+"id": "r034",
+"s": "I'd be furious too",
+"t": 1791508507869,
+"re": "n19",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "r033",
+"s": "I hope you got some sleep",
+"t": 1791523388674,
+"re": "n18",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "n21",
+"s": "they moved the meeting again, third time this week",
+"t": 1791640917075,
+"i": 0.56,
+"medium": "text"
+},
+{
+"id": "r036",
+"s": "I understand you completely",
+"t": 1791647911615,
+"re": "n21",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "r035",
+"s": "drink some water. then be angry again, properly",
+"t": 1791672496888,
+"re": "n21",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "n22",
+"s": "nobody tells you how lonely a new city is",
+"t": 1791686733232,
+"i": 0.4,
+"medium": "text"
+},
+{
+"id": "r038",
+"s": "sending you a very big sigh of solidarity",
+"t": 1791695063770,
+"re": "n22"
+},
+{
+"id": "n23",
+"s": "my back hurts from sitting in front of the screen all day",
+"t": 1791696617218,
+"i": 0.69,
+"medium": "voice"
+},
+{
+"id": "r042",
+"s": "I understand you completely",
+"t": 1791702003915,
+"re": "n23",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r041",
+"s": "same here, hang in there",
+"t": 1791704327028,
+"re": "n23"
+},
+{
+"id": "n24",
+"s": "I cleaned the whole flat and my flatmate didn't even notice",
+"t": 1791719282289,
+"i": 0.35,
+"medium": "text"
+},
+{
+"id": "n25",
+"s": "why do I only feel brave at 2am",
+"t": 1791732568446,
+"name": "mara",
+"trip": "k7wq2n",
+"i": 0.66,
+"medium": "text"
+},
+{
+"id": "n26",
+"s": "the bus driver saw me running and drove off anyway",
+"t": 1791745572806,
+"name": "mara",
+"trip": "k7wq2n",
+"i": 0.53,
+"medium": "voice"
+},
+{
+"id": "r037",
+"s": "me too, every single time",
+"t": 1791746419405,
+"re": "n21",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "r046",
+"s": "ugh, I feel this in my bones",
+"t": 1791751335254,
+"re": "n25",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "r040",
+"s": "that's exactly it",
+"t": 1791752080408,
+"re": "n23",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r039",
+"s": "I hope you got some sleep",
+"t": 1791754445132,
+"re": "n22",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r045",
+"s": "I'd be furious too",
+"t": 1791760979995,
+"re": "n24",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r050",
+"s": "me too, every single time",
+"t": 1791763155479,
+"re": "n26",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "r043",
+"s": "you should send this to them. or not. but you should",
+"t": 1791797481484,
+"re": "n24",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r044",
+"s": "tell them. you're allowed",
+"t": 1791805449233,
+"re": "n24",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r047",
+"s": "you're not alone in this",
+"t": 1791810057131,
+"re": "n25",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "r049",
+"s": "I'd be furious too",
+"t": 1791812007693,
+"re": "n26"
+},
+{
+"id": "n27",
+"s": "I want to scream into a pillow but my pillow is in the wash",
+"t": 1791815333071,
+"name": "tom",
+"trip": "x3pfa9",
+"i": 0.85,
+"medium": "voice"
+},
+{
+"id": "r048",
+"s": "same here, hang in there",
+"t": 1791816782570,
+"re": "n25",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "r051",
+"s": "this happened to me last week too",
+"t": 1791834366437,
+"re": "n27",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "n28",
+"s": "my thesis supervisor answered my email with one word: 'no'",
+"t": 1791874179445,
+"i": 0.94,
+"medium": "voice"
+},
+{
+"id": "r052",
+"s": "ugh, I feel this in my bones",
+"t": 1791882335112,
+"re": "n27",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r053",
+"s": "ugh, that's infuriating",
+"t": 1791895538382,
+"re": "n27",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r054",
+"s": "the volcano hears you",
+"t": 1791921040996,
+"re": "n28",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "n29",
+"s": "I keep apologising for things that aren't my fault",
+"t": 1791928030116,
+"name": "lu",
+"trip": "h8rmc4",
+"i": 0.66,
+"medium": "voice"
+},
+{
+"id": "n30",
+"s": "the upstairs neighbour does DIY every Sunday morning",
+"t": 1791961739894,
+"name": "mara",
+"trip": "k7wq2n",
+"i": 0.63,
+"medium": "text"
+},
+{
+"id": "r056",
+"s": "ok this one made me laugh and then cry",
+"t": 1791983673121,
+"re": "n29"
+},
+{
+"id": "r058",
+"s": "the volcano hears you",
+"t": 1792002745907,
+"re": "n30",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r057",
+"s": "ugh, I feel this in my bones",
+"t": 1792025212004,
+"re": "n29",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "r055",
+"s": "honestly, valid",
+"t": 1792030769725,
+"re": "n29",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "n31",
+"s": "I'm so done with people who reply 'k'",
+"t": 1792058348854,
+"name": "ines",
+"trip": "q9dz3s",
+"i": 0.47,
+"medium": "text"
+},
+{
+"id": "r059",
+"s": "it gets better. slowly, annoyingly, but it does",
+"t": 1792088742941,
+"re": "n31"
+},
+{
+"id": "r060",
+"s": "breathe. then throw something soft",
+"t": 1792130496902,
+"re": "n31",
+"name": "tom",
+"trip": "x3pfa9"
+},
+{
+"id": "n32",
+"s": "everyone at the party had a plus one except me",
+"t": 1792144645194,
+"i": 0.3,
+"medium": "voice"
+},
+{
+"id": "r061",
+"s": "you're not alone in this",
+"t": 1792182587805,
+"re": "n32",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "n33",
+"s": "my plants are dying and honestly same",
+"t": 1792217977493,
+"i": 0.21,
+"medium": "text"
+},
+{
+"id": "n34",
+"s": "I have forty tabs open and none of them is the one I need",
+"t": 1792239805243,
+"i": 0.23,
+"medium": "voice"
+},
+{
+"id": "n35",
+"s": "I hate small talk. I hate it. I'm very good at it and I hate it",
+"t": 1792241776802,
+"name": "lu",
+"trip": "h8rmc4",
+"i": 0.28,
+"medium": "text"
+},
+{
+"id": "r063",
+"s": "I'd be furious too",
+"t": 1792244013216,
+"re": "n33"
+},
+{
+"id": "n36",
+"s": "the coffee machine broke on exam week. this is a war crime",
+"t": 1792266654988,
+"name": "noé",
+"trip": "e2vbt6",
+"i": 0.86,
+"medium": "voice"
+},
+{
+"id": "r066",
+"s": "hugs from a stranger",
+"t": 1792275193314,
+"re": "n35",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r062",
+"s": "you're not alone in this",
+"t": 1792283673649,
+"re": "n33",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "n37",
+"s": "I'm angry and I don't even know at what",
+"t": 1792283686657,
+"i": 0.68,
+"medium": "text"
+},
+{
+"id": "r064",
+"s": "honestly, valid",
+"t": 1792288914030,
+"re": "n34"
+},
+{
+"id": "r067",
+"s": "I hope tomorrow is lighter for you",
+"t": 1792328793979,
+"re": "n36",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r065",
+"s": "that's not fair at all",
+"t": 1792330611549,
+"re": "n35"
+},
+{
+"id": "n38",
+"s": "stop telling me to just relax",
+"t": 1792369022170,
+"i": 0.5,
+"medium": "voice"
+},
+{
+"id": "n39",
+"s": "my boss texts me at eleven at night like it's normal",
+"t": 1792385169714,
+"name": "lu",
+"trip": "h8rmc4",
+"i": 0.38,
+"medium": "text"
+},
+{
+"id": "r068",
+"s": "wishing you a quiet evening",
+"t": 1792385551275,
+"re": "n38",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r071",
+"s": "honestly, valid",
+"t": 1792385616152,
+"re": "n38"
+},
+{
+"id": "r073",
+"s": "same. exactly this.",
+"t": 1792405392865,
+"re": "n39"
+},
+{
+"id": "n40",
+"s": "four years in this job and they still spell my name wrong",
+"t": 1792418555724,
+"name": "lu",
+"trip": "h8rmc4",
+"i": 0.37,
+"medium": "voice"
+},
+{
+"id": "r070",
+"s": "breathe. then throw something soft",
+"t": 1792419965358,
+"re": "n38",
+"name": "lu",
+"trip": "h8rmc4"
+},
+{
+"id": "r069",
+"s": "I literally just said this out loud",
+"t": 1792457086277,
+"re": "n38",
+"name": "ines",
+"trip": "q9dz3s"
+},
+{
+"id": "r074",
+"s": "lol same",
+"t": 1792458433342,
+"re": "n39",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "r072",
+"s": "the same thing at my place, it's like a curse",
+"t": 1792472346034,
+"re": "n39"
+},
+{
+"id": "n41",
+"s": "I can't sleep because I'm worried about not sleeping",
+"t": 1792478492974,
+"i": 0.18,
+"medium": "text"
+},
+{
+"id": "r076",
+"s": "breathe. then throw something soft",
+"t": 1792495678201,
+"re": "n41"
+},
+{
+"id": "n42",
+"s": "my mum calls me every day to ask if I've eaten. I haven't",
+"t": 1792520864702,
+"name": "mara",
+"trip": "k7wq2n",
+"i": 0.89,
+"medium": "voice"
+},
+{
+"id": "r077",
+"s": "ok this one made me laugh and then cry",
+"t": 1792542449667,
+"re": "n42",
+"name": "mara",
+"trip": "k7wq2n"
+},
+{
+"id": "n43",
+"s": "why is adulthood mostly paperwork",
+"t": 1792550508511,
+"i": 0.41,
+"medium": "text"
+},
+{
+"id": "r075",
+"s": "ok this one made me laugh and then cry",
+"t": 1792563761090,
+"re": "n41",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "r078",
+"s": "I read this three times, it's so true",
+"t": 1792599501423,
+"re": "n42",
+"name": "noé",
+"trip": "e2vbt6"
+},
+{
+"id": "n44",
+"s": "I just want one week where nothing breaks",
+"t": 1792601297972,
+"i": 0.17,
+"medium": "text"
+},
+{
+"id": "r079",
+"s": "honestly, valid",
+"t": 1792604867628,
+"re": "n43",
+"name": "lu",
+"trip": "h8rmc4"
+}
+];
