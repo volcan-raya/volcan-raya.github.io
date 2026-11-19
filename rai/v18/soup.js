@@ -1454,21 +1454,49 @@ function updateSims(dt, t) {
     }
   }
 }
-function drawSims(x) {
-  for (const m of sims) {
-    if (m.a <= 0) continue;
-    x.save(); x.globalAlpha = m.a; x.translate(Math.round(m.x), Math.round(m.y));
-    const s = m.mode === "drag" ? .9 : 1; x.scale(s, s);
-    // an arrow, as a pointer is drawn, white with a black edge, so it reads on the orange and on the balls
-    x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 17); x.lineTo(4.2, 13); x.lineTo(7.2, 19.6); x.lineTo(9.8, 18.4); x.lineTo(6.9, 12); x.lineTo(12.4, 12); x.closePath();
-    x.fillStyle = "#fff"; x.fill(); x.lineWidth = 1.3; x.lineJoin = "round"; x.strokeStyle = "#000"; x.stroke();
-    // its name, small, beside it
-    x.font = `400 11px "DM Mono", ui-monospace, Menlo, monospace`; x.textBaseline = "middle"; x.textAlign = "left";
-    const w = x.measureText(m.name).width;
-    x.fillStyle = "#000"; x.fillRect(14, 18, w + 10, 17);
-    x.fillStyle = "#fff"; x.fillText(m.name, 19, 26.5);
-    x.restore();
-  }
+// v18: how the others are seen, the simulated ones and the real ones alike: a ball, or an evangelion (eva.png, aya's
+// pixel EVA-01, its purple turned to another hue). Which one: the toggle under the soup's (index.html, html[data-avatar]).
+// Each other gets a colour at random, in this browser: two people see the room in different colours
+const AV_COLS = ["#2f6bff", "#14c46e", "#ff4fb3", "#8a5cff", "#12c6d8", "#a6e01c", "#ffd21f", "#c04dff", "#00a3ff", "#ff7ad9"];
+const avOf = new Map();                          // key → { col, hue, img }
+const evaImg = new Image(); evaImg.src = "eva.png";
+function avatar(key) {
+  let a = avOf.get(key);
+  if (!a) { a = { col: AV_COLS[Math.floor(Math.random() * AV_COLS.length)], hue: Math.random() * 360, img: null }; avOf.set(key, a); }
+  return a;
+}
+// the EVA in another hue: its pixels turned round the colour wheel once, kept
+function evaOf(a) {
+  if (a.img || !evaImg.complete || !evaImg.naturalWidth) return a.img;
+  const c = document.createElement("canvas"); c.width = evaImg.naturalWidth; c.height = evaImg.naturalHeight;
+  const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(evaImg, 0, 0);
+  try {
+    const d = x.getImageData(0, 0, c.width, c.height), p = d.data, rot = a.hue / 360;
+    for (let k = 0; k < p.length; k += 4) {
+      if (!p[k + 3]) continue;
+      const r = p[k] / 255, g = p[k + 1] / 255, b = p[k + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+      if (mx === mn) continue;                    // greys stay grey
+      const dd = mx - mn, sat = l > .5 ? dd / (2 - mx - mn) : dd / (mx + mn);
+      let h = mx === r ? (g - b) / dd + (g < b ? 6 : 0) : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4; h = (h / 6 + rot) % 1;
+      const q = l < .5 ? l * (1 + sat) : l + sat - l * sat, pp = 2 * l - q;
+      const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? pp + (q - pp) * 6 * t : t < .5 ? q : t < 2 / 3 ? pp + (q - pp) * (2 / 3 - t) * 6 : pp; };
+      p[k] = f(h + 1 / 3) * 255; p[k + 1] = f(h) * 255; p[k + 2] = f(h - 1 / 3) * 255;
+    }
+    x.putImageData(d, 0, 0);
+  } catch {}
+  return (a.img = c);
+}
+const EVA_H = 90;                                // px tall on the screen, its middle at the pointer
+function drawAvatar(x, px, py, key, alpha = 1) {
+  const a = avatar(key);
+  x.save(); x.globalAlpha = alpha;
+  const im = document.documentElement.dataset.avatar === "eva" ? evaOf(a) : null;
+  if (im) { const w = EVA_H * im.width / im.height; x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(im, px - w / 2, py - EVA_H / 2, w, EVA_H); }
+  else { x.fillStyle = a.col; x.beginPath(); x.arc(px, py, 9, 0, Math.PI * 2); x.fill(); }
+  x.restore();
+}
+function drawSims(x) {                           // v18: no arrow and no name any more: a ball (or an evangelion), as a real other
+  for (const m of sims) if (m.a > 0) drawAvatar(x, m.x, m.y, "sim" + m.i, m.a);
   x.globalAlpha = 1;
 }
 V.dev.tab("aya", `
@@ -1544,12 +1572,10 @@ setInterval(loadSentences, 90 * 1000);         // people elsewhere keep venting
 
 // ================= v18: the others' pointers, as balls =================
 // Everyone in the same playhtml room (index.html) shares where their pointer is: in the soup as a place in the soup (so
-// it lands on the same balls whatever the screen), outside as a share of the screen. Each other person is a ball of a
-// colour of their own, none of the page's (no orange, red, peach or black): blues, greens, pinks… Yours stays the
+// it lands on the same balls whatever the screen), outside as a share of the screen. Each other person is drawn as the
+// simulated ones are (drawAvatar: a ball or an evangelion, its colour chosen at random in this browser). Yours stays the
 // system's arrow. A pointer that leaves the window, or a person who leaves, is gone
 {
-  const COLS = ["#2f6bff", "#14c46e", "#ff4fb3", "#8a5cff", "#12c6d8", "#a6e01c", "#ffd21f", "#c04dff"];
-  const colOf = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLS[h % COLS.length]; };
   const pCv = document.createElement("canvas");
   pCv.setAttribute("aria-hidden", "true");
   pCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none";
@@ -1589,7 +1615,7 @@ setInterval(loadSentences, 90 * 1000);         // people elsewhere keep venting
         seen.add(id);
         const s = shown.get(id) || { x: tx, y: ty };
         s.x += (tx - s.x) * .25; s.y += (ty - s.y) * .25; shown.set(id, s);
-        x.fillStyle = colOf(id); x.beginPath(); x.arc(s.x, s.y, 9, 0, Math.PI * 2); x.fill();
+        drawAvatar(x, s.x, s.y, id);
       }
       for (const id of shown.keys()) if (!seen.has(id)) shown.delete(id);
       requestAnimationFrame(frame);
