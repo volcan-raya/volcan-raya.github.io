@@ -407,7 +407,10 @@ function seeded(a) { return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(
 let birth = null;
 function placeHome(b) {                        // the same place on every visit, seeded by the note's id
   const r = seeded(hashStr(b.s.id));
-  if (FLAT) { b.hx = (r() * 2 - 1) * .92; b.hy = lerp(-.95, .55, r()); b.hz = 0; return; }   // over the whole screen (camera.js: -1 … 1 each way), clear of the black at the top
+  if (FLAT) {                                    // v20: most round the middle, about one in five further out, none on the borders
+    const far = r() < .2, u = r() * 2 - 1, v = r();
+    b.hx = u * (far ? .82 : .58); b.hy = far ? lerp(-.72, .55, v) : lerp(-.5, .38, v); b.hz = 0; return;
+  }   // over the whole screen (camera.js: -1 … 1 each way), clear of the black at the top
   const z = lerp(-CH.Rc * .92, CH.Rc * .9, r());
   // spread as wide as the view is from where you start, so they fill it at every depth, but always inside the chamber
   const hw = Math.min(.3 + Math.abs(z - CH.z0) * .62, Math.max(.3, Math.sqrt(Math.max(0, CH.Rc ** 2 - z * z)) * .9));
@@ -444,7 +447,7 @@ function setCount(b) {
 }
 // where you dropped a badge in the soup (this browser only): its home from then on
 // (1.03 keeps its own since the soup is seen from above: the old places were for a soup seen from the side)
-const PLACED_KEY = FLAT ? "volcano-v09-placed" : "volcano-v13-placed-top";
+const PLACED_KEY = VN >= 20 ? KEY + "placed" : FLAT ? "volcano-v09-placed" : "volcano-v13-placed-top";   // v20: its own (the older flat pages had parked balls on the borders)
 let placed = store.get(PLACED_KEY, {}) || {};
 function syncBadges(freshId) {
   const byId = new Map(sentences.map(s => [s.id, s]));
@@ -661,12 +664,18 @@ function drawInside(x) {
   }
   if (layer.width !== marks.width || layer.height !== marks.height) { layer.width = marks.width; layer.height = marks.height; }
   lctx.setTransform(MDPR, 0, 0, MDPR, 0, 0); lctx.clearRect(0, 0, W, H);
-  drawLinks(lctx);
-  for (const b of vis) if (b !== picked && b !== hovered) drawBall(lctx, b, now, dt, TYPE);
+  // v20: the whole constellation of the opened conversation (the note and its replies, their links) stays sharp
+  const root = picked && (picked.parent || picked), con = new Set(root ? [root, ...[...badges.values()].filter(c => c.parent === root)] : []);
+  const all = vis;
+  vis = all.filter(b => !con.has(b)); drawLinks(lctx);
+  for (const b of vis) if (b !== hovered) drawBall(lctx, b, now, dt, TYPE);
+  vis = all.filter(b => con.has(b)); drawLinks(x);
+  for (const b of vis) if (b !== picked) drawBall(x, b, now, dt, TYPE);
+  vis = all;
   layer.style.display = "block";
   layer.style.filter = reduce.matches || !blurK ? "none" : `blur(${(blurK * flatE).toFixed(1)}px)`;
   if (hovered && hovered !== picked && vis.includes(hovered)) { drawBall(x, hovered, now, dt, TYPE); peek = drawPeek(x, hovered, W, TYPE); }
-  if (picked && vis.includes(picked)) {           // the opened message's ball: filled, a full intense red, no ring
+  if (picked && vis.includes(picked)) {           // the opened message's ball: filled, a full intense red, no ring; the rest of its constellation as it is
     x.globalAlpha = 1; x.fillStyle = "rgb(255, 0, 0)";
     x.beginPath(); x.arc(picked.sx, picked.sy, picked.R, 0, Math.PI * 2); x.fill();
   }
@@ -703,6 +712,7 @@ function drop() {
   const g = grab; grab = null; if (!g) return;
   const b = g.b; b.hold = hovered === b || b.focus;
   if (!g.on) return;
+  b.byMe = true;                                // moved by you: where it stops is kept
   // let go while moving, it is thrown: it goes on with the hand's speed (at most THROW px a second on the screen), slowing
   // down; a reply is then pulled back to its orbit, a note stays where it stops (settle). Held still first, it is dropped
   const sp = Math.hypot(...g.sv), moving = MOVES && !reduce.matches && performance.now() - g.t < 90 && sp > 80;
@@ -714,8 +724,10 @@ function drop() {
 const THROW = 1400;   // a throw goes on about a third of this, in px
 function settle(b) {                          // where it is becomes its home, now and on the next visits
   b.coast = false;
+  if (FLAT && VN >= 20) { b.x = clamp(b.x, -.85, .85); b.y = clamp(b.y, -.75, .6); }   // v20: never left on a border
   const [dx, dy, dz] = driftOf(b, simT, reduce.matches ? .5 : 1);
-  placed[b.s.id] = [b.x, b.y, b.z]; store.set(PLACED_KEY, placed);   // its home on the next visits
+  if (b.byMe || VN < 20) { placed[b.s.id] = [b.x, b.y, b.z]; store.set(PLACED_KEY, placed); }   // its home on the next visits: only where you put it (v20), not where the others or a bump left it
+  b.byMe = false;
   b.hx = b.x - dx; b.hy = b.y - dy; b.hz = b.z - dz;   // and now, so it drifts on from where it was dropped
 }
 function pointerDown(px, py) {
@@ -1273,18 +1285,18 @@ setInterval(() => {
   const css = document.createElement("style");
   css.textContent = `
     /* rai v18: the words in the soup's own ink again (aya v14 lightened them for her dark scene) */
-    #big .thread { position: relative; margin: 28px 0 8px; padding: 4px 0 0 18px; border-left: 1.5px solid var(--ink); color: var(--ink);
-      font: 400 20px/1.3 var(--type); max-width: 720px; }
-    #big .thread::before { content: ""; position: absolute; left: -1.5px; top: -12px; height: 12px; border-left: 1.5px solid var(--ink); }
-    #big .thread p { position: relative; margin: 0 0 12px; display: flex; flex-direction: column; gap: 2px; }
-    #big .thread p::before { content: ""; position: absolute; left: -18px; top: .7em; width: 10px; border-top: 1.5px solid var(--ink); }
-    #big .thread .rw { font-size: 11px; opacity: .7; }
-    #big .thread.earlier { margin: 0 0 28px; }
+    /* v20, as in v19: the rest of the conversation as smaller quotations, a third of the large one's size, each signed;
+       no lines. Before it above, after it under */
+    #big .thread { position: relative; margin: 2.2em 0 .5em; padding: 0; color: var(--ink); font: 500 max(17px, calc(var(--fs) * .32))/1.15 var(--type);
+      letter-spacing: -.01em; max-width: 52em; display: flex; flex-direction: column; gap: 1.1em; }
+    #big .thread.earlier { margin: 0 0 2.2em; }
+    #big .thread p { margin: 0; display: flex; flex-direction: column; gap: .35em; }
+    #big .thread .rw { font-size: max(11px, calc(var(--sig) * .85)); font-weight: 500; letter-spacing: 0; opacity: .8; }
     #big .thread [data-id] { cursor: pointer; border-radius: 4px; }
-    #big .thread [data-id]:hover .rt, #big .thread [data-id]:focus-visible .rt { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    #big .thread [data-id]:hover .rt, #big .thread [data-id]:focus-visible .rt { text-decoration: underline; text-underline-offset: .12em; text-decoration-thickness: 1px; }
     #big .thread [data-id]:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
     #big .thread .rimg { display: block; max-width: min(100%, 220px); max-height: 140px; object-fit: contain; object-position: left top; }
-    @media (max-width: 600px) { #big .thread { font-size: 16px; } }
+    @media (max-width: 600px) { #big .thread { font-size: 17px; } }
   `;
   document.head.append(css);
 }
