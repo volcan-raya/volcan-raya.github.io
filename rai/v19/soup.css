@@ -55,36 +55,48 @@
 .pill.go { background: var(--red); color: #fff; }
 .pill:disabled { opacity: .4; cursor: default; }
 
-/* a note opened: only the note, huge, in the scene: over the field, under the badges, never taking the pointer.
-   Its box is set in DEV (soup.js): --fs --lh, and the margins in px from the edges, --side and --tb. The text starts
-   at the box's top left; a picture and a voice sit in its middle, the screen's */
-#big { position: absolute; inset: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .6s ease; }
+/* a note opened (v19): the soup flattens behind it (soup.js) and what is left is the quotation, in one column in the box
+   set in DEV (--side, --tb): a picture, or a voice's wave and its play button; the words, at --fs or shrunk to fit with
+   all the rest (--wfs, soup.js); "— who, when"; then the replies, smaller quotations, each signed. Over the balls (they
+   are far back now), never taking the pointer but for the play button: a click on it anywhere else closes it */
+#big { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .55s ease; }
 #big.on { opacity: 1; }
-#big .box { position: absolute; top: var(--tb); bottom: var(--tb); left: var(--side); right: var(--side); }
+#big .box { position: absolute; top: var(--tb); bottom: var(--tb); left: var(--side); right: var(--side); display: flex; flex-direction: column; justify-content: center; }
 #big.outlined .box { outline: 1px dashed #C16CFF; outline-offset: -1px; }
+#big .q { display: flex; flex-direction: column; align-items: flex-start; min-height: 0; transform: translateY(12px); transition: transform .6s cubic-bezier(.2, .7, .2, 1); }
+#big.on .q { transform: none; }
+@media (prefers-reduced-motion: reduce) { #big .q, #big.on .q { transform: none; transition: none; } }
 /* the words: by default the sans, 500, as written, in DEV's ink (.sans, set by soup.js). DEV (soup, "messages") can
-   switch them to Mebar Display (mebar.css), the title's type: in capitals, the only letters it draws, black whatever
-   DEV's ink; what it doesn't draw falls back to the page's type, light (300; Mebar has only its one weight) */
-#big .words { position: absolute; left: 0; right: 0; top: 0; margin: 0; text-transform: uppercase;
+   switch them to Mebar Display (mebar.css): in capitals, black whatever DEV's ink; what it doesn't draw in the light sans */
+#big .words { margin: 0; max-width: 100%; text-transform: uppercase;
   color: #000; font: 300 var(--fs)/var(--lh) "Mebar Display", var(--type); letter-spacing: -.035em; overflow-wrap: normal; hyphens: none; white-space: normal; }
-/* Mebar's own letters thickened by an outline in their ink, under the fill (--mw, DEV soup "mebar weight") */
 #big .words .m { -webkit-text-stroke: var(--mw, 0) currentColor; paint-order: stroke fill; }
 #big.sans .words .m { -webkit-text-stroke: 0; }
 #big.sans .words { text-transform: none; color: var(--ink); font-weight: 500; font-family: var(--type); }
-#big .pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: var(--fit); object-position: 50% 50%; display: none; }
-#big .viz { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
-#big[data-kind="image"] .pic, #big[data-kind="voice"] .viz { display: block; }
+#big .pic { display: none; max-width: 100%; max-height: calc((100vh - 2 * var(--tb)) * .62); object-fit: var(--fit); }
+#big .voice { display: none; align-items: center; gap: 18px; width: 100%; }
+#big .viz { flex: 1; min-width: 0; height: min(calc((100vh - 2 * var(--tb)) * var(--wh) / 50), 34vh); }
+#big .dur { color: var(--ink); font: 400 var(--sig)/1 var(--type); font-variant-numeric: tabular-nums; opacity: .75; }
+#big .play { flex: none; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: var(--ink); color: #FF4500; display: grid; place-items: center; cursor: pointer; pointer-events: auto; }
+#big .play svg { width: 24px; height: 24px; fill: currentColor; }
+#big .play .bars, #big .play.on .tri { display: none; }
+#big .play.on .bars { display: inline; }
+#big .play:focus-visible { outline: 1.5px solid var(--ink); outline-offset: 3px; }
+#big[data-kind="image"] .pic { display: block; }
+#big[data-kind="voice"] .voice { display: flex; }
 #big[data-kind="image"] .words, #big[data-kind="voice"]:not(.vwords) .words { display: none; }
-/* who wrote it, credited as a quote or an epigraph is (Chicago, APA: an em dash, then the author): — name, day, hour,
-   the larger unit first, all in one weight. It sits just under what was written or sent, lined up with its left: the
-   text's last line, or the picture's bottom edge as it is drawn in the box (--sx, --sy, soup.js) */
-#big .sig { position: absolute; left: var(--sx, 0px); top: var(--sy, 0px); transform: translateY(.9em); margin: 0;
-  display: flex; align-items: baseline; gap: .4em; color: var(--ink); font: 400 var(--sig)/1.2 var(--type); white-space: pre; }
-#big .sig { font-weight: 500; opacity: .8; }     /* who and when alike: one weight, between the bold and the light they were */
+#big[data-kind="voice"].vwords .words { margin-top: .4em; }
+/* who said it, credited as a quote is: — who, day, hour, in one weight, just under what was written or sent */
+#big .sig { margin: .7em 0 0; display: flex; align-items: baseline; gap: .4em; color: var(--ink); font: 500 var(--sig)/1.2 var(--type); white-space: pre; opacity: .8; }
 #big .sig .who, #big .sig .when { font-weight: inherit; }
 #big .sig .when { font-variant-numeric: tabular-nums; }
-#big .sig .who::before { content: "— "; }       /* as a quote is credited: — name, day, hour */
+#big .sig .who::before { content: "— "; }
 #big .sig.dated .who::after { content: ","; }
+/* the replies: smaller quotations under it, a third of the words' size (never under 15 px), each with who said it */
+#big .replies { list-style: none; margin: 2.2em 0 0; padding: 0; display: flex; flex-direction: column; gap: 1.1em; max-width: min(100%, 52em); }
+#big .replies li { margin: 0; }
+#big .rw { margin: 0; color: var(--ink); font: 500 max(15px, calc(var(--wfs, 4vw) * .3))/1.15 var(--type); letter-spacing: -.01em; }
+#big .replies .sig { margin-top: .35em; font-size: max(11px, calc(var(--sig) * .85)); }
 
 /* the soup's rows in DEV */
 .meter { height: 4px; background: rgba(255, 255, 255, .12); }

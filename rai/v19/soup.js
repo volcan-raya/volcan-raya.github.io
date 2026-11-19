@@ -4,6 +4,12 @@
 // Shared: one soup for 1.03 (v13) and 3.00 (v14), so a change here reaches both. The page says which it is on the
 // script tag: data-ver (its own settings in this browser, volcano-<ver>-…) and data-flat (3.00: no depth, the balls on
 // the screen, the black at the top a plain gradient drawn by its field.js). Everything else is the same.
+// v19 (1.05), after v17: the balls hold what is inside them, still, as a small white sign (notification.js), larger,
+// the number of messages in a badge on their edge; no breathing, the cue off by default. Under the pointer a thin ring,
+// its links forward, the others back, and who said it beside it; on a phone the first tap shows that, the second opens.
+// Opened, the soup flattens behind (the balls stop, lose their depth, blur and fade to ~15%, the links go) and what is
+// left is the quotation: the words, "— who, when", the replies under it as smaller quotations, live. Who said it: the
+// name, or "unnamed " + the device (intro.js, V.who), or "anonymous"
 (() => {
 "use strict";
 const ME = document.currentScript, FLAT = ME.hasAttribute("data-flat"), KEY = `volcano-${ME.dataset.ver || "v13"}-`;
@@ -29,6 +35,14 @@ V.dev.tab("soup", `
     <span class="k">messages</span>
     <button class="t" type="button" data-bigfont="sans">sans</button>
     <button class="t" type="button" data-bigfont="mebar">mebar</button>
+  </div>
+  <label class="full"><span class="k">ball size </span><span id="ballSizeV"></span><input type="range" id="ballSize" min="60" max="300" step="5"></label>
+  <label class="full"><span class="k">sign: padding </span><span id="signPadV"></span><input type="range" id="signPad" min="0" max="45" step="1"></label>
+  <label class="full"><span class="k">sign: line and bar thickness </span><span id="signLwV"></span><input type="range" id="signLw" min="4" max="30" step="1"></label>
+  <div class="full seg" role="group" aria-label="The number of messages">
+    <span class="k">count</span>
+    <button class="t" type="button" data-badge="on">badge</button>
+    <button class="t" type="button" data-badge="off">none</button>
   </div>
   <label class="full"><span class="k">cue: a ball plays by itself, on average every </span><span id="cueV"></span><input type="range" id="cueEvery" min="0" max="10" step=".5"></label>
   <label class="full"><span class="k">cue: at most at once </span><span id="cueMaxV"></span><input type="range" id="cueMax" min="1" max="6" step="1"></label>
@@ -94,7 +108,9 @@ const marks = V.marks, notesEl = $("notes");
 // an opened note: one layer in the scene, over the field and under the badges, that never takes the pointer
 const bigEl = document.createElement("div");
 bigEl.id = "big"; bigEl.setAttribute("aria-live", "polite");
-bigEl.innerHTML = '<canvas class="viz" aria-hidden="true"></canvas><div class="box"><img class="pic" alt=""><p class="words"></p><p class="sig"><b class="who"></b><span class="when"></span></p></div>';
+bigEl.innerHTML = '<div class="box"><div class="q"><img class="pic" alt=""><div class="voice"><button class="play" type="button" aria-label="play">'
+  + '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="tri" d="M8 5.5v13l11-6.5z"/><path class="bars" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>'
+  + '<canvas class="viz" aria-hidden="true"></canvas><span class="dur"></span></div><p class="words"></p><p class="sig"><b class="who"></b><span class="when"></span></p><ol class="replies" aria-label="replies"></ol></div></div>';
 $("field").after(bigEl);
 let dev = false;
 addEventListener("cabz:dev", e => { dev = !!e.detail.on; if (typeof applyBig === "function") applyBig(); });   // the "dev" square in the site bar (nav.js)
@@ -118,9 +134,14 @@ addEventListener("cabz:dev", e => { dev = !!e.detail.on; if (typeof applyBig ===
 
 // ================= identity: a name, or anonymous. No code and no language to choose (from 1.00 on): the notes are
 // in English, and so is what the microphone hears =================
-let me = { name: "", trip: "" };
-try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name) me = { name: String(s.name).slice(0, 20), trip: "" }; } catch {}
-const signature = name => name || "anonymous";
+const readMe = () => { try { const s = JSON.parse(localStorage.getItem("volcano-id") || "null"); if (s && s.name) return { name: String(s.name).slice(0, 20), trip: "" }; } catch {} return { name: "", trip: "" }; };
+let me = readMe();
+// who said it, everywhere: the name; or, unnamed, the device it was written on (intro.js: V.who.device, sent with the
+// note as "anon"); or "anonymous", the older notes that have neither. Without V.who (no intro.js), as in v17
+const sigOf = s => s.name || (s.anon ? "unnamed " + s.anon : "anonymous");
+const deviceWord = () => V.who && typeof V.who.device === "string" && V.who.device ? V.who.device.slice(0, 20) : "";
+const signature = name => name || (deviceWord() ? "unnamed " + deviceWord() : "anonymous");
+document.addEventListener("volcano:who", () => { me = readMe(); showWho(); });
 const idPanel = $("idPanel"), nm = $("nm");
 const ICON_YOU = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5c1.2-3.6 4-5.4 7-5.4s5.8 1.8 7 5.4"/></svg>';
 function showWho() {
@@ -168,6 +189,7 @@ $("keep").form.addEventListener("submit", e => {
   me = { name: n, trip: "" };
   try { if (n) localStorage.setItem("volcano-id", JSON.stringify(me)); else localStorage.removeItem("volcano-id"); } catch {}
   closeId(); showWho();
+  document.dispatchEvent(new CustomEvent("volcano:who"));   // intro.js keeps V.who in step
 });
 // the language speech is heard in: English, as the notes are
 const lang = "en-US";
@@ -190,10 +212,11 @@ async function loadSentences() {
   const seen = new Set(), out = [];
   const add = o => {
     if (!o || typeof o.s !== "string" || (!o.s.trim() && !o.img) || seen.has(String(o.id))) return;
-    if (o.medium === "voice") return;          // no voices in 1.02: they were spoken by a made-up voice, not recorded
+    // (v19: the voices are back, as a sound wave in their ball and opened; 1.02 to 1.04 left them out)
     seen.add(String(o.id));
     out.push({ id: String(o.id), s: o.s.trim().slice(0, 240), t: Number(o.t) || 0,
-      name: typeof o.name === "string" ? o.name.slice(0, 20) : "", trip: typeof o.trip === "string" ? o.trip.slice(0, 8) : "",
+      name: typeof o.name === "string" ? o.name.slice(0, 20) : "", anon: typeof o.anon === "string" ? o.anon.slice(0, 20) : "",
+      wave: Array.isArray(o.wave) ? o.wave.slice(0, 64).map(Number).filter(Number.isFinite) : null, trip: typeof o.trip === "string" ? o.trip.slice(0, 8) : "",
       i: Number.isFinite(o.i) ? clamp(o.i, 0, 1) : null, re: typeof o.re === "string" ? o.re : null,
       medium: ["voice", "text", "image"].includes(o.medium) ? o.medium : "text",
       img: typeof o.img === "string" && /^(perref\/|uploads\/|data:image\/)/.test(o.img) ? o.img : null });
@@ -219,11 +242,12 @@ async function saveSentence(text, I, re = null, medium = "text", img = null) {
   if ((!t && !img) || t.split(" ").length > 40) return;
   if (re) { medium = null; img = null; }       // replies are just words
   const i = I == null ? null : Math.round(clamp(I, 0, 1) * 100) / 100;
-  const o = { id: "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), s: t, t: Date.now(), name: me.name, trip: me.trip, i, re, medium, img };
+  const anon = me.name ? "" : deviceWord();     // unnamed: the device word, and nothing else of what the browser says
+  const o = { id: "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), s: t, t: Date.now(), name: me.name, ...(anon ? { anon } : {}), trip: me.trip, i, re, medium, img };
   let saved = null;
   if (sentMode === "shared") {
     try {
-      const r = await fetch(UP + "api.php?kind=sentences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ s: t, name: me.name, trip: me.trip, i, re, medium, img }) });
+      const r = await fetch(UP + "api.php?kind=sentences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ s: t, name: me.name, ...(anon ? { anon } : {}), trip: me.trip, i, re, medium, img }) });
       const j = await r.json();
       if (r.ok && j && j.sentence) saved = { ...o, ...j.sentence };
     } catch {}
@@ -330,13 +354,16 @@ function syncBadges(freshId) {
     b.s = r; b.parent = p; b.idx = i; setCount(b);
   }
   if (picked && !badges.has(picked.s.id)) closeNote();
+  else if (picked) renderReplies();
 }
 function markRead(b) { readMap[b.s.id] = Math.max(1, readMap[b.s.id] || 0); store.set("volcano-read", readMap); setCount(b); }
 // slow, wide drift round its home and a gentle bob, as if suspended in something thick
 const driftOf = (b, t, calm) => FLAT ? [(Math.sin(t * .035 * b.sp + b.ph) * .05 + Math.sin(t * .011 + b.ph * 2) * .02) * calm,   // flat: smaller, on the screen
   (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .04 + Math.sin(t * .9 * b.sp + b.ph) * .006) * calm, 0] : [(Math.sin(t * .035 * b.sp + b.ph) * .2 + Math.sin(t * .011 + b.ph * 2) * .08) * calm,
   Math.sin(t * .021 * b.sp + b.ph * 2.2) * .3 * calm, (Math.cos(t * .028 * b.sp + b.ph * 1.3) * .1 + Math.sin(t * .9 * b.sp + b.ph) * .01) * calm];   // seen from above: the bob in depth is up and down
-function updateBadges(dt, t) {
+let simT = 0;
+function updateBadges(dt) {
+  dt *= 1 - flatE; simT += dt; const t = simT;   // opened, the soup stops
   const calm = reduce.matches ? .5 : 1, exy = 1 - Math.exp(-dt / 1.1), ez = 1 - Math.exp(-dt / 1.6);
   for (const b of badges.values()) {
     b.readT = clamp(b.readT + (b.read ? dt : -dt) / 2, 0, 1);   // two seconds, as in v05
@@ -396,7 +423,7 @@ function projectBadges() {
   for (const b of badges.values()) {
     const p = C.project(b.x, b.y, b.z);
     if (!p || p.d < NEAR) continue;
-    let R = BR * p.k * (b.parent ? sat.size / 100 : 1), sx = p.x, sy = p.y, a = cam.balls ?? 1;
+    let R = BR * p.k * (b.parent ? sat.size / 100 : 1) * ball.size / 100, sx = p.x, sy = p.y, a = cam.balls ?? 1;
     const io = introOf(b, now);
     if (io) { sx = W / 2 + (sx - W / 2) * io.s; sy = H / 2 + (sy - H / 2) * io.s; R *= io.s; a *= io.a; }
     if (sx + R < -40 || sx - R > W + 40 || sy + R < -40 || sy - R > H + 40) continue;
@@ -423,14 +450,15 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 // red, or black once read: the deep red holds on the orange, where the interface's red would vanish
 const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];
 // a seen ball, over 2 s, still whole to touch, on every page on this soup:
-let seenLook = "outline";   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
+let seenLook = "fill";       // v19: read, the ball goes black, its sign white   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
 function badgeColour(b) {
   const e = b.readT * b.readT * (3 - 2 * b.readT);
   return [lerp(DOT[0], DOT_READ[0], e), lerp(DOT[1], DOT_READ[1], e), lerp(DOT[2], DOT_READ[2], e)];
 }
 let hovered = null, lastDraw = 0;
+const coarse = matchMedia("(pointer: coarse)");
 function showCue() {
-  $("cueEvery").value = cueEvery; $("cueV").textContent = cueEvery ? cueEvery + " s" : "never"; store.set(KEY + "cue2", cueEvery);
+  $("cueEvery").value = cueEvery; $("cueV").textContent = cueEvery ? cueEvery + " s" : "never"; store.set(KEY + "cue3", cueEvery);
   $("cueMax").value = cueMax; $("cueMaxV").textContent = cueMax; store.set(KEY + "cuemax", cueMax);
 }
 queueMicrotask(() => {
@@ -442,7 +470,7 @@ queueMicrotask(() => {
 // through. They start at random, with no rhythm (the gaps between them are as a Geiger counter's: mostly short, now and
 // then long), so two or three can play at once, never more than cueMax, and never two side by side. DEV, soup: "cue",
 // the gap on average (0: never), and "at once"
-let cueEvery = store.get(KEY + "cue2", 2.5), cueMax = store.get(KEY + "cuemax", 3), cueNext = 0;
+let cueEvery = store.get(KEY + "cue3", 0), cueMax = store.get(KEY + "cuemax", 3), cueNext = 0;
 const cues = new Map();                       // ball → when it started
 const CUE_LEN = () => reduce.matches ? 8.5 : 8.5 / 2.5;   // one loop of a sign (../shared/notification.js: LOOP / SPEED)
 function cue(t) {
@@ -456,7 +484,7 @@ function cue(t) {
     && b.sx > b.R && b.sx < W - b.R && b.sy > b.R && b.sy < H - b.R && !near(b));
   if (pool.length) cues.set(pool[Math.floor(Math.random() * pool.length)], t);
 }
-const sinceOf = (b, t) => b === hovered ? t - b.sigT0 : cues.has(b) ? t - cues.get(b) : null;
+const sinceOf = (b, t) => cues.has(b) ? t - cues.get(b) : null;   // v19: only the cue plays; under the pointer a ball stays still
 // ================= the links =================
 // as in Obsidian's graph: a thin line from each reply to the note it answers, and nothing else. In the balls' own red;
 // it stops at each ball's edge, so a seen ball drawn as a ring stays empty inside. Faint, fading with the balls into
@@ -465,7 +493,8 @@ const sinceOf = (b, t) => b === hovered ? t - b.sigT0 : cues.has(b) ? t - cues.g
 let linksK = store.get(KEY + "links", 30);
 function drawLinks(x) {
   if (linksK <= 0 || vis.length < 2) return;
-  const on = new Set(vis), focus = hovered || picked, base = linksK / 100;
+  const on = new Set(vis), focus = hovered || picked, base = linksK / 100 * (1 - flatE);
+  if (base <= 0) return;
   x.lineCap = "butt"; x.strokeStyle = `rgb(${DOT.join(",")})`;
   for (const a of vis) {
     const c = a.parent;
@@ -482,34 +511,55 @@ function drawLinks(x) {
   }
   x.globalAlpha = 1;
 }
+// v19: the balls, the one under the pointer forward and the others a step back; opened, the whole soup flat behind the
+// quotation (flatE 0 … 1): every ball the same size (no depth), still, blurred and faint, drawn once to a layer
+let flatK = 0, flatE = 0, stepK = 0;
+const layer = document.createElement("canvas"), lctx = layer.getContext("2d");
 function drawInside(x) {
-  const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W } = V.size(); lastDraw = now;
+  const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W, H, MDPR } = V.size(); lastDraw = now;
   cue(now / 1000);
+  stepK = clamp(stepK + ((hovered && !flatE) ? dt : -dt) / .25, 0, 1);
   drawLinks(x);
-  // the further a ball is, the softer: in focus up close, a little blurred with depth (1.03, seen down into the soup;
-  // flat 3.00 has no depth). Up to BLUR px, from FOCUS on, full at FOCUS + 4 of the soup's units
-  for (const b of vis) {
-    const bl = FLAT ? 0 : BLUR * smooth(FOCUS, FOCUS + 4, b.d);
-    x.filter = bl > .3 ? `blur(${bl.toFixed(1)}px)` : "none";
-    drawBall(x, b, now, dt, TYPE);
+  const calm = reduce.matches, F = flatE;
+  let Rflat = 0;
+  if (F > 0 && !calm) { const rs = vis.map(b => b.R).sort((a, c) => a - c); Rflat = rs.length ? rs[Math.floor(rs.length * .5)] : 0; }
+  let to = x;
+  if (F > .01) {                               // the layer, blurred and faint as a whole
+    if (layer.width !== marks.width || layer.height !== marks.height) { layer.width = marks.width; layer.height = marks.height; }
+    lctx.setTransform(MDPR, 0, 0, MDPR, 0, 0); lctx.clearRect(0, 0, W, H); to = lctx;
   }
-  x.filter = "none";
-  x.globalAlpha = 1;
-  // what it is, next to the one the keyboard is on
-  drawFocusLabel(x, W, TYPE);
+  for (const b of vis) {
+    b.ringT = clamp((b.ringT || 0) + ((b === hovered || b.focus) && !F ? 1 : -1) * dt / .12, 0, 1);
+    const bl = FLAT || F > .01 ? 0 : BLUR * smooth(FOCUS, FOCUS + 4, b.d);
+    const R0 = b.R;
+    if (Rflat) b.R = lerp(R0, Rflat, F);
+    drawBall(to, b, now, dt, TYPE, b === hovered || b.focus ? 1 : 1 - .45 * stepK, bl);
+    b.R = R0;
+  }
+  to.filter = "none"; to.globalAlpha = 1;
+  if (to !== x) {
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0);
+    x.globalAlpha = lerp(1, .15, F); x.filter = calm ? "none" : `blur(${(6 * F * MDPR).toFixed(1)}px)`;
+    x.drawImage(layer, 0, 0); x.restore();
+  }
+  x.filter = "none"; x.globalAlpha = 1;
+  if (F < .3) drawWho(x, W, TYPE);
 }
 const BLUR = 1.5, FOCUS = 1.6;
-function drawBall(x, b, now, dt, TYPE) {
-  volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: b.seen,   /* never fainter for being close: a ball is as solid huge as small */ type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc, count: false });
+function drawBall(x, b, now, dt, TYPE, k = 1, blur = 0) {
+  const n = b.parent ? 0 : 1 + (replies.get(b.s.id)?.length || 0);
+  volcanoNote.draw(x, b, { rgb: badgeColour(b), alpha: b.seen * k, type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc,
+    sign: { pad: ball.pad / 100, lw: ball.lw / 100 }, badge: ball.badge === "on" ? n : 0, ring: b.ringT || 0, blur });
 }
-function drawFocusLabel(x, W, TYPE) {
-  const pk = [...badges.values()].find(b => b.focus);
-  if (pk && vis.includes(pk) && pk.seen > .5) {
-    x.font = `400 13px ${TYPE}`; x.textBaseline = "middle"; x.fillStyle = "#fff";
-    const txt = noteLabel(pk.s), w = x.measureText(txt).width, flip = pk.sx + pk.R + 10 + w > W - 12;
-    x.textAlign = flip ? "right" : "left";
-    x.fillText(txt, flip ? pk.sx - pk.R - 10 : pk.sx + pk.R + 10, pk.sy);
-  }
+// who said it, in small type beside the ball under the pointer (or the keyboard)
+function drawWho(x, W, TYPE) {
+  const pk = hovered || [...badges.values()].find(b => b.focus);
+  if (!pk || !vis.includes(pk) || pk.seen < .5 || !pk.ringT) return;
+  x.globalAlpha = pk.ringT; x.font = `500 12px ${TYPE}`; x.textBaseline = "middle"; x.fillStyle = "#000";
+  const txt = sigOf(pk.s), w = x.measureText(txt).width, gap = pk.R + 12, flip = pk.sx + gap + w > W - 12;
+  x.textAlign = flip ? "right" : "left";
+  x.fillText(txt, flip ? pk.sx - gap : pk.sx + gap, pk.sy);
+  x.globalAlpha = 1;
 }
 
 // ================= picking a badge up =================
@@ -531,7 +581,7 @@ function drop() {
 const THROW = 1400;   // a throw goes on about a third of this, in px
 function settle(b) {                          // where it is becomes its home, now and on the next visits
   b.coast = false;
-  const [dx, dy, dz] = driftOf(b, performance.now() / 1000, reduce.matches ? .5 : 1);
+  const [dx, dy, dz] = driftOf(b, simT, reduce.matches ? .5 : 1);
   placed[b.s.id] = [b.x, b.y, b.z]; store.set(PLACED_KEY, placed);   // its home on the next visits
   b.hx = b.x - dx; b.hy = b.y - dy; b.hz = b.z - dz;   // and now, so it drifts on from where it was dropped
 }
@@ -557,14 +607,18 @@ function pointerMove(px, py, dragged) {
   }
   return true;
 }
-function hover(px, py) {
-  const h = px == null ? null : pick(px, py);
+function hover(px, py) { setHovered(px == null || flatE > 0 ? null : pick(px, py)); }
+function setHovered(h) {
   if (h !== hovered) { if (hovered && !hovered.focus) hovered.hold = false; hovered = h; if (h) { h.hold = true; h.sigT0 = performance.now() / 1000; } }
 }
-function click(px, py) {                        // a tap: a badge opens; anywhere else closes what is open
+// a tap: a ball opens; anywhere else closes what is open. Open, any tap closes it (outside, or the ball again). On a
+// phone the first tap on a ball shows which it is (its ring, its links, who said it), the second opens it
+function click(px, py) {
+  if (bigEl.classList.contains("on")) { closeNote(); return; }
   const b = pick(px, py);
-  if (b) openNote(b);
-  else { if (!idPanel.hidden) closeId(); closeNote(); }
+  if (!b) { if (!idPanel.hidden) closeId(); setHovered(null); return; }
+  if (coarse.matches && hovered !== b) { setHovered(b); return; }
+  openNote(b);
 }
 
 // ================= the composer =================
@@ -657,7 +711,7 @@ function updateSend(c) {                        // as in Telegram: the mic becom
   const has = !!c.input.value.trim() || !!c.img || c.going, rec = listening && micComp === c;
   c.send.hidden = !has; c.mic.hidden = has && !rec;
 }
-const composerEl = $("composer"), coarse = matchMedia("(pointer: coarse)");
+const composerEl = $("composer");
 // one bar, always at the bottom while you are in the soup: "Vent" writes a note (or adds to your own, open); with
 // someone else's note open, "Support" answers it
 // the ball starts as the send button: where it was and as big on the screen, then sinks to its place in the soup
@@ -705,12 +759,13 @@ if (saved.wh != null && !saved.v3) {           // kept before the tallest bar wa
 }
 let big = { ...BIG0, ...saved, v3: 1 };
 const INK = { black: [0, 0, 0], white: [255, 255, 255], red: [196, 0, 12] };
+const qEl = bigEl.querySelector(".q"), repliesEl = bigEl.querySelector(".replies"), playEl = bigEl.querySelector(".play"), durEl = bigEl.querySelector(".dur");
 const boxEl = bigEl.querySelector(".box"), sigEl = bigEl.querySelector(".sig"), wordsEl = bigEl.querySelector(".words"), picEl = bigEl.querySelector(".pic"), vizEl = bigEl.querySelector(".viz");
 function applyBig() {
   const st = bigEl.style;
   st.setProperty("--fs", big.fs + "vw"); st.setProperty("--lh", big.lh);
   st.setProperty("--sig", big.sig + "px");
-  st.setProperty("--side", big.side + "px"); st.setProperty("--tb", big.tb + "px"); st.setProperty("--fit", big.fit);
+  st.setProperty("--side", big.side + "px"); st.setProperty("--tb", big.tb + "px"); st.setProperty("--fit", big.fit); st.setProperty("--wh", big.wh);
   st.setProperty("--ink", `rgb(${INK[big.ink].join(",")})`);
   bigEl.classList.toggle("outlined", dev && big.show === "on");
   bigEl.classList.toggle("vwords", big.vw === "on");
@@ -722,11 +777,11 @@ function applyBig() {
 }
 // shrink to fit: the largest size, up to the chosen one, at which the whole text is inside the box
 function fitWords() {
-  wordsEl.style.fontSize = "";
-  if (big.tsize !== "fit" || !wordsEl.textContent || getComputedStyle(wordsEl).display === "none") return;
-  const bw = boxEl.clientWidth, bh = boxEl.clientHeight, fits = px => { wordsEl.style.fontSize = px + "px"; return wordsEl.scrollHeight <= bh + 1 && wordsEl.scrollWidth <= bw + 1; };
+  wordsEl.style.fontSize = ""; bigEl.style.removeProperty("--wfs");
+  if (!bigEl.dataset.kind) return;
+  const bw = boxEl.clientWidth, bh = boxEl.clientHeight, fits = px => { wordsEl.style.fontSize = px + "px"; bigEl.style.setProperty("--wfs", px + "px"); return qEl.scrollHeight <= bh + 1 && wordsEl.scrollWidth <= bw + 1; };
   let lo = 4, hi = parseFloat(getComputedStyle(bigEl).getPropertyValue("--fs")) * innerWidth / 100;
-  if (fits(hi)) return;
+  if (big.tsize !== "fit" || fits(hi)) { fits(hi); return; }
   for (let k = 0; k < 14; k++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; }
   fits(lo);
 }
@@ -774,51 +829,53 @@ function pseudoOf(s) {
   for (let k = 0; k < 6; k++) { out += k % 2 ? VOWEL[h % 5] : PSEUDO[h % 20]; h = Math.imul(h ^ (h >>> 13), 2654435761) >>> 0; }
   return out;
 }
-function sign(s) {
-  const z = n => String(n).padStart(2, "0"), d = s.t > 1e11 ? new Date(s.t) : null;
-  sigEl.querySelector(".who").textContent = s.name || pseudoOf(s);
-  sigEl.querySelector(".when").textContent = d ? `${z(d.getDate())}.${z(d.getMonth() + 1)}.${String(d.getFullYear()).slice(2)}, ${z(d.getHours())}:${z(d.getMinutes())}` : "";
-  sigEl.classList.toggle("dated", !!d);
+const whenOf = s => { const z = n => String(n).padStart(2, "0"), d = s.t > 1e11 ? new Date(s.t) : null;
+  return d ? `${z(d.getDate())}.${z(d.getMonth() + 1)}.${String(d.getFullYear()).slice(2)}, ${z(d.getHours())}:${z(d.getMinutes())}` : ""; };
+function signInto(el, s) {                    // — who, when (v19: the name, "unnamed Mac" or "anonymous"; no made-up pseudonym)
+  el.querySelector(".who").textContent = sigOf(s);
+  const w = whenOf(s); el.querySelector(".when").textContent = w; el.classList.toggle("dated", !!w);
+}
+const sign = s => signInto(sigEl, s);
+// the replies under the quotation, smaller quotations, each signed; built again whenever one comes in
+let shownReplies = "";
+function renderReplies() {
+  const root = picked && (picked.parent || picked), list = root ? replies.get(root.s.id) || [] : [], key = list.map(r => r.id).join(",");
+  if (key === shownReplies) return;
+  shownReplies = key; repliesEl.textContent = "";
+  for (const r of list) {
+    const li = document.createElement("li"), q = document.createElement("p"), sg = document.createElement("p");
+    q.className = "rw"; q.textContent = r.s; sg.className = "sig"; sg.innerHTML = '<b class="who"></b><span class="when"></span>'; signInto(sg, r);
+    li.append(q, sg); repliesEl.append(li);
+  }
+  repliesEl.hidden = !list.length;
+  fitWords();
 }
 // where the note's top left is, in the box: the text's is the box's; a picture's is where it is drawn, fitted in the box
 // and centred in it
-const inkCtx = document.createElement("canvas").getContext("2d");
-function placeSig() {
-  let x = 0, y = 0;
-  const first = bigEl.dataset.kind !== "image" && [...(wordsEl.textContent || "").trim()][0];
-  if (first && getComputedStyle(wordsEl).display !== "none") {   // where the first letter's ink starts, past its blank
-    const cs = getComputedStyle(wordsEl);
-    inkCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-    x = Math.max(0, -inkCtx.measureText(cs.textTransform === "uppercase" ? first.toLocaleUpperCase() : first).actualBoundingBoxLeft);
-  }
-  // and under it: the text's last line, a picture's bottom edge as it is drawn, or the box's bottom for a voice
-  const kind = bigEl.dataset.kind, bw = boxEl.clientWidth, bh = boxEl.clientHeight;
-  if (kind === "image") {
-    y = bh;
-    if (picEl.naturalWidth && big.fit === "contain") {
-      const k = Math.min(bw / picEl.naturalWidth, bh / picEl.naturalHeight);
-      x = (bw - picEl.naturalWidth * k) / 2; y = (bh + picEl.naturalHeight * k) / 2;
-    }
-  } else if (getComputedStyle(wordsEl).display !== "none" && wordsEl.textContent) y = wordsEl.offsetTop + wordsEl.offsetHeight;
-  else y = bh;
-  sigEl.style.setProperty("--sx", x + "px"); sigEl.style.setProperty("--sy", y + "px");
-}
-picEl.addEventListener("load", placeSig);
+function placeSig() {}   // (v19: the signature follows the words in the column, soup.css)
+picEl.addEventListener("load", () => fitWords());
 addEventListener("resize", placeSig);
 let picked = null, hideT = 0;
 function openNote(b) {
   if (C.cam.soup <= .5 && !b.fake) return;
   stopVoice(); clearTimeout(hideT);
   picked = b.fake ? null : b;
-  const s = b.s, me = mediumOf(s);
+  const root = b.parent || b, s = root.s, me = mediumOf(s);   // a reply opens its note, with every reply under it
   bigEl.dataset.kind = me;
   setWords(me === "image" ? "" : s.s);
   sign(s);
   if (me === "image") { picEl.src = imgSrc(s.img); picEl.alt = s.s || "a picture"; } else { picEl.removeAttribute("src"); picEl.alt = ""; }
+  shownReplies = null; renderReplies();
   bigEl.classList.add("on");
-  fitWords(); placeSig();
-  if (me === "voice") startVoice(s);
-  if (!b.fake) { markRead(b); barMode(true); }
+  fitWords();
+  if (me === "voice") { vz.s = s; vz.t = 0; vz.prog = 0; vz.live = false; vz.est = shapeOf(s).secs; durEl.textContent = mmss(vz.est); playEl.classList.remove("on"); }
+  if (!b.fake) {
+    markRead(b); if (b !== root) markRead(root);
+    const n = replies.get(root.s.id)?.length || 0;   // the replies shown are read too
+    if (n) { readMap[root.s.id] = Math.max(readMap[root.s.id] || 0, n + 1); store.set("volcano-read", readMap); for (const x of badges.values()) if (x.parent === root) setCount(x); }
+    barMode(true);
+  }
+  setHovered(null);
   if (!coarse.matches && !composerEl.hidden && !typing()) mainComp.input.focus({ preventScroll: true });
 }
 function closeNote() {
@@ -826,7 +883,7 @@ function closeNote() {
   stopVoice();
   if (bigEl.classList.contains("on")) {
     bigEl.classList.remove("on");
-    hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; } }, 700);
+    hideT = setTimeout(() => { if (!bigEl.classList.contains("on")) { wordsEl.textContent = ""; repliesEl.textContent = ""; shownReplies = ""; picEl.removeAttribute("src"); delete bigEl.dataset.kind; } }, 700);
   }
   picked = null; barMode(false);
   if (listening && micComp === mainComp && was) stopMic();
@@ -879,11 +936,18 @@ function startVoice(s) {
   u.onend = u.onerror = () => { if (vz.u === u) { vz.live = false; vz.est = Math.max(.5, vz.t); } };
   vz.u = u; speechSynthesis.speak(u);
 }
-function stopVoice() { vz.live = false; vz.u = null; try { speechSynthesis.cancel(); } catch {} }
+function stopVoice() { vz.live = false; vz.u = null; try { speechSynthesis.cancel(); } catch {} playEl.classList.remove("on"); playEl.setAttribute("aria-label", "play"); }
+playEl.addEventListener("click", () => {
+  if (!vz.s) return;
+  if (vz.live) { stopVoice(); return; }
+  startVoice(vz.s); playEl.classList.add("on"); playEl.setAttribute("aria-label", "stop");
+});
 function updateVoice(dt) {
   vz.fade = clamp(vz.fade + (bigEl.dataset.kind === "voice" && bigEl.classList.contains("on") ? dt : -dt) / .6, 0, 1);
   if (vz.fade <= 0 || !vz.s) return;
-  if (vz.live) { vz.t += dt; if (!vz.u && vz.t >= vz.est) vz.live = false; }   // no speech here: it plays for as long as it would take
+  if (vz.live) { vz.t += dt; if (!vz.u && vz.t >= vz.est) vz.live = false; }
+  if (!vz.live && playEl.classList.contains("on")) { playEl.classList.remove("on"); playEl.setAttribute("aria-label", "play"); }
+  durEl.textContent = mmss(vz.live ? vz.t : vz.est);   // no speech here: it plays for as long as it would take
   const target = vz.live ? Math.min(.985, Math.max(vz.t / vz.est, vz.said)) : vz.t > 0 ? 1 : 0;
   vz.prog += (target - vz.prog) * (1 - Math.exp(-dt * 8));
   drawVoice();
@@ -895,18 +959,13 @@ function drawVoice() {
   if (vizEl.width !== Math.round(cw * dpr) || vizEl.height !== Math.round(ch * dpr)) { vizEl.width = Math.round(cw * dpr); vizEl.height = Math.round(ch * dpr); }
   const x = vizEl.getContext("2d"), ink = `rgb(${INK[big.ink].join(",")})`;
   x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, cw, ch);
-  const bx = Math.min(big.side, cw / 2 - 10), by = Math.min(big.tb, ch / 2 - 10), boxW = cw - 2 * bx, boxH = ch - 2 * by;   // the box, in the middle of the screen
-  const pitch = boxW / big.bars, n = big.bars, bw = Math.min(big.bw, pitch * .9), wave = waveOf(vz.s, n);
-  const bandH = boxH * big.wh / 50, fs = clamp(Math.min(bandH, boxH) * .14, 12, 64), cy = by + boxH / 2, top = cy - bandH / 2;   // the wave in the middle, its time under it
+  const n = big.bars, pitch = cw / n, bw = Math.min(big.bw, pitch * .9), wave = waveOf(vz.s, n), cy = ch / 2, bandH = ch;   // the wave fills its own band
   x.lineCap = "round"; x.lineWidth = bw; x.strokeStyle = ink;
   for (let k = 0; k < n; k++) {
-    const h = Math.max(0, wave[k] * bandH - bw), px = bx + k * pitch + pitch / 2;
+    const h = Math.max(0, wave[k] * bandH - bw), px = k * pitch + pitch / 2;
     x.globalAlpha = vz.fade * ((k + .5) / n <= vz.prog ? 1 : .3);   // what has been said, full; the rest, faint
     x.beginPath(); x.moveTo(px, cy - h / 2); x.lineTo(px, cy + h / 2 + .01); x.stroke();
   }
-  x.globalAlpha = vz.fade * .75; x.fillStyle = ink;
-  x.font = `400 ${fs.toFixed(1)}px ${V.type()}`; x.textAlign = "left"; x.textBaseline = "top";
-  x.fillText(mmss(vz.live ? vz.t : vz.est), bx + pitch / 2 - bw / 2, Math.min(top + bandH + fs * .6, by + boxH - fs * 1.2));
   x.globalAlpha = 1;
 }
 
@@ -988,6 +1047,21 @@ document.querySelectorAll("[data-vm]").forEach(b => b.addEventListener("click", 
   $("intBox").hidden = voiceMode !== "debug"; $("meter").hidden = voiceMode === "debug";
 }));
 $("intensity").addEventListener("input", () => { $("intVal").textContent = $("intensity").value; });
+// the balls (DEV, soup): their size against v17's, the sign's padding in its inner box, its lines' and bars' thickness,
+// and the number of messages as a badge or not
+const ball = { size: 160, pad: 26, lw: 8, badge: "on", ...(store.get(KEY + "ball", {}) || {}) };
+function showBall() {
+  $("ballSize").value = ball.size; $("ballSizeV").textContent = ball.size + "% of 1.04";
+  $("signPad").value = ball.pad; $("signPadV").textContent = ball.pad + "%";
+  $("signLw").value = ball.lw; $("signLwV").textContent = ball.lw + "% of the box";
+  document.querySelectorAll("[data-badge]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.badge === ball.badge)));
+  store.set(KEY + "ball", ball);
+}
+$("ballSize").addEventListener("input", e => { ball.size = +e.target.value; showBall(); });
+$("signPad").addEventListener("input", e => { ball.pad = +e.target.value; showBall(); });
+$("signLw").addEventListener("input", e => { ball.lw = +e.target.value; showBall(); });
+document.querySelectorAll("[data-badge]").forEach(b => b.addEventListener("click", () => { ball.badge = b.dataset.badge; showBall(); }));
+showBall();
 function showSat() {
   $("satSize").value = sat.size; $("orbSize").value = sat.orbit;
   $("satV").textContent = sat.size + "% of a note"; $("orbV").textContent = sat.orbit + "%";
@@ -1040,7 +1114,9 @@ V.soup = {
   top: () => ({ from: soupTop.from, to: soupTop.full }),   // flat: the black at the top, for field.js
   update(dt, t) {
     setComposer(C.cam.soup > .5);
-    updateBadges(dt, t);
+    // opened, the soup flattens; closed, it rounds back out (one calm movement each way, .7 s)
+    flatK = clamp(flatK + (bigEl.classList.contains("on") ? dt : -dt) / .7, 0, 1); flatE = smooth(0, 1, flatK);
+    updateBadges(dt);
     projectBadges();
     updateVoice(dt);
   },
@@ -1052,6 +1128,8 @@ V.soup = {
       b.vy += rand(.35, .8) * k; b.vx += rand(-.12, .12) * k; b.vz += rand(-.12, .12) * k; b.fly = k * rand(2.6, 3.4); b.flyA = rand(5, 8);
     }
   },
+  // the balls on the screen, for tests and DEV: id, kind, where, how big, read, a reply or not
+  balls: () => vis.map(b => ({ id: b.s.id, kind: b.parent ? "reply" : mediumOf(b.s), sx: b.sx, sy: b.sy, R: b.R, read: b.read, n: b.parent ? 0 : 1 + (replies.get(b.s.id)?.length || 0), who: sigOf(b.s) })),
   texts: () => [...sentences.filter(s => mediumOf(s) === "text").map(s => s.s), ...[...replies.values()].flat().map(r => r.s)].filter(Boolean),
   readLevel,
 };

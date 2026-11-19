@@ -1,13 +1,12 @@
-// A notification, the same in every branch of the volcano: its disc, its number and what it plays under the pointer.
-// v09 (1.00) and v10 (2.00) both load this file, so a change here shows in both. Each page passes only what is its own:
-// the colour, the type, how far it has faded.
-//   <script src="../shared/notification.js"></script>
-//   volcanoNote.draw(x, b, { rgb, alpha, type, fade, since, dt, imgSrc, count })
-//   count: false draws the disc without its number (default true).
-//   seen: how a read ball looks. "fill" (default): the caller's colour, as it is. "outline" / "outline-black": as it is
-//   read (b.readT 0 … 1) the fill fades away and a ring at its edge comes in, in its colour or in black; the ring is
-//   about 1.5 px on a near ball (R ≈ 21), thinner further off, never under one device pixel.
-// b needs R, sx, sy, readT, n, s (the note). since: seconds under the pointer, or null when it isn't.
+// A notification: its disc and what is inside it. v19's own copy (../shared/notification.js stays as v09 to v17 use it).
+//   volcanoNote.draw(x, b, { rgb, alpha, type, since, dt, imgSrc, sign, badge, ring })
+// v19 (1.05): what is inside sits inside, still, as a small white sign in one inner box (the same padding on every side,
+// so a text, a voice and a picture weigh the same): a text as a few lines of text, a voice as a sound wave (the same idea
+// turned upright), a picture as a filled landscape rectangle. Replies are words: lines. No breathing: the sign that grows
+// out of the ball (v17) is only played by the cue (since != null), which is off by default.
+//   sign: { pad 0 … .45 (of the inner box), lw (of the box's height) } · badge: the number of messages, on the ball's top
+//   right edge, as on an app icon (0: none) · ring 0 … 1: the thin ring of the ball under the pointer
+// b needs R, sx, sy, readT, s (the note).
 window.volcanoNote = (() => {
   "use strict";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
@@ -125,10 +124,63 @@ window.volcanoNote = (() => {
     }
   }
 
-  function draw(x, b, { rgb, alpha = 1, type = "sans-serif", fade = 1, since = null, dt = 0, imgSrc = null, count = true, seen = "fill" }) {
+  // ---- v19: the still sign, made once per note (lengths and heights 0 … 1), drawn in the inner box ----
+  function hashStr(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return h >>> 0; }
+  function seeded(a) { return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function shapeOf(s) {
+    const me = mediumOf(s);
+    if (me === "image") return { me };
+    if (me === "voice") {                         // a row of thin bars: from the voice's data when it has some, else its words and id
+      const r = seeded(hashStr("wave|" + (s.id || "") + (s.s || ""))), n = 7, src = Array.isArray(s.wave) && s.wave.length ? s.wave : null;
+      const h = [];
+      for (let k = 0; k < n; k++) {
+        const v = src ? +src[Math.floor(k / n * src.length)] || 0 : .25 + .75 * r() * Math.sin(Math.PI * (k + .5) / n) ** .4;
+        h.push(clamp(v, .15, 1));
+      }
+      return { me, h };
+    }
+    // a text: its own words wrapped into 3 or 4 lines (4 for a long one), left-aligned, the last one shorter
+    const words = (s.s || "").trim().split(/\s+/).filter(Boolean), total = words.join(" ").length || 12;
+    const n = total > 48 ? 4 : 3, per = Math.max(4, total / n), lines = [];
+    let cur = 0;
+    for (const w of words) { if (cur && cur + 1 + w.length > per * 1.12 && lines.length < n - 1) { lines.push(cur); cur = w.length; } else cur += (cur ? 1 : 0) + w.length; }
+    lines.push(cur);
+    while (lines.length < n) lines.push(Math.max(2, (lines[lines.length - 1] || per) * .6));
+    const mx = Math.max(...lines.slice(0, -1), 1), L = lines.map(v => clamp(v / mx, .35, 1));
+    L[L.length - 1] = Math.min(L[L.length - 1], .62);
+    return { me: "text", L };
+  }
+  function drawStill(x, b, sign) {
+    const R = b.R; if (R < 7) return;             // a speck: just its disc
+    const shape = b.still && b.still.id === b.s.id ? b.still : (b.still = { id: b.s.id, ...shapeOf(b.s) });
+    const half = R * Math.SQRT1_2 * (1 - sign.pad), x0 = b.sx - half, y0 = b.sy - half, side = 2 * half;   // the inner box: a square in the disc
+    const lw = Math.max(1, side * sign.lw);
+    x.fillStyle = "#fff";
+    if (shape.me === "text") {
+      const n = shape.L.length, gap = (side - lw) / (n - 1);
+      for (let k = 0; k < n; k++) x.fillRect(x0, y0 + k * gap, side * shape.L[k], lw);
+    } else if (shape.me === "voice") {
+      const n = shape.h.length, gap = (side - lw) / (n - 1);   // a bar as thick as a line, more space between them
+      for (let k = 0; k < n; k++) { const h = side * shape.h[k]; x.fillRect(x0 + k * gap, b.sy - h / 2, lw, h); }
+    } else {
+      const h = side * .66; x.fillRect(x0, b.sy - h / 2, side, h);   // a picture: landscape, plain
+    }
+  }
+  function drawBadge(x, b, n, type) {
+    if (!(n > 1) || b.R < 9) return;
+    const r = clamp(b.R * .3, 6, 13), cx = b.sx + b.R * Math.SQRT1_2, cy = b.sy - b.R * Math.SQRT1_2, txt = n > 99 ? "99+" : String(n);
+    x.font = `600 ${(r * 1.15).toFixed(1)}px ${type}`;
+    const w = Math.max(2 * r, x.measureText(txt).width + r * .9);
+    x.fillStyle = "#fff"; x.beginPath(); x.roundRect ? x.roundRect(cx - w / 2, cy - r, w, 2 * r, r) : x.arc(cx, cy, r, 0, TAU); x.fill();
+    x.fillStyle = "#000"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(txt, cx, cy + r * .06);
+  }
+
+  function draw(x, b, { rgb, alpha = 1, type = "sans-serif", fade = 1, since = null, dt = 0, imgSrc = null, count = false, seen = "fill", sign = null, badge = 0, ring = 0, blur = 0 }) {
     const R = b.R, ink = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`;
     const o = seen === "fill" ? 0 : smooth(0, 1, b.readT);   // how far a ball is into its outline
+    if (blur > .3) x.filter = `blur(${blur.toFixed(1)}px)`;   // the depth's softness: the disc only (one filtered draw, not one per line)
     if (o < .998) { x.globalAlpha = alpha * (1 - o); x.fillStyle = ink; x.beginPath(); x.arc(b.sx, b.sy, R, 0, TAU); x.fill(); }
+    if (blur > .3) x.filter = "none";
     if (o > .002) {
       const m = x.getTransform(), px = 1 / (Math.hypot(m.a, m.b) || 1), lw = Math.max(px, 1.5 * R / 21);
       x.globalAlpha = alpha * o; x.strokeStyle = seen === "outline-black" ? "#000" : ink; x.lineWidth = lw;
@@ -143,10 +195,11 @@ window.volcanoNote = (() => {
       x.fillText(b.n, b.sx, b.sy + fs * .04);
     }
     x.globalAlpha = alpha;
-    if (since != null) drawSign(x, b, Math.max(R, 6) / R0, signTime(since), ink, imgSrc);   // under the pointer, what is in it grows out of the ball, again and again
-    // on the keyboard, a bold outline in its own colour: it comes out of the dot's edge and goes back in
-    b.ring = (b.ring || 0) + ((b.focus ? 1 : 0) - (b.ring || 0)) * (reduce.matches ? 1 : 1 - Math.exp(-dt / .05));
-    if (b.ring > .01) { x.strokeStyle = ink; x.lineWidth = 2; x.beginPath(); x.arc(b.sx, b.sy, R - 1 + 6 * b.ring, 0, TAU); x.stroke(); }
+    if (sign) drawStill(x, b, sign);
+    if (badge) drawBadge(x, b, badge, type);
+    if (ring > .01) { x.globalAlpha = alpha * ring; x.strokeStyle = ink; x.lineWidth = 1.25; x.beginPath(); x.arc(b.sx, b.sy, R + 4, 0, TAU); x.stroke(); x.globalAlpha = alpha; }
+    if (since != null) drawSign(x, b, Math.max(R, 6) / R0, signTime(since), ink, imgSrc);   // the cue only (DEV): what is in it grows out of the ball
+    // (v19: the keyboard's ring is the pointer's, drawn above from ring)
   }
 
   return { mediumOf, draw };
