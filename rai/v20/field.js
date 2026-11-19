@@ -1,3 +1,5 @@
+// v20 (3.04): the soup and the outside in the same place, one over the other: going out, the outside comes in from the
+// top through a soft gradient edge that sweeps down the screen (BAND of it, s from camera.js); nothing moves under it.
 // The field, 3.01: flat. Outside, the orange and the volcano, the eject sign, ⏏, black, its triangle the volcano, grown on the way in; inside,
 // the soup's colour, the same orange, all the way up. No shader, no depth.
 // Shared: changed only by agreement (see core.js). (aya v05: this copy draws the triangle's sides on down, past the screen)
@@ -50,11 +52,21 @@ function skyNow() {
   return [0, 1].map(i => mix(mix(SKY[i], DARK[i], dark), CLEAR[i], c * (1 - dark)));
 }
 const ayaLook = () => document.documentElement.dataset.look !== "rai";
+// the soup, drawn on its own layer, so the gradient's edge can take it away from the top
+const soupCv = document.createElement("canvas"), sctx = soupCv.getContext("2d");
+const BAND = .45;                                  // the edge's softness, a share of the screen's height
+function paintSoup(x, W, H, aya) {
+  if (aya) { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, SOUP[0]); g.addColorStop(1, SOUP[1]); x.fillStyle = g; }
+  else x.fillStyle = ORANGE;
+  x.fillRect(0, 0, W, H);
+}
 function draw() {
   const { W, H, MDPR } = V.size(), cam = V.camera.cam, x = ctx, aya = ayaLook();
   x.setTransform(MDPR, 0, 0, MDPR, 0, 0);
   const sk = aya ? skyNow() : null;
-  if (cam.inside < 1) {
+  const s = cam.s, eased = s * s * (3 - 2 * s);
+  if (s <= 0) { paintSoup(x, W, H, aya); return; }
+  {
     const { CX, CY, E } = V.camera.volcano(), out = V.camera.outside;
     const [ax, ay] = out(CX, CY - .25 * E);        // the apex, on the screen
     if (aya) {
@@ -79,12 +91,19 @@ function draw() {
       x.stroke();
     } else { x.fillStyle = "#000"; x.fill(); }
   }
-  if (cam.inside > 0) {                            // the soup, coming through: all the way up
-    if (aya) { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, SOUP[0]); g.addColorStop(1, SOUP[1]); x.fillStyle = g; }
-    else x.fillStyle = ORANGE;
-    x.globalAlpha = cam.inside; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
-  }
+  if (s >= 1) return;
+  // the soup over it, from the edge down: transparent at the edge, whole BAND lower
+  const band = H * BAND, edge = lerpN(-band, H, eased);
+  if (soupCv.width !== field.width || soupCv.height !== field.height) { soupCv.width = field.width; soupCv.height = field.height; }
+  sctx.setTransform(MDPR, 0, 0, MDPR, 0, 0); sctx.globalCompositeOperation = "source-over";
+  paintSoup(sctx, W, H, aya);
+  const m = sctx.createLinearGradient(0, edge, 0, edge + band);
+  m.addColorStop(0, "rgba(0,0,0,0)"); m.addColorStop(1, "rgba(0,0,0,1)");
+  sctx.globalCompositeOperation = "destination-in"; sctx.fillStyle = m; sctx.fillRect(0, 0, W, H);
+  sctx.globalCompositeOperation = "source-over";
+  x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(soupCv, 0, 0); x.setTransform(MDPR, 0, 0, MDPR, 0, 0);
 }
+const lerpN = (a, b, t) => a + (b - a) * t;
 V.field = {
   init() {},
   size, draw, eject,

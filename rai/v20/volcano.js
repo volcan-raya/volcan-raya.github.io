@@ -28,6 +28,7 @@ function updatePressure(dt) {
   }
 }
 function erupt() {
+  if (ER.mode === "v20") { erupt20(); return; }   // v20's own (below); v18's, aya v07's, as it was
   V.soup.unpick();                     // aya v01: the rant that was open is taken away, by force
   shake = 20; startReel();            // aya v00: every vent, one by one (v04: no more 3.01 spill, the letters are the lava)
   lavaPending = true;                  // aya v03/v04: then the letters are thrown, once the stop motion is over and we are out
@@ -597,11 +598,200 @@ showOut();
 $("lvClear").addEventListener("click", () => { traceFit(); tctx.setTransform(1, 0, 0, 1, 0, 0); tctx.clearRect(0, 0, traceCv.width, traceCv.height); });
 showLv();
 
+// ================= v20: two eruptions at once, after rai's own (v09 and v07) =================
+// The 8 most answered notes (V.soup.threads(), by their replies) and those notes' replies, out of the triangle's apex:
+//   waves  rai v09's: each note leaves on a wide wave, up and out like smoke, its letters along the way; calmer than
+//          v09 (gentler curves, much slower). At a moment they stop where they are, all at once, as the balls stop
+//          inside when a note is opened, and slowly fade out
+//   falls  rai v07's: the replies leave as balls (the soup's own: filled, unread), thrown up and out together; each lands
+//          on the triangle's side and turns there into its words: it sinks into the slope, to a lane of its own (each
+//          reply one line deeper than the last on its side, parallel to it, so no two cross), and runs on down it, writing
+//          the reply behind it as it goes, spending itself into its letters until the last one is out and it is gone
+//          (the ball → text, one movement, never a swap). The words go on flowing a little, cool, and fade
+// v18's eruption (aya v07's letters, the stop motion) is DEV volcano, "eruption: v18"
+const ER = {
+  mode: V.store.get("volcano-v20-mode", "v20"),
+  speed: V.store.get("volcano-v20-speed", .14),    // the waves' pace, in the volcano's widths a second
+  curve: V.store.get("volcano-v20-curve", .16),    // how wide their wave swings, in the volcano's widths
+  freeze: V.store.get("volcano-v20-freeze", 9),    // s after the start when they stop
+  fade: V.store.get("volcano-v20-fade", 7),        // s they take to fade, once stopped
+  rate: V.store.get("volcano-v20-rate", 9),        // the replies' letters written a second
+  size: V.store.get("volcano-v20-size", 100),      // the words' size, %
+};
+let waves = [], falls = [], erPending = false, erT = 0;
+const fs20 = () => { const { E } = V.camera.volcano(); return Math.max(13, E * .042) * ER.size / 100; };
+const font20 = f => `500 ${f.toFixed(1)}px ${V.type()}`;
+// the threads: the soup's (window B: V.soup.threads()), or this version's own notes (notes.js) until it has them
+function threads() {
+  if (V.soup.threads) { try { const t = V.soup.threads(); if (t && t.length) return t; } catch {} }
+  const all = window.AYA_NOTES || [], by = new Map();
+  for (const n of all) if (!n.re && n.s) by.set(n.id, { id: n.id, s: n.s, name: n.name || "", replies: [] });
+  for (const r of all) if (r.re && r.s && by.has(r.re)) by.get(r.re).replies.push({ id: r.id, s: r.s, name: r.name || "" });
+  return [...by.values()];
+}
+const ballLook = () => {
+  if (V.soup.ballLook) { try { const b = V.soup.ballLook(); if (b && b.fill) return b; } catch {} }
+  return { fill: ayaLook() ? "rgb(251,179,129)" : "rgb(196,0,12)" };
+};
+function measure(text, f) {
+  V.mctx.font = font20(f);
+  return [...text].map(ch => ({ ch, w: V.mctx.measureText(ch).width }));
+}
+function startV20() {
+  waves = []; falls = []; erT = 0;
+  const top = threads().filter(t => t.s).sort((a, b) => b.replies.length - a.replies.length).slice(0, 8);
+  if (!top.length) return;
+  const f = fs20(), { E } = V.camera.volcano(), n = top.length;
+  // the waves: spread over a fan above the apex, shuffled so the first out are not all on one side
+  const order = [...Array(n).keys()].sort(() => Math.random() - .5);
+  top.forEach((t, k) => {
+    const u = n > 1 ? order[k] / (n - 1) : .5, letters = measure(String(t.s), f);
+    waves.push({ letters, len: letters.reduce((a, L) => a + L.w, 0), f, a: lerp(-.95, .95, u) + rand(-.06, .06),
+      head: -k * .1 * E - rand(0, .12) * E, amp: ER.curve * E * rand(.75, 1.15), freq: rand(1.6, 2.4) / E, ph: rand(0, 6.28), sp: rand(.85, 1.15) });
+  });
+  // the falls: every reply of those 8, round the 8 in turn so they come mixed, at most 32 (14 on a phone)
+  const reps = [], lists = top.map(t => t.replies.slice());
+  const most = V.size().W < 600 ? 14 : 32;          // a phone: fewer, or they crowd the slopes
+  for (let i = 0; reps.length < most && lists.some(l => l.length); i++) { const l = lists[i % lists.length]; if (l.length) reps.push(l.shift()); }
+  const lanes = { "-1": 0, "1": 0 };
+  reps.forEach((r, k) => {
+    const side = k % 2 ? 1 : -1, letters = measure(String(r.s), f * .9), lane = lanes[side]++;
+    if (side < 0) letters.reverse();               // going down to the left, written from its end, so it reads left to right
+    falls.push({ letters, len: letters.reduce((a, L) => a + L.w, 0), f: f * .9, side, t0: .4 + k * .09 + rand(0, .35),
+      vx: side * rand(.12, .62) * E, vy: -rand(.85, 1.35) * E, g: 2.2 * E, state: "wait", x: 0, y: 0, t: 0,
+      inset: f * .9 * (1.1 + lane * 1.3) });
+  });
+}
+const apex = () => { const { CX, CY, E } = V.camera.volcano(); return [CX, CY - .25 * E]; };
+// a wave's way: up its ray from the apex, swinging across it, the swing growing as it goes
+function waveAt(w, d) {
+  const [ax, ay] = apex(), { E } = V.camera.volcano(), ux = Math.sin(w.a), uy = -Math.cos(w.a);
+  const sw = w.amp * Math.min(1, d / (1.2 * E)) * Math.sin(d * w.freq + w.ph);
+  return [ax + ux * d - uy * sw, ay + uy * d + ux * sw];
+}
+function updateV20(dt) {
+  const cam = V.camera.cam;
+  if (erPending && cam && cam.s >= .999) { erPending = false; startV20(); }
+  if (!waves.length && !falls.length) return;
+  erT += dt;
+  const { E } = V.camera.volcano(), k = reduce.matches ? .6 : 1, still = erT >= ER.freeze;
+  for (const w of waves) if (!still) w.head += ER.speed * E * w.sp * dt * k;
+  const sq = Math.SQRT1_2;
+  for (const b of falls) {
+    if (erT < b.t0) continue;
+    const [ax, ay] = apex();
+    if (b.state === "wait") { b.state = reduce.matches ? "land" : "fly"; b.x = ax; b.y = ay; b.t = 0; }
+    b.t += dt;
+    if (b.state === "fly") {
+      b.x += b.vx * dt; b.vy += b.g * dt; b.y += b.vy * dt;
+      if (b.vy > 0 && b.y >= ay + Math.abs(b.x - ax)) b.state = "land";
+    }
+    if (b.state === "land") {                      // on the side: where along it, from the apex
+      b.sL = Math.abs(b.x - ax) * Math.SQRT2;   // where it touched the side
+      b.s0 = Math.max(b.sL, b.inset * 1.25); b.state = "write"; b.t = 0;   // where it writes from: its lane, never past the apex
+    }
+    if (b.state === "write" || b.state === "rest") {
+      const v = ER.rate * (b.len / Math.max(1, b.letters.length));   // px a second, so many letters a second
+      b.w = Math.min(b.len, b.t * v);
+      b.flow = .25 * E * (1 - Math.exp(-b.t / 4));   // the whole goes on running down a little, slower and slower
+      if (b.w >= b.len && b.state === "write") { b.state = "rest"; b.tEnd = b.t; }
+      if (b.state === "rest" && b.t - b.tEnd > ER.fade + 5) b.state = "gone";
+    }
+  }
+  const fadeEnd = ER.freeze + ER.fade;
+  if (erT > fadeEnd && falls.every(b => b.state === "gone" || b.state === "wait")) { waves = []; falls = []; }
+  void sq;
+}
+function drawV20(x) {
+  const cam = V.camera.cam;
+  if (!cam || (!waves.length && !falls.length)) return;
+  const vis = Math.max(0, (cam.s - .5) * 2);       // outside only: they go with it into the gradient
+  if (vis <= 0) return;
+  const { E } = V.camera.volcano(), wa = erT < ER.freeze ? 1 : Math.max(0, 1 - (erT - ER.freeze) / ER.fade);
+  x.save(); x.textAlign = "center"; x.textBaseline = "middle";
+  // the waves: letters laid back from the head along the way; going right, the last letter at the head, going left the first
+  x.fillStyle = ayaLook() ? "#fff1e6" : "#000";
+  for (const w of waves) {
+    if (w.head <= 0 || wa <= 0) continue;
+    x.font = font20(w.f); x.globalAlpha = vis * wa;
+    const right = Math.sin(w.a) >= 0, lets = right ? [...w.letters].reverse() : w.letters;
+    let d = w.head;
+    for (const L of lets) {
+      const mid = d - L.w / 2; d -= L.w;
+      if (mid < 0) break;
+      if (L.ch === " ") continue;
+      const p = waveAt(w, mid), q = waveAt(w, mid + 1);
+      let ang = Math.atan2(q[1] - p[1], q[0] - p[0]); if (!right) ang += Math.PI;
+      x.save(); x.translate(p[0], p[1]); x.rotate(ang); x.fillText(L.ch, 0, 0); x.restore();
+    }
+  }
+  // the falls
+  const look = ballLook(), R = Math.max(5, V.store.get("volcano-v18-ball", 26) / 2 * .8), [ax, ay] = apex();
+  for (const b of falls) {
+    if (b.state === "wait" || b.state === "gone") continue;
+    if (b.state === "fly") { x.globalAlpha = vis; x.fillStyle = look.fill; x.beginPath(); x.arc(b.x, b.y, R, 0, 6.2832); x.fill(); continue; }
+    // along the side: dir down the slope, n into the mountain
+    const dx = b.side * Math.SQRT1_2, dy = Math.SQRT1_2, nx = -b.side * Math.SQRT1_2, ny = Math.SQRT1_2;
+    const sink = 1 - (1 - Math.min(1, b.t / .6)) ** 3, base = b.s0 + (b.flow || 0);
+    const at = s => [ax + dx * s + nx * b.inset, ay + dy * s + ny * b.inset];
+    const fade = b.state === "rest" ? Math.max(0, 1 - Math.max(0, b.t - b.tEnd - 5) / ER.fade) : 1;
+    x.font = font20(b.f);
+    const ang = b.side > 0 ? Math.PI / 4 : -Math.PI / 4;
+    let s = 0;
+    for (const L of b.letters) {
+      const mid = s + L.w / 2; s += L.w;
+      if (mid > b.w) break;                          // not written yet
+      if (L.ch === " ") continue;
+      const age = (b.w - mid) / Math.max(1, b.len) * (b.len / (ER.rate * (b.len / Math.max(1, b.letters.length)))) + (b.state === "rest" ? b.t - b.tEnd : 0);
+      const heat = Math.max(0, 1 - age / 3.5), born = b.state === "rest" ? 1 : Math.min(1, (b.w - mid) / (L.w * 1.5) + .35);
+      const [px, py] = at(base + mid);
+      x.globalAlpha = vis * fade; x.fillStyle = heat > 0 ? heatCol(.25 + heat * .7) : (ayaLook() ? "rgb(60,12,22)" : "rgb(196,0,12)");
+      x.save(); x.translate(px, py); x.rotate(ang); x.scale(born, born); x.fillText(L.ch, 0, 0); x.restore();
+    }
+    if (b.state === "write") {                     // the ball, at the head, spent into its letters
+      const left = 1 - b.w / Math.max(1, b.len), r = R * Math.sqrt(left), [px, py] = at(base + b.w + r * .6);
+      const [lx, ly] = [ax + dx * b.sL, ay + dy * b.sL];   // where it landed: it sinks from the edge into its lane
+      x.globalAlpha = vis; x.fillStyle = look.fill;
+      x.beginPath(); x.arc(lerp(lx, px, sink), lerp(ly, py, sink), r, 0, 6.2832); x.fill();
+    }
+  }
+  x.restore(); x.globalAlpha = 1;
+}
+function erupt20() {
+  V.soup.unpick();
+  shake = 20;
+  erPending = true;
+  if (inside() && outFirst) V.camera.goTo(1);
+  V.soup.jolt(reduce.matches ? .4 : inside());
+}
+V.dev.tab("volcano", `
+  <span class="full k">v20: the 8 most answered notes as waves (rai v09), their replies as balls falling into words (rai v07)</span>
+  <div class="full seg" role="group" aria-label="Which eruption"><span class="k">eruption</span><button class="t" type="button" data-ermode="v20">v20</button><button class="t" type="button" data-ermode="v18">v18</button><button class="t" type="button" id="erTry">play it</button></div>
+  <label class="full"><span class="k">waves, pace </span><span id="erSpeedV"></span><input type="range" id="erSpeed" min=".04" max=".5" step=".01"></label>
+  <label class="full"><span class="k">waves, curve </span><span id="erCurveV"></span><input type="range" id="erCurve" min="0" max=".5" step=".01"></label>
+  <label class="full"><span class="k">they stop after </span><span id="erFreezeV"></span><input type="range" id="erFreeze" min="2" max="30" step=".5"></label>
+  <label class="full"><span class="k">then fade over </span><span id="erFadeV"></span><input type="range" id="erFade" min="1" max="20" step=".5"></label>
+  <label class="full"><span class="k">replies, letters a second </span><span id="erRateV"></span><input type="range" id="erRate" min="2" max="40" step="1"></label>
+  <label class="full"><span class="k">words, size </span><span id="erSizeV"></span><input type="range" id="erSize" min="50" max="200" step="5"></label>`);
+function showEr() {
+  const set = (id, v, t) => { $(id).value = v; $(id + "V").textContent = t; };
+  set("erSpeed", ER.speed, ER.speed.toFixed(2)); set("erCurve", ER.curve, ER.curve.toFixed(2));
+  set("erFreeze", ER.freeze, ER.freeze + " s"); set("erFade", ER.fade, ER.fade + " s");
+  set("erRate", ER.rate, String(ER.rate)); set("erSize", ER.size, ER.size + "%");
+  document.querySelectorAll("[data-ermode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ermode === ER.mode)));
+  for (const k of Object.keys(ER)) V.store.set("volcano-v20-" + k, ER[k]);
+}
+for (const [id, k] of [["erSpeed", "speed"], ["erCurve", "curve"], ["erFreeze", "freeze"], ["erFade", "fade"], ["erRate", "rate"], ["erSize", "size"]]) $(id).addEventListener("input", e => { ER[k] = +e.target.value; showEr(); });
+document.querySelectorAll("[data-ermode]").forEach(b => b.addEventListener("click", () => { ER.mode = b.dataset.ermode; showEr(); }));
+$("erTry").addEventListener("click", () => { if (ER.mode === "v20") { erPending = true; if (inside()) V.camera.goTo(1); } else { startReel(); lavaPending = true; if (inside()) V.camera.goTo(1); } });
+showEr();
+
 V.volcano = {
   addPressure, PER_NOTE, get pressure() { return pressure; }, get phase() { return phase; },
   VOL: { eye: 0, Rc: 1 },
-  update(dt) { updatePressure(dt); shake *= Math.exp(-dt * 3); updateReel(dt); updateLava(dt); },   // aya v07: no more 3.01 smoke (puffs, flyers)
-  drawMarks(x) { drawLava2(x); drawReel(x); },
+  update(dt) { updatePressure(dt); shake *= Math.exp(-dt * 3); updateReel(dt); updateLava(dt); updateV20(dt); },   // aya v07: no more 3.01 smoke (puffs, flyers)
+  drawMarks(x) { drawLava2(x); drawReel(x); drawV20(x); },
+  v20: () => ({ waves: waves.length, falls: falls.length, t: erT, states: falls.map(b => b.state) }),
   lavaRun: () => lavaRun ? { n: lavaRun.letters.length, left: lavaRun.letters.filter(L => !L.done).length } : null,
   reel: () => reel ? { i: reel.i, n: reel.list.length } : null,
   pre, shakeK: () => smOpt.shake,

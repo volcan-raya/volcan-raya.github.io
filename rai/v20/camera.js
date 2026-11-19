@@ -1,3 +1,9 @@
+// v20 (3.04): no camera any more. The volcano is v18's big triangle, where v18's way out ended, and it stays there; the
+// soup and the outside are two pictures in the same place, and scrolling goes from one to the other through a gradient
+// (field.js): scrolling down, the outside comes in from the top, a soft edge sweeping down the screen, the soup's balls
+// fading first; up, the soup comes back the same way. Nothing moves, nothing zooms, nothing pans. Scrolling is the only
+// way in and out (19/11/26: no ⏏, no click on the triangle: "it's just adding noise"). s is still the one number:
+// 0 in the soup, 1 outside. v18's zoom into the ⏏ and its pan down the mountain are gone (their notes follow)
 // rai v18: one way from the soup to the bottom of the mountain, scrolled. The way in and out is 3.02's (v16) zoom into
 // the ⏏: going out, we dive into the small ⏏ at the top, the soup growing round it on one axis, until the ⏏ is the
 // volcano, where it sits and at its size; coming in, the reverse. Scrolling down (the wheel, two fingers, a drag up, the
@@ -10,6 +16,7 @@
 (() => {
 "use strict";
 const { clamp, lerp, $, reduce } = V;
+const smoothE = (a, b, x) => { const u = clamp((x - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); };
 
 // the volcano on the screen: its middle and size, and its crater, where the words leave from. Set in DEV (camera)
 const look = { size: 44, craterY: .25, pivotY: .18, atY: .7, ...(V.store.get("volcano-v18-look2", {}) || {}) };   // size: % of the screen's short side; craterY: above the middle, in its sizes; pivotY: below the middle; atY: where that point is on the screen, from the top
@@ -30,6 +37,7 @@ let s = 0, aim = 0, cam = null, scrolled = false;  // it opens in the soup
 function goTo(v) { aim = clamp(v, 0, 1); scrolled = false; if (reduce.matches) s = aim; }
 // how far down it goes: until the mountain fills the screen, and on as far as the lava's lowest line
 function maxPan() {
+  return 0;                                        // v20: no pan
   const apex = CY0 - .25 * E, black = apex + Math.max(CX, W - CX) + 12, lava = V.volcano && V.volcano.lavaBottom ? V.volcano.lavaBottom() : 0;
   return Math.max(0, black, lava - H + 70);
 }
@@ -40,17 +48,17 @@ function scroll(d) {
   scrolled = true;
   if (d > 0) {
     if (aim < 1) { aim = clamp(aim + d / SPAN, 0, 1); if (reduce.matches) s = aim; }
-    else if (s >= .999) panBy(d);
+    // v20: no pan down the mountain
   } else {
-    if (panAim > 0) panBy(d);
-    else { aim = clamp(aim + d / SPAN, 0, 1); if (reduce.matches) s = aim; }   // the pan, eased, is still on its way up to 0: it gets there first
+    aim = clamp(aim + d / SPAN, 0, 1); if (reduce.matches) s = aim;
   }
 }
 
 // the small ⏏ at the top: its triangle's middle and its width, on the screen
 let btn = null;
 function button() {
-  const g = goOut.querySelector("svg"); if (!g) return null;
+  return null;                                     // v20: no ⏏
+  const g = null;
   const r = g.getBoundingClientRect(), o = document.body.getBoundingClientRect();
   if (!r.width) return btn;
   return { x: r.left - o.left + r.width / 2, y: r.top - o.top + r.width * 6 / 24, w: r.width };   // the svg is 24 × 19: the triangle 12 high
@@ -62,24 +70,15 @@ function update(dt) {
     if (scrolled) { s += (aim - s) * Math.min(1, dt * 7); if (Math.abs(aim - s) < 1e-4) s = aim; }   // following the scroll, softly
     else { const step = dt / TIME; s = aim > s ? Math.min(aim, s + step) : Math.max(aim, s - step); }
   }
-  // scrolled, the way follows the hand evenly; clicked, slow to start, fast through the middle
-  const t = 1 - s, e = scrolled ? t : (t < .5 ? 4 * t * t * t : 1 - 4 * (1 - t) ** 3);   // 0 outside … 1 in
-  // 3.02's zoom: from the button (at s = 0) to the volcano (at s = 1); the size on a log scale, so it grows evenly, round
-  // the one point that stays put while the button grows into the volcano. The soup is scaled with it
-  btn = button() || btn || { x: W / 2, y: 30, w: 32 };
-  const u = 1 - e, K = E / btn.w, k = Math.exp(Math.log(K) * u);
-  let vx, vy;
-  if (Math.abs(K - 1) > 1e-3) { const f = (k - 1) / (K - 1); vx = btn.x + (CX - btn.x) * f; vy = btn.y + (CY - btn.y) * f; }
-  else { vx = lerp(btn.x, CX, u); vy = lerp(btn.y, CY, u); }
-  const zoom = k * btn.w / E;                      // the volcano drawn at zoom × its size, its middle at (vx, vy)
-  const there = s >= 1, home = s <= 0;
+  // v20: the gradient. e: 1 in the soup … 0 outside, as before. The balls fade out early in it (gone by FADE), so they
+  // never sit on the outside; the soup can be touched only when it is all there
+  const e = 1 - s, FADE = .35;
   cam = {
-    s, e, zoom, fx: vx, fy: vy, kx: CX, ky: CY,
-    out: !home, in: !there,
-    inside: there ? 0 : 1,                         // the soup is there until the ⏏ has arrived, then the cut, no fade
-    soup: home ? 1 : 0,                            // and it can be touched only when it is still
-    soupT: !home ? { k, tx: vx - btn.x * k, ty: vy - btn.y * k } : null,   // the soup, grown with the button
-    eject: !home && !there,                        // the ⏏ drawn over the soup on the way (field.js), the button hidden
+    s, e, zoom: 1, fx: CX, fy: CY, kx: CX, ky: CY,
+    out: s > 0, in: s < 1,
+    inside: 1 - smoothE(0, FADE, s),               // the soup's balls, fading
+    soup: s <= .001 ? 1 : 0,
+    soupT: null, eject: false,
     F: 1, x: 0, y: 0, z: 0,
   };
   return cam;
@@ -105,20 +104,21 @@ function unproject(px, py) {
 const marks = V.marks, at = V.at, soup = () => V.soup;
 document.body.insertAdjacentHTML("beforeend", `
 <button id="goIn" class="sr" type="button">into the volcano</button>
-<nav id="goOut" aria-label="into and out of the volcano"></nav>`);
+<button id="goOutSr" class="sr" type="button">out of the volcano</button>`);
 // the way out: the eject, ⏏, at the top of the soup only (outside, the volcano is the way in). Drawn from the volcano's
 // own shape (field.js: the triangle 12 high in 24, 3 of gap, 4 of bar), so the two are the same
-const goIn = $("goIn"), goOut = $("goOut");
+// v20: no ⏏ on the page; two buttons for the keyboard and screen readers only (.sr), in and out
+const goIn = $("goIn"), goOutSr = $("goOutSr");
 const EJECT = '<svg width="32" height="25.33" viewBox="0 0 24 19"><path d="M12 0L24 12H0Z M0 15H24V19H0Z" fill="#000"/></svg>';
-goOut.innerHTML = `<button type="button" title="eject" aria-label="out (eject)"><span class="g sign" aria-hidden="true">${EJECT}</span></button>`;
+
 function onVolcano(px, py) {                     // on the triangle (field.js), with a little room round it
   const u = (px - CX) / E, v = (py - CY) / E;
-  return cam.e < .05 && v > -.3 && v < .6 && Math.abs(u) < (v < .3 ? v + .35 : .55);
+  return cam.s > .95 && v > -.3 && v < .6 && Math.abs(u) < (v < .3 ? v + .35 : .55);
 }
 function enter() { if (aim !== 0) { goTo(0); panAim = 0; } }   // aya v05: back up to the apex on the way in
 function leave() { if (aim !== 1) goTo(1); }       // the balls stay where they are: they go up only in an eruption (volcano.js)
 goIn.addEventListener("click", enter);
-goOut.addEventListener("click", e => { if (e.target.closest("button")) (aim === 0 ? leave : enter)(); });
+goOutSr.addEventListener("click", leave);
 
 let downAt = null, dragged = false, grabbing = false, lastY = null;
 marks.addEventListener("pointerdown", e => {
@@ -134,7 +134,7 @@ marks.addEventListener("pointermove", e => {
   if (downAt && dragged && lastY != null) scroll((lastY - e.clientY) * 1.5);   // a drag on nothing scrolls: dragged up, it goes down
   lastY = e.clientY;
   const [px, py] = at(e);
-  hoverVolcano = onVolcano(px, py);
+  hoverVolcano = false;                            // v20: the triangle is not a button
   if (e.pointerType !== "touch") soup().hover(px, py);
 });
 const lift = () => { downAt = null; lastY = null; if (grabbing) { grabbing = false; soup().drop(); } };
@@ -143,7 +143,7 @@ marks.addEventListener("pointerleave", e => { hoverVolcano = false; if (e.pointe
 marks.addEventListener("click", e => {
   if (dragged) return;
   const [px, py] = at(e);
-  if (onVolcano(px, py)) { enter(); return; }
+
   soup().click(px, py);
 });
 let hoverVolcano = false;
@@ -199,15 +199,11 @@ V.camera = {
   get cam() { return cam; }, project, unproject, unit: () => { const b = box(); return [b.sx, b.sy]; }, NEAR: .14, z0: 0, goTo, lens, update, showDev, outside,
   volcano: () => ({ CX, CY, E, crater: crater() }),
   dragging: () => false,
-  cursor: () => hoverVolcano && cam.e < .05 ? "pointer" : null,
-  afterFrame() {                                   // the way out only once you are in; the hidden way in only outside
+  cursor: () => hoverVolcano && cam.s > .95 ? "pointer" : null,
+  afterFrame() {                                   // the hidden ways in and out (keyboard, screen readers) only where they go somewhere
     const inNow = cam.soup > .5;
     document.documentElement.toggleAttribute("data-out", cam.inside < 1);   // v18: outside, for the look's colours (index.html)
-    const b = goOut.querySelector("button"), say = inNow ? "out of the volcano" : "into the volcano";
-    if (b.getAttribute("aria-label") !== say) { b.setAttribute("aria-label", say); b.title = inNow ? "out" : "in"; }
-    goIn.disabled = cam.e > .05;
-    const hide = cam.eject || !inNow ? "hidden" : "";   // only in the soup: outside, the volcano itself is the way in
-    if (b.style.visibility !== hide) b.style.visibility = hide;
+    goIn.disabled = cam.s < .95; goOutSr.disabled = !inNow;
   },
 };
 lens();
