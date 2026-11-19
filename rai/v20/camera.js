@@ -1,7 +1,10 @@
-// v20 (3.04): no camera any more. The volcano is v18's big triangle, where v18's way out ended, and it stays there; the
-// soup and the outside are two pictures in the same place, and scrolling goes from one to the other through a gradient
-// (field.js): scrolling down, the outside comes in from the top, a soft edge sweeping down the screen, the soup's balls
-// fading first; up, the soup comes back the same way. Nothing moves, nothing zooms, nothing pans. Scrolling is the only
+// v20 (3.04): no camera any more, one long page. At its top the volcano, v18's big triangle (where v18's way out ended),
+// in its sky; under it the mountain's body, going darker and darker as you go down, and the dark warming slowly into
+// the soup's orange at the bottom, where the soup is (field.js draws the whole column). Scrolling moves the view down
+// and up it, as a page scrolls: the triangle stays where it is on the page and slides away up; the soup's balls come
+// up with the soup from below. Nothing zooms. s is where the view is: 1 at the top (the volcano), 0 at the bottom (the
+// soup); off, px the view is down the page. 19/11/26: "you go from a full triangle and as you scroll down ... you just
+// start going to a dark part slowly fading into orange". Scrolling is the only
 // way in and out (19/11/26: no ⏏, no click on the triangle: "it's just adding noise"). s is still the one number:
 // 0 in the soup, 1 outside. v18's zoom into the ⏏ and its pan down the mountain are gone (their notes follow)
 // rai v18: one way from the soup to the bottom of the mountain, scrolled. The way in and out is 3.02's (v16) zoom into
@@ -32,7 +35,9 @@ const crater = () => [CX, CY - E * look.craterY];
 
 // s goes to its aim: at a steady pace after a click (TIME), following the hand when scrolled
 const TIME = 1.4;
-let SPAN = V.store.get("volcano-v18-span", 900);   // px of scrolling for the whole way in or out (DEV, camera)
+let SPAN = V.store.get("volcano-v18-span", 900);   // (v18's; v20 scrolls the page's own length, LEN)
+let LEN = V.store.get("volcano-v20-len", 2.2);     // v20: the page, from the volcano's view to the soup's, in screens (DEV, camera)
+const pageD = () => LEN * H;
 let s = 0, aim = 0, cam = null, scrolled = false;  // it opens in the soup
 function goTo(v) { aim = clamp(v, 0, 1); scrolled = false; if (reduce.matches) s = aim; }
 // how far down it goes: until the mountain fills the screen, and on as far as the lava's lowest line
@@ -43,15 +48,10 @@ function maxPan() {
 }
 function panBy(d) { panAim = clamp(panAim + d, 0, maxPan()); }
 // one scroll, the whole way: down, the soup → out through the ⏏ → down the mountain; up, the reverse
-function scroll(d) {
+function scroll(d) {                               // v20: down the page (d > 0) is towards the soup, s towards 0, px for px
   if (!d) return;
   scrolled = true;
-  if (d > 0) {
-    if (aim < 1) { aim = clamp(aim + d / SPAN, 0, 1); if (reduce.matches) s = aim; }
-    // v20: no pan down the mountain
-  } else {
-    aim = clamp(aim + d / SPAN, 0, 1); if (reduce.matches) s = aim;
-  }
+  aim = clamp(aim - d / pageD(), 0, 1); if (reduce.matches) s = aim;
 }
 
 // the small ⏏ at the top: its triangle's middle and its width, on the screen
@@ -72,13 +72,14 @@ function update(dt) {
   }
   // v20: the gradient. e: 1 in the soup … 0 outside, as before. The balls fade out early in it (gone by FADE), so they
   // never sit on the outside; the soup can be touched only when it is all there
-  const e = 1 - s, FADE = .35;
+  // the soup is the bottom screen of the page: drawn moved down by how far the view is above it (core.js applies soupT)
+  const e = 1 - s, D = pageD(), off = (1 - s) * D, below = s * D;
   cam = {
-    s, e, zoom: 1, fx: CX, fy: CY, kx: CX, ky: CY,
+    s, e, zoom: 1, fx: CX, fy: CY, kx: CX, ky: CY, off, D,
     out: s > 0, in: s < 1,
-    inside: 1 - smoothE(0, FADE, s),               // the soup's balls, fading
+    inside: below < H ? 1 : 0,                     // the balls, while any of the soup's screen is in view
     soup: s <= .001 ? 1 : 0,
-    soupT: null, eject: false,
+    soupT: below > .5 ? { k: 1, tx: 0, ty: below } : null, eject: false,
     F: 1, x: 0, y: 0, z: 0,
   };
   return cam;
@@ -158,7 +159,9 @@ addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey || (t instanceof Element && t.closest("input, textarea, select, [contenteditable]"))) return;
   if (e.key === "+" || e.key === "=") { enter(); e.preventDefault(); return; }
   if (e.key === "-" || e.key === "_") { leave(); e.preventDefault(); return; }
-  if (cam && cam.soup > .5 && !["ArrowDown", "PageDown"].includes(e.key)) return;   // in the soup, only down takes you out
+  if (e.key === "Home") { leave(); e.preventDefault(); return; }   // v20: the page's top, the volcano
+  if (e.key === "End") { enter(); e.preventDefault(); return; }    // its bottom, the soup
+  if (cam && cam.soup > .5 && !["ArrowUp", "PageUp"].includes(e.key)) return;   // v20: in the soup (the page's bottom), only up takes you out
   const d = { ArrowDown: 80, ArrowUp: -80, PageDown: H * .8, PageUp: -H * .8, " ": H * .8 }[e.key];
   if (d != null) { scroll(d); e.preventDefault(); }
 });
@@ -166,7 +169,7 @@ addEventListener("keydown", e => {
 // ================= DEV =================
 V.dev.tab("camera", `
   <label class="full"><span class="k">in … out </span><span id="camVal"></span><input type="range" id="camera" min="0" max="1" step="0.001" value="0"></label>
-  <label class="full"><span class="k">scroll for the whole way in or out, px </span><span id="spanV"></span><input type="range" id="vSpan" min="200" max="3000" step="50"></label>
+  <label class="full"><span class="k">the page, volcano to soup, screens </span><span id="spanV"></span><input type="range" id="vSpan" min="1.2" max="5" step="0.1"></label>
   <label class="full"><span class="k">volcano size, % of the screen </span><span id="sizeV"></span><input type="range" id="vSize" min="10" max="70" step="1"></label>
   <label class="full"><span class="k">crater, above the middle </span><span id="craterV"></span><input type="range" id="vCrater" min="-.2" max=".5" step=".01"></label>
   <label class="full"><span class="k">zoom point, below the middle </span><span id="pivotV"></span><input type="range" id="vPivot" min="-.3" max=".45" step=".01"></label>
@@ -175,7 +178,7 @@ V.dev.tab("camera", `
 const camIn = $("camera");
 camIn.addEventListener("input", () => { s = aim = +camIn.value; scrolled = true; });
 function showLook() {
-  $("vSpan").value = SPAN; $("spanV").textContent = SPAN + " px";
+  $("vSpan").value = LEN; $("spanV").textContent = LEN.toFixed(1);
   $("vSize").value = look.size; $("sizeV").textContent = look.size + "%";
   $("vCrater").value = look.craterY; $("craterV").textContent = look.craterY.toFixed(2);
   $("vPivot").value = look.pivotY; $("pivotV").textContent = look.pivotY.toFixed(2);
@@ -183,7 +186,7 @@ function showLook() {
   $("vBall").value = BALL(); $("ballV").textContent = BALL() + " px";
   V.store.set("volcano-v18-look2", look); lens();
 }
-$("vSpan").addEventListener("input", e => { SPAN = +e.target.value; V.store.set("volcano-v18-span", SPAN); showLook(); });
+$("vSpan").addEventListener("input", e => { LEN = +e.target.value; V.store.set("volcano-v20-len", LEN); showLook(); });
 $("vSize").addEventListener("input", e => { look.size = +e.target.value; showLook(); });
 $("vCrater").addEventListener("input", e => { look.craterY = +e.target.value; showLook(); });
 $("vPivot").addEventListener("input", e => { look.pivotY = +e.target.value; showLook(); });

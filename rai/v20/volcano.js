@@ -671,7 +671,7 @@ function waveAt(w, d) {
 }
 function updateV20(dt) {
   const cam = V.camera.cam;
-  if (erPending && cam && cam.s >= .999) { erPending = false; startV20(); }
+  if (erPending && cam && cam.s >= .98) { erPending = false; startV20(); }
   if (!waves.length && !falls.length) return;
   erT += dt;
   const { E } = V.camera.volcano(), k = reduce.matches ? .6 : 1, still = erT >= ER.freeze;
@@ -705,12 +705,12 @@ function updateV20(dt) {
 function drawV20(x) {
   const cam = V.camera.cam;
   if (!cam || (!waves.length && !falls.length)) return;
-  const vis = Math.max(0, (cam.s - .5) * 2);       // outside only: they go with it into the gradient
-  if (vis <= 0) return;
+  const vis = 1, off = cam.off || 0;               // v20: on the page with the volcano, scrolled away with it
+  if (off > V.size().H * 1.6) return;
   const { E } = V.camera.volcano(), wa = erT < ER.freeze ? 1 : Math.max(0, 1 - (erT - ER.freeze) / ER.fade);
-  x.save(); x.textAlign = "center"; x.textBaseline = "middle";
+  x.save(); x.translate(0, -off); x.textAlign = "center"; x.textBaseline = "middle";
   // the waves: letters laid back from the head along the way; going right, the last letter at the head, going left the first
-  x.fillStyle = ayaLook() ? "#fff1e6" : "#000";
+  x.fillStyle = "#000";                            // black, on v13's sky (field.js), as v13's words were
   for (const w of waves) {
     if (w.head <= 0 || wa <= 0) continue;
     x.font = font20(w.f); x.globalAlpha = vis * wa;
@@ -790,7 +790,7 @@ V.volcano = {
   addPressure, PER_NOTE, get pressure() { return pressure; }, get phase() { return phase; },
   VOL: { eye: 0, Rc: 1 },
   update(dt) { updatePressure(dt); shake *= Math.exp(-dt * 3); updateReel(dt); updateLava(dt); updateV20(dt); },   // aya v07: no more 3.01 smoke (puffs, flyers)
-  drawMarks(x) { drawLava2(x); drawReel(x); drawV20(x); },
+  drawMarks(x) { if (ER.mode === "v18") { drawLava2(x); drawReel(x); } drawV20(x); },   // v18's layers only for v18's eruption (its traces left a smudge)
   v20: () => ({ waves: waves.length, falls: falls.length, t: erT, states: falls.map(b => b.state) }),
   lavaRun: () => lavaRun ? { n: lavaRun.letters.length, left: lavaRun.letters.filter(L => !L.done).length } : null,
   reel: () => reel ? { i: reel.i, n: reel.list.length } : null,
