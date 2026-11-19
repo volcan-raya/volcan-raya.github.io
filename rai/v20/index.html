@@ -113,6 +113,8 @@ html body #mood .named { display: none; }
 /* picked: it stays on the volcano, scrolled away with it, until we are in the soup (camera.js, data-mood-hold) */
 html[data-mood-hold] body #mood { display: block !important; opacity: 1 !important; pointer-events: none; }
 #title span { display: block; }
+/* it shows only once its font is in, so it never appears in a fallback first and changes (the script under #title) */
+html:not([data-fonts]) #title { visibility: hidden; }
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */
 #dev { position: fixed; z-index: 9; top: 12px; right: calc(var(--grid-margin, 24px) + env(safe-area-inset-right, 0px)); width: min(300px, calc(100% - 2 * var(--grid-margin, 24px)));   /* its right edge on the site's margin, as the bar's dev box */ box-sizing: border-box;
@@ -183,11 +185,18 @@ document.getElementById("avatar").addEventListener("click", () => {
 });
 </script>
 <h1 id="title"><span>NOTIFICATION SOUP</span></h1>
+<script>
+  // the title waits for its font (Inter Tight, 500), at most 3 s, then shows
+  (() => {
+    const on = () => document.documentElement.setAttribute("data-fonts", "");
+    try { Promise.race([document.fonts.load('500 100px "Inter Tight"', "NOTIFICATION SOUP"), new Promise(r => setTimeout(r, 3000))]).then(on, on); } catch { on(); }
+  })();
+</script>
 
 <aside id="dev" aria-label="DEV" data-dev data-ui hidden></aside>
 
 <script src="notification.js"></script>
-<script src="../../rai/shared/venting.js"></script>
+<script src="venting.js"></script>
 <script>window.playhtmlReady = new Promise(r => { window.__playhtmlResolve = r; });</script>
 <script type="module">
   // who is here at the same time is counted with playhtml (https://playhtml.fun): presence clears when a person leaves
