@@ -66,6 +66,7 @@
 #big.on .box { pointer-events: auto; }
 #big .box::-webkit-scrollbar { display: none; }
 #big.outlined .box { outline: 1px dashed #C16CFF; outline-offset: -1px; }
+#big .words, #big .sig { width: fit-content; max-width: 100%; }   /* only as wide as they are: the rest of the column is a click out */
 #big .words { margin: 0; color: var(--ink); font: 500 max(28px, var(--fs))/var(--lh) var(--type); letter-spacing: -.035em; overflow-wrap: break-word; hyphens: none; }
 #big .pic { display: none; max-width: 100%; max-height: 55vh; width: auto; height: auto; object-fit: contain; object-position: left top; margin: 0 0 .5em;
   opacity: 0; transition: opacity .3s ease; }

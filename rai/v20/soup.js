@@ -1022,7 +1022,9 @@ boxEl.addEventListener("pointerleave", () => { hover(null); boxEl.style.cursor =
 boxEl.addEventListener("click", e => {
   if (getSelection && String(getSelection()).length) return;   // selecting words, not clicking
   const [px, py] = V.at(e), b = pick(px, py);
-  if (b && b !== picked) openNote(b);
+  if (b) { if (b !== picked) openNote(b); else closeNote(); return; }
+  // v20: anywhere in the column that is not the picture, the words, who said them or a reply: out, as a click on the soup is
+  if (!e.target.closest(".pic, .words, .sig, .thread [data-id]")) closeNote();
 });
 addEventListener("resize", placeSig);
 let picked = null, hideT = 0;
