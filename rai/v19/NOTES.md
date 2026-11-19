@@ -58,8 +58,10 @@ Stage only your own files. `git pull --rebase` before every push. Never force-pu
 - The page opens outside at `S_MAX` (v17's farthest), the name field under the volcano. Enter (or the arrow) → the dive:
   `V.camera.dive(speed)`, along v17's way in (s from 3.3 to 0) by the clock, ~13 s at ×1, slower in the hole so the title
   holds ~3.5 s. Any wheel, pinch, key or the DEV camera slider takes over at once.
-- The title in the black: `#title`, the sans, light, 80% of the width (all but 16px a side on a phone), orange `#FF4500`
-  or white. v17's floor title behind DEV "on the floor".
+- The title in the black: `#title`, set as an opened note is (camera.js reads `--fs`, `--lh`, `--side`, `--tb` off
+  `#big`, and shrinks it to fit as fitWords does): **B, if you change the note's type, the title follows**. Orange
+  `#FF4500` or white. v17's floor title behind DEV "on the floor".
+- The name is asked above the volcano; on Enter it falls into the hole as the zoom starts.
 - `V.camera`: new `S_MAX, dive(speed), replay("outside"|"floor"), diving(), titleMode(mode, color)`.
 - `V.intro`: `askAt`, `replay()`, `facts()` (the facts as words).
 - Reduced motion: fades through `#veil`: outside → the black with the title → the soup.
