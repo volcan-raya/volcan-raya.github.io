@@ -617,7 +617,64 @@ const ER = {
   fade: V.store.get("volcano-v20-fade", 7),        // s they take to fade, once stopped
   rate: V.store.get("volcano-v20-rate", 9),        // the replies' letters written a second
   size: V.store.get("volcano-v20-size", 100),      // the words' size, %
+  clouds: V.store.get("volcano-v20-clouds", true), // the waves gather into clouds (19/11/26), or stay waves (v09's)
 };
+// 19/11/26: the notes' words rearrange, horizontal, into clouds at the top: each sentence its own cloud, its letters on a
+// grid, one to a cell, as ASCII art is, filling a puffed shape row by row and read left to right. They leave the apex on
+// their waves first (RISE s), then each letter goes to its cell (GATHER s, one after the other through the sentence)
+const RISE = 3.5, GATHER = 2.6;
+// a cloud for n characters: rows, each centred with a little play, wider in the middle, a puff here and there
+function cloudShape(n) {
+  const rows = Math.max(3, Math.round(Math.sqrt(n / 2))), prof = [];
+  for (let i = 0; i < rows; i++) prof.push(.3 + .7 * Math.sin(Math.PI * (i + .5) / rows) + rand(-.1, .1));
+  const sum = prof.reduce((a, b) => a + b, 0), cells = [];
+  let left = n;
+  prof.forEach((p, i) => {
+    const w = i === rows - 1 ? left : Math.max(2, Math.min(left, Math.round(n * p / sum)));
+    left -= w;
+    const shift = i && i < rows - 1 ? Math.round(rand(-1.2, 1.2)) : 0;
+    for (let c = 0; c < w; c++) cells.push([c - w / 2 + .5 + shift, i - (rows - 1) / 2]);
+  });
+  while (left-- > 0) cells.push([cells.length % 6 - 2.5, rows / 2 + .5]);   // whatever is left, under it
+  const cols = cells.reduce((m, [c]) => Math.max(m, Math.abs(c)), 0) * 2 + 1;
+  return { cells, cols, rows };
+}
+// where the clouds go: in the sky, clear of the title, of the triangle and of each other (the page's top, as at s = 1)
+function placeClouds(list, f) {
+  const { W, H } = V.size(), [ax, ay] = apex(), cw = f * .64, rh = f * 1.3, M = 16, placed = [];
+  const t = document.getElementById("title"), tr = t && t.getBoundingClientRect(), mr = V.marks.getBoundingClientRect();
+  const off = V.camera.cam ? V.camera.cam.off || 0 : 0;
+  const title = tr && tr.height ? { x0: tr.left - mr.left, x1: tr.right - mr.left, y0: tr.top - mr.top + off, y1: tr.bottom - mr.top + off } : null;
+  const hits = (a, b) => a.x0 < b.x1 + M && a.x1 + M > b.x0 && a.y0 < b.y1 + M && a.y1 + M > b.y0;
+  const onMountain = r => [r.x0, r.x1].some(x => r.y1 > ay + Math.abs(x - ax) - M) || (r.x0 < ax && r.x1 > ax && r.y1 > ay - M);
+  for (const c of list) {
+    const w = c.shape.cols * cw, h = c.shape.rows * rh;
+    let best = null;
+    for (let k = 0; k < 400 && !best; k++) {
+      const loose = k > 250;                       // at last, let it sit over the title rather than not at all
+      const cx = rand(M + w / 2, W - M - w / 2), cy = rand(M + h / 2, Math.max(M + h / 2 + 1, ay - M - h / 2));
+      const r = { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
+      if (onMountain(r) || placed.some(p => hits(p, r)) || (!loose && title && hits(title, r))) continue;
+      best = r; c.cx = cx; c.cy = cy;
+    }
+    if (!best) { c.cx = rand(w / 2, W - w / 2); c.cy = rand(h / 2, ay - h / 2); best = { x0: c.cx - w / 2, x1: c.cx + w / 2, y0: c.cy - h / 2, y1: c.cy + h / 2 }; }
+    placed.push(best);
+    c.letters.forEach((L, i) => { const [col, row] = c.shape.cells[i]; L.cell = [c.cx + col * cw, c.cy + row * rh]; });
+  }
+}
+// the letters of the waves where they are now, on the screen (as drawn), to leave from
+function snapshot(w) {
+  const [ax, ay] = apex(), right = Math.sin(w.a) >= 0, lets = right ? [...w.letters].reverse() : w.letters;
+  let d = w.head;
+  for (const L of lets) {
+    const mid = d - L.w / 2; d -= L.w;
+    if (mid < 0) { L.from = [ax, ay, 0]; continue; }
+    const p = waveAt(w, mid), q = waveAt(w, mid + 1);
+    let ang = Math.atan2(q[1] - p[1], q[0] - p[0]); if (!right) ang += Math.PI;
+    L.from = [p[0], p[1], Math.atan2(Math.sin(ang), Math.cos(ang))];
+  }
+  w.gather = true;
+}
 let waves = [], falls = [], erPending = false, erT = 0;
 const fs20 = () => { const { E } = V.camera.volcano(); return Math.max(13, E * .042) * ER.size / 100; };
 const font20 = f => `500 ${f.toFixed(1)}px ${V.type()}`;
@@ -649,6 +706,10 @@ function startV20() {
     waves.push({ letters, len: letters.reduce((a, L) => a + L.w, 0), f, a: lerp(-.95, .95, u) + rand(-.06, .06),
       head: -k * .1 * E - rand(0, .12) * E, amp: ER.curve * E * rand(.75, 1.15), freq: rand(1.6, 2.4) / E, ph: rand(0, 6.28), sp: rand(.85, 1.15) });
   });
+  if (ER.clouds) {                                 // each sentence's cloud, made and placed now, gathered into after RISE
+    for (const w of waves) w.shape = cloudShape(w.letters.length);
+    placeClouds(waves, f);
+  }
   // the falls: every reply of those 8, round the 8 in turn so they come mixed, at most 32 (14 on a phone)
   const reps = [], lists = top.map(t => t.replies.slice());
   const most = V.size().W < 600 ? 14 : 32;          // a phone: fewer, or they crowd the slopes
@@ -663,6 +724,9 @@ function startV20() {
   });
 }
 const apex = () => { const { CX, CY, E } = V.camera.volcano(); return [CX, CY - .25 * E]; };
+// when the notes start to fade: at "they stop after" (DEV); with clouds, never before the last letter is in its cell and
+// the clouds have been there a few seconds
+const fadeFrom = () => ER.clouds ? Math.max(ER.freeze, RISE + GATHER + 1.1 + 4) : ER.freeze;
 // a wave's way: up its ray from the apex, swinging across it, the swing growing as it goes
 function waveAt(w, d) {
   const [ax, ay] = apex(), { E } = V.camera.volcano(), ux = Math.sin(w.a), uy = -Math.cos(w.a);
@@ -675,7 +739,10 @@ function updateV20(dt) {
   if (!waves.length && !falls.length) return;
   erT += dt;
   const { E } = V.camera.volcano(), k = reduce.matches ? .6 : 1, still = erT >= ER.freeze;
-  for (const w of waves) if (!still) w.head += ER.speed * E * w.sp * dt * k;
+  for (const w of waves) {
+    if (ER.clouds && w.shape && !w.gather && erT >= RISE) snapshot(w);   // off the waves, into their clouds
+    if (!still && !w.gather) w.head += ER.speed * E * w.sp * dt * k;
+  }
   const sq = Math.SQRT1_2;
   for (const b of falls) {
     if (erT < b.t0) continue;
@@ -698,7 +765,7 @@ function updateV20(dt) {
       if (b.state === "rest" && b.t - b.tEnd > ER.fade + 5) b.state = "gone";
     }
   }
-  const fadeEnd = ER.freeze + ER.fade;
+  const fadeEnd = fadeFrom() + ER.fade;
   if (erT > fadeEnd && falls.every(b => b.state === "gone" || b.state === "wait")) { waves = []; falls = []; }
   void sq;
 }
@@ -707,11 +774,23 @@ function drawV20(x) {
   if (!cam || (!waves.length && !falls.length)) return;
   const vis = 1, off = cam.off || 0;               // v20: on the page with the volcano, scrolled away with it
   if (off > V.size().H * 1.6) return;
-  const { E } = V.camera.volcano(), wa = erT < ER.freeze ? 1 : Math.max(0, 1 - (erT - ER.freeze) / ER.fade);
+  const { E } = V.camera.volcano(), wa = erT < fadeFrom() ? 1 : Math.max(0, 1 - (erT - fadeFrom()) / ER.fade);
   x.save(); x.translate(0, -off); x.textAlign = "center"; x.textBaseline = "middle";
   // the waves: letters laid back from the head along the way; going right, the last letter at the head, going left the first
   x.fillStyle = "#000";                            // black, on v13's sky (field.js), as v13's words were
   for (const w of waves) {
+    if (w.gather) {                                // into its cloud: each letter from where it was to its cell, upright
+      if (wa <= 0) continue;
+      x.font = font20(w.f); x.globalAlpha = vis * wa;
+      const n = w.letters.length;
+      w.letters.forEach((L, i) => {
+        if (L.ch === " " || !L.cell) return;
+        const u = clamp((erT - RISE - i / Math.max(1, n) * 1.1) / GATHER, 0, 1), e = u < .5 ? 4 * u * u * u : 1 - 4 * (1 - u) ** 3;
+        const px = lerp(L.from[0], L.cell[0], e), py = lerp(L.from[1], L.cell[1], e) - Math.sin(Math.PI * e) * w.f * .6, a = L.from[2] * (1 - e);
+        x.save(); x.translate(px, py); if (a) x.rotate(a); x.fillText(L.ch, 0, 0); x.restore();
+      });
+      continue;
+    }
     if (w.head <= 0 || wa <= 0) continue;
     x.font = font20(w.f); x.globalAlpha = vis * wa;
     const right = Math.sin(w.a) >= 0, lets = right ? [...w.letters].reverse() : w.letters;
@@ -767,6 +846,7 @@ function erupt20() {
 V.dev.tab("volcano", `
   <span class="full k">v20: the 8 most answered notes as waves (rai v09), their replies as balls falling into words (rai v07)</span>
   <div class="full seg" role="group" aria-label="Which eruption"><span class="k">eruption</span><button class="t" type="button" data-ermode="v20">v20</button><button class="t" type="button" data-ermode="v18">v18</button><button class="t" type="button" id="erTry">play it</button></div>
+  <div class="full seg" role="group" aria-label="The notes, after their waves"><span class="k">the notes</span><button class="t" type="button" data-erclouds="1">into clouds</button><button class="t" type="button" data-erclouds="0">stay waves</button></div>
   <label class="full"><span class="k">waves, pace </span><span id="erSpeedV"></span><input type="range" id="erSpeed" min=".04" max=".5" step=".01"></label>
   <label class="full"><span class="k">waves, curve </span><span id="erCurveV"></span><input type="range" id="erCurve" min="0" max=".5" step=".01"></label>
   <label class="full"><span class="k">they stop after </span><span id="erFreezeV"></span><input type="range" id="erFreeze" min="2" max="30" step=".5"></label>
@@ -779,10 +859,12 @@ function showEr() {
   set("erFreeze", ER.freeze, ER.freeze + " s"); set("erFade", ER.fade, ER.fade + " s");
   set("erRate", ER.rate, String(ER.rate)); set("erSize", ER.size, ER.size + "%");
   document.querySelectorAll("[data-ermode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ermode === ER.mode)));
+  document.querySelectorAll("[data-erclouds]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.erclouds === "1") === ER.clouds)));
   for (const k of Object.keys(ER)) V.store.set("volcano-v20-" + k, ER[k]);
 }
 for (const [id, k] of [["erSpeed", "speed"], ["erCurve", "curve"], ["erFreeze", "freeze"], ["erFade", "fade"], ["erRate", "rate"], ["erSize", "size"]]) $(id).addEventListener("input", e => { ER[k] = +e.target.value; showEr(); });
 document.querySelectorAll("[data-ermode]").forEach(b => b.addEventListener("click", () => { ER.mode = b.dataset.ermode; showEr(); }));
+document.querySelectorAll("[data-erclouds]").forEach(b => b.addEventListener("click", () => { ER.clouds = b.dataset.erclouds === "1"; showEr(); }));
 $("erTry").addEventListener("click", () => { if (ER.mode === "v20") { erPending = true; if (inside()) V.camera.goTo(1); } else { startReel(); lavaPending = true; if (inside()) V.camera.goTo(1); } });
 showEr();
 

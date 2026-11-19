@@ -222,7 +222,11 @@ function placeTitle() {
   }
   const y = H * TITLE_TOP - (cam.off || 0);
   titleEl.style.transform = `translateY(${y.toFixed(1)}px)`;
-  titleEl.style.visibility = y < -H ? "hidden" : "";
+  // and it fades as soon as you scroll down, gone within the first third of a screen (19/11/26: "the title should
+  // disappear once we scroll down"); back as you come up to the top
+  const fade = 1 - smoothE(0, .35 * H, cam.off || 0);
+  titleEl.style.opacity = fade.toFixed(3);
+  titleEl.style.visibility = fade <= 0 ? "hidden" : "";
   // the mood at the door (soup.js #mood) on the black triangle: its middle low enough under the apex that the row of
   // faces fits inside the slopes (the triangle is as wide as it is deep), and on the page, scrolled with the volcano
   const mood = $("mood"), root = document.documentElement;
