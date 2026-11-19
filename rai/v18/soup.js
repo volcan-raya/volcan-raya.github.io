@@ -864,6 +864,7 @@ function closeNote() {
 // them. Closing, the reverse: the words break into dots, gather into the balls at full size, which shrink back to their
 // places in the soup. DEV, soup: "opening" (the morph, or the fade it was before)
 let morphOn = store.get(KEY + "morph", true);
+document.documentElement.dataset.morph = morphOn ? "on" : "off";   // the toggle top right (index.html) shows it
 const mCv = document.createElement("canvas");
 mCv.id = "morph"; mCv.setAttribute("aria-hidden", "true");
 mCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;display:none";
@@ -924,7 +925,6 @@ function morphActors(b) {
   }
   return out;
 }
-const MORPH = { grow: 620, fly: 760, text: 300 };
 function morphOpen(b) {
   if (!morphOn || reduce.matches) { morphStop(); return; }
   const actors = morphActors(b);
@@ -943,50 +943,51 @@ function morphClose(b) {
   mCv.style.display = "block";
   requestAnimationFrame(morphFrame);
 }
+const MORPH = { dur: 1350, text: 300 };
+// one movement, never still: the ball grows as it travels towards its words (ease-out, so it is quickest at the start
+// and never stops before the end); its dots start leaving it early, each from where it sits in the ball as the ball
+// goes on moving, and fly to its letter; the ball fades as it empties
 const ease = u => u < .5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;
+const easeOut = u => 1 - (1 - u) ** 3;
 function morphFrame(now) {
   if (!morph) return;
   const { W, H, MDPR } = V.size();
   if (mCv.width !== Math.round(W * MDPR)) { mCv.width = Math.round(W * MDPR); mCv.height = Math.round(H * MDPR); }
   const x = mCtx; x.setTransform(MDPR, 0, 0, MDPR, 0, 0); x.clearRect(0, 0, W, H);
-  const T = MORPH.grow + MORPH.fly, el = now - morph.t0;
-  // the time on the way to the words: opening it runs forward; closing, backwards from the words to the balls
-  const k = morph.dir > 0 ? el : T - el * (T / (T * .85));   // closing a little quicker
+  const T = MORPH.dur, el = now - morph.t0;
+  // where along the way: opening forward; closing backwards from the words to the ball, a little quicker
+  const u = clamp(morph.dir > 0 ? el / T : 1 - el / (T * .85), 0, 1);
   const ballRgb = `rgb(${DOT.join(",")})`;
+  const REL0 = .12, REL1 = .5, FLY = .5;                                // when the dots leave (spread), and how long each flies
   for (const a of morph.actors) {
     const bx = a.b.sx ?? a.cx, by = a.b.sy ?? a.cy, R0 = Math.max(2, a.b.R || 6);
-    const gT = ease(clamp(k / MORPH.grow, 0, 1));                       // growing
-    const fT = clamp((k - MORPH.grow) / MORPH.fly, 0, 1);               // flying into the letters
-    const R = lerp(R0, a.RT, gT);
-    const cx = lerp(bx, lerp(bx, a.cx, .45), gT), cy = lerp(by, lerp(by, a.cy, .45), gT);   // drifting towards its words
-    if (fT <= 0) {
-      x.fillStyle = ballRgb; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill();
-      continue;
-    }
-    // the ball, already broken: what is left of it fades as its dots leave
-    if (fT < .25) { x.globalAlpha = 1 - fT / .25; x.fillStyle = ballRgb; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1; }
-    const r = Math.max(.8, a.g * .45);                                   // round dots, as solarbol's
-    x.fillStyle = fT > .6 ? a.ink : ballRgb;
+    const g = easeOut(clamp(u / .8, 0, 1));
+    const R = lerp(R0, a.RT, g), cx = lerp(bx, a.cx, g * .6), cy = lerp(by, a.cy, g * .6);   // growing while moving towards its words
+    const gone = clamp((u - REL0) / (REL1 + FLY * .3 - REL0), 0, 1);    // how much of the ball has left as dots
+    if (gone < 1) { x.globalAlpha = 1 - gone * gone; x.fillStyle = ballRgb; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill(); }
+    const r = Math.max(.8, a.g * .45);
     x.globalAlpha = morph.dir > 0 ? 1 - clamp((el - T) / MORPH.text, 0, 1) : 1;
-    x.beginPath();
+    const hot = new Path2D(), cool = new Path2D();
     for (let i = 0; i < a.dots.length; i++) {
-      const [rr, ang, j] = a.seeds[i];
-      const d = ease(clamp((fT - j * .3) / .7, 0, 1));                   // each dot leaves a little after the one before
-      const sx = cx + Math.cos(ang) * rr * R, sy = cy + Math.sin(ang) * rr * R;
+      const [rr, ang, j] = a.seeds[i], start = REL0 + j * (REL1 - REL0);
+      if (u <= start) continue;
+      const d = ease(clamp((u - start) / FLY, 0, 1));
+      const sx = cx + Math.cos(ang) * rr * R, sy = cy + Math.sin(ang) * rr * R;   // its place in the ball, as the ball is now
       const px = lerp(sx, a.dots[i][0], d), py = lerp(sy, a.dots[i][1], d);
-      x.moveTo(px + r, py); x.arc(px, py, r, 0, Math.PI * 2);
+      const P = d < .55 ? hot : cool; P.moveTo(px + r, py); P.arc(px, py, r, 0, Math.PI * 2);
     }
-    x.fill();
+    x.fillStyle = ballRgb; x.fill(hot); x.fillStyle = a.ink; x.fill(cool);
     x.globalAlpha = 1;
   }
   if (morph.dir > 0) {
     if (el >= T - 60) bigEl.classList.remove("morphing");                 // the words come in under the dots
     if (el >= T + MORPH.text) { morphStop(); return; }
-  } else if (k <= 0) { morphStop(); return; }
+  } else if (u <= 0) { morphStop(); return; }
   requestAnimationFrame(morphFrame);
 }
 V.dev.tab("soup", `<span class="full seg" id="morphSeg"><span class="k">opening a note</span><button class="t" type="button" data-morph="1">balls into words</button><button class="t" type="button" data-morph="0">fade</button></span>`);
-const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph", morphOn); };
+const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph", morphOn); document.documentElement.dataset.morph = morphOn ? "on" : "off"; };
+addEventListener("v18:morph", () => { morphOn = !morphOn; if (!morphOn) morphStop(); showMorph(); });
 document.querySelectorAll("[data-morph]").forEach(b => b.addEventListener("click", () => { morphOn = b.dataset.morph === "1"; showMorph(); }));
 showMorph();
 

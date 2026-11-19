@@ -175,6 +175,12 @@ html[data-look="aya"] #look span { background: #ff4500; color: #000; }
 #avatar .dots, #avatar img, #avatar .arr { display: none; }
 html[data-avatar="cursor"] #avatar .dots, html[data-avatar="balls"] #avatar img, html[data-avatar="eva"] #avatar .arr { display: block; }
 #avatar:focus-visible { outline: 1.5px solid #000; outline-offset: 3px; border-radius: 4px; }
+#morphT { position: fixed; z-index: 6; top: 78px; right: 16px; padding: 0; border: 0; background: none; cursor: pointer; }
+/* v18: the notes' transitions, on or off: MORPH, struck through when off (DEV, soup, "opening a note" is the same setting) */
+#morphT span { display: grid; place-items: center; width: 48px; aspect-ratio: 16 / 9; border: .75px solid #000; border-radius: 2px; background: #fff1e6; color: #000;
+  font: 800 9px/1 var(--type); letter-spacing: .06em; text-transform: uppercase; }
+html[data-morph="off"] #morphT span { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: .6; }
+#morphT:focus-visible { outline: 1.5px solid #000; outline-offset: 3px; border-radius: 4px; }
 html[data-look="aya"] #big { --ink: rgb(255, 241, 230) !important; }   /* her soup is dark: its words in a light ink */
 html[data-look="aya"] #venting { color: #fff1e6; }
 html[data-look="aya"][data-out] #venting { color: #000; }   /* outside, on her cream horizon */
@@ -193,6 +199,7 @@ html[data-look="aya"][data-out] #venting { color: #000; }   /* outside, on her c
 (() => { let k = "cursor"; try { const v = localStorage.getItem("volcano-v18-avatar2"); if (v === "balls" || v === "eva") k = v; } catch {} document.documentElement.dataset.avatar = k; })();
 </script>
 <button id="look" type="button" aria-label="the other soup"><span>soup</span></button>
+<button id="morphT" type="button" aria-label="transitions: the balls turning into words, on or off"><span>morph</span></button>
 <button id="avatar" type="button" aria-label="the others: cursors, balls or evangelions"><span><b class="dots"><i style="background:#2f6bff"></i><i style="background:#14c46e"></i><i style="background:#ff4fb3"></i></b><img src="eva.png" alt=""><svg class="arr" width="13" height="20" viewBox="-1 -1 14 22"><path d="M0 0L0 17L4.2 13L7.2 19.6L9.8 18.4L6.9 12L12.4 12Z" fill="#2f6bff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg></span></button>
 <script>
 document.getElementById("look").addEventListener("click", () => {
@@ -201,6 +208,7 @@ document.getElementById("look").addEventListener("click", () => {
   try { localStorage.setItem("volcano-v18-look", k); } catch {}
   dispatchEvent(new CustomEvent("v18:look", { detail: k }));
 });
+document.getElementById("morphT").addEventListener("click", () => dispatchEvent(new CustomEvent("v18:morph")));
 document.getElementById("avatar").addEventListener("click", () => {
   const k = { cursor: "balls", balls: "eva", eva: "cursor" }[document.documentElement.dataset.avatar] || "balls";
   document.documentElement.dataset.avatar = k;
