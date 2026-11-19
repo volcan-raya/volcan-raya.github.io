@@ -183,6 +183,7 @@ const SENT_LOCAL_KEY = "lapilli-sentences-local";
 // shows is decided here. A comment is always its words.
 const mediumOf = volcanoNote.mediumOf;
 const noteLabel = s => ({ image: "a picture", voice: "a voice" })[mediumOf(s)] || shortNote(s.s);
+let arriving = new Set();                       // v18: notes just come from someone else (loadSentences)
 let sentences = [], replies = new Map(), sentMode = "none", sentLoaded = false, knownIds = new Set();
 // aya v02: which notes are in the soup. ten: these ten of rai's (texts and pictures), with their replies; all: all of
 // rai's 44
@@ -209,6 +210,7 @@ async function loadSentences() {
   if (!out.some(s => !s.re)) SENT_STARTERS.forEach((t, i) => add({ id: "q" + (i + 1), s: t }));
   if (sentLoaded) {                            // notes and replies from other people add to the pressure too
     const fresh = out.filter(s => !knownIds.has(s.id));
+    fresh.forEach(s => arriving.add(s.id));     // v18: someone else's, just come: it arrives large and shrinks into its place
     VO.addPressure(VO.PER_NOTE * fresh.reduce((a, s) => a + (s.re ? .5 : 1), 0));
   }
   knownIds = new Set(out.map(s => s.id));
@@ -326,6 +328,7 @@ function syncBadges(freshId) {
     let b = badges.get(s.id);
     if (!b) {
       b = makeBadge(s); badges.set(s.id, b); b.s = s; placeHome(b);
+      if (arriving.delete(s.id)) b.arrive = performance.now();
       const p = placed[s.id]; if (Array.isArray(p) && p.length === 3 && p.every(Number.isFinite)) [b.hx, b.hy, b.hz] = p;   // where it was dropped
       if (s.id === freshId && birth) { b.x = birth.x; b.y = birth.y; b.z = birth.z; birth = null; }   // what you just wrote leaves the send button, then sinks in
       else { b.x = b.hx; b.y = b.hy; b.z = b.hz; }
@@ -340,6 +343,7 @@ function syncBadges(freshId) {
     let b = badges.get(id);
     if (!b) {                                  // born from its note, then out to its orbit; yours, from the send button
       b = makeBadge(r); badges.set(id, b); b.parent = p; orbitOf(b, i);
+      if (arriving.delete(id)) b.arrive = performance.now();
       if (id === freshId && birth) { b.x = birth.x; b.y = birth.y; b.z = birth.z; birth = null; } else { b.x = p.x; b.y = p.y; b.z = p.z; }
     }
     b.s = r; b.parent = p; b.idx = i; setCount(b);
@@ -395,8 +399,14 @@ const NEAR = C.NEAR;
 // so they come as a stream and not as one wall. The first are at rest (within 1% of their size) 80% of the way, 3.4 s in,
 // just as the title is gone (#title, 2.8 s from 0.6 s): change one, change the other
 const INTRO = { t0: performance.now() + 600, dur: 3500, spread: 1600, f: 600, S: 14 };   // rai v18: the intro back (aya v07's), the balls coming in   // S: how much larger than its place a ball starts
+const ARRIVE = { dur: 2200, S: 7 };              // v18: a note come from someone else: from how large, in how long
 function introOf(b, now) {
-  if (reduce.matches || !FLAT) return null;   // 1.03: the camera itself rises off the soup's floor through them (camera.js)
+  if (reduce.matches || !FLAT) return null;
+  if (b.arrive) {                                 // v18: it comes as the first ones do, from close to us, large, shrinking into its place
+    const u = (now - b.arrive) / ARRIVE.dur;
+    if (u < 1) { const e = 1 - Math.pow(1 - u, 3), z0 = INTRO.f / ARRIVE.S - INTRO.f; return { s: INTRO.f / (INTRO.f + z0 * (1 - e)), a: smooth(0, .12, u) }; }
+    b.arrive = 0;
+  }   // 1.03: the camera itself rises off the soup's floor through them (camera.js)
   const u = (now - INTRO.t0 - (b.ph / (Math.PI * 2)) * INTRO.spread) / INTRO.dur;
   if (u >= 1) return null;
   const e = u <= 0 ? 0 : 1 - Math.pow(1 - u, 3);   // out: it slows as it comes into place
@@ -864,7 +874,7 @@ function closeNote() {
 // them. Closing, the reverse: the words break into dots, gather into the balls at full size, which shrink back to their
 // places in the soup. DEV, soup: "opening" (the morph, or the fade it was before)
 let morphOn = store.get(KEY + "morph", true);
-document.documentElement.dataset.morph = morphOn ? "on" : "off";   // the toggle top right (index.html) shows it
+document.documentElement.dataset.transitions = morphOn ? "on" : "off";   // the toggle top right (index.html) shows it
 const mCv = document.createElement("canvas");
 mCv.id = "morph"; mCv.setAttribute("aria-hidden", "true");
 mCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;display:none";
@@ -986,7 +996,7 @@ function morphFrame(now) {
   requestAnimationFrame(morphFrame);
 }
 V.dev.tab("soup", `<span class="full seg" id="morphSeg"><span class="k">opening a note</span><button class="t" type="button" data-morph="1">balls into words</button><button class="t" type="button" data-morph="0">fade</button></span>`);
-const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph", morphOn); document.documentElement.dataset.morph = morphOn ? "on" : "off"; };
+const showMorph = () => { for (const b of document.querySelectorAll("[data-morph]")) b.setAttribute("aria-pressed", String((b.dataset.morph === "1") === morphOn)); store.set(KEY + "morph", morphOn); document.documentElement.dataset.transitions = morphOn ? "on" : "off"; };
 addEventListener("v18:morph", () => { morphOn = !morphOn; if (!morphOn) morphStop(); showMorph(); });
 document.querySelectorAll("[data-morph]").forEach(b => b.addEventListener("click", () => { morphOn = b.dataset.morph === "1"; showMorph(); }));
 showMorph();

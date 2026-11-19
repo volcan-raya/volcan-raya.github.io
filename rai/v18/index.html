@@ -179,7 +179,7 @@ html[data-avatar="cursor"] #avatar .dots, html[data-avatar="balls"] #avatar img,
 /* v18: the notes' transitions, on or off: MORPH, struck through when off (DEV, soup, "opening a note" is the same setting) */
 #morphT span { display: grid; place-items: center; width: 48px; aspect-ratio: 16 / 9; border: .75px solid #000; border-radius: 2px; background: #fff1e6; color: #000;
   font: 800 9px/1 var(--type); letter-spacing: .06em; text-transform: uppercase; }
-html[data-morph="off"] #morphT span { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: .6; }
+html[data-transitions="off"] #morphT span { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: .6; }
 #morphT:focus-visible { outline: 1.5px solid #000; outline-offset: 3px; border-radius: 4px; }
 html[data-look="aya"] #big { --ink: rgb(255, 241, 230) !important; }   /* her soup is dark: its words in a light ink */
 html[data-look="aya"] #venting { color: #fff1e6; }
