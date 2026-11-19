@@ -658,9 +658,16 @@ let flatK = 0, flatE = 0, blurK = store.get(KEY + "blur", 8);
 const layer = document.createElement("canvas"), lctx = layer.getContext("2d");
 layer.setAttribute("aria-hidden", "true"); layer.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;display:none";
 marks.before(layer);
+// and the open conversation's constellation on one over the opened note (its words, its picture), so nothing covers
+// it; it never takes the pointer (the note's column passes clicks on its balls on, see boxEl below)
+const conCv = document.createElement("canvas"), conCtx = conCv.getContext("2d");
+conCv.setAttribute("aria-hidden", "true"); conCv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none";
+bigEl.after(conCv);
+let conShown = false;
 function drawInside(x) {
   const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W, H, MDPR } = V.size(); lastDraw = now;
   cue(now / 1000);
+  if (conShown) { conCtx.setTransform(1, 0, 0, 1, 0, 0); conCtx.clearRect(0, 0, conCv.width, conCv.height); conShown = false; }
   if (flatE < .01) {
     if (layer.style.display !== "none") { layer.style.display = "none"; lctx.clearRect(0, 0, layer.width, layer.height); }
     drawLinks(x);
@@ -675,6 +682,9 @@ function drawInside(x) {
   const con = conOf(picked), all = vis;
   vis = all.filter(b => !con.has(b)); drawLinks(lctx);
   for (const b of vis) drawBall(lctx, b, now, dt, TYPE);
+  if (conCv.width !== marks.width || conCv.height !== marks.height) { conCv.width = marks.width; conCv.height = marks.height; }
+  conCtx.setTransform(MDPR, 0, 0, MDPR, 0, 0); conShown = true;
+  x = conCtx;                                     // over the opened note
   vis = all.filter(b => con.has(b)); drawLinks(x);
   for (const b of vis) {                          // the open constellation: every ball filled, read or not; the clicked one in its own red
     x.globalAlpha = 1; x.fillStyle = b === picked ? `rgb(${PICKED.join(",")})` : `rgb(${DOT.join(",")})`;
