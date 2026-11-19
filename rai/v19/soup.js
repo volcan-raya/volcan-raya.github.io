@@ -4,10 +4,10 @@
 // Shared: one soup for 1.03 (v13) and 3.00 (v14), so a change here reaches both. The page says which it is on the
 // script tag: data-ver (its own settings in this browser, volcano-<ver>-…) and data-flat (3.00: no depth, the balls on
 // the screen, the black at the top a plain gradient drawn by its field.js). Everything else is the same.
-// v19 (1.05), after v17: the balls hold what is inside them, still, as a small white sign (notification.js), larger,
-// the number of messages in a badge on their edge; no breathing, the cue off by default. Under the pointer a thin ring,
-// its links forward, the others back, and who said it beside it; on a phone the first tap shows that, the second opens.
-// Opened, the soup flattens behind (the balls stop, lose their depth, blur and fade to ~15%, the links go) and what is
+// v19 (1.05), after v17: the balls hold what is inside them, still, as a small black sign (notification.js), larger,
+// no number on them; no breathing, the cue off by default; read, a red ring with no fill, its sign still black. Never
+// fainter. Under the pointer a thin ring, its links forward, and who said it beside it; on a phone the first tap shows
+// that, the second opens. Opened, the soup flattens behind (the balls stop, lose their depth, blur, the links go) and what is
 // left is the quotation: the words, "— who, when", the replies under it as smaller quotations, live. Who said it: the
 // name, or "unnamed " + the device (intro.js, V.who), or "anonymous"
 (() => {
@@ -39,11 +39,6 @@ V.dev.tab("soup", `
   <label class="full"><span class="k">ball size </span><span id="ballSizeV"></span><input type="range" id="ballSize" min="60" max="300" step="5"></label>
   <label class="full"><span class="k">sign: padding </span><span id="signPadV"></span><input type="range" id="signPad" min="0" max="45" step="1"></label>
   <label class="full"><span class="k">sign: line and bar thickness </span><span id="signLwV"></span><input type="range" id="signLw" min="4" max="30" step="1"></label>
-  <div class="full seg" role="group" aria-label="The number of messages">
-    <span class="k">count</span>
-    <button class="t" type="button" data-badge="on">badge</button>
-    <button class="t" type="button" data-badge="off">none</button>
-  </div>
   <label class="full"><span class="k">cue: a ball plays by itself, on average every </span><span id="cueV"></span><input type="range" id="cueEvery" min="0" max="10" step=".5"></label>
   <label class="full"><span class="k">cue: at most at once </span><span id="cueMaxV"></span><input type="range" id="cueMax" min="1" max="6" step="1"></label>
   <label class="full"><span class="k">mebar weight </span><span id="mebarWV"></span><input type="range" id="mebarW" min="0" max="40" step="1"></label>
@@ -450,7 +445,7 @@ const pick = (px, py) => C.cam.soup > .5 ? hitAt(px, py) : null;
 // red, or black once read: the deep red holds on the orange, where the interface's red would vanish
 const DOT = [196, 0, 12], DOT_READ = [10, 3, 2];
 // a seen ball, over 2 s, still whole to touch, on every page on this soup:
-let seenLook = "fill";       // v19: read, the ball goes black, its sign white   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
+let seenLook = "outline";   // read: a red ring with no fill, as in 1.04; its sign stays black   // a seen ball: its fill gives way to a red ring at its edge (no longer a DEV choice, 13/11/26)
 function badgeColour(b) {
   const e = b.readT * b.readT * (3 - 2 * b.readT);
   return [lerp(DOT[0], DOT_READ[0], e), lerp(DOT[1], DOT_READ[1], e), lerp(DOT[2], DOT_READ[2], e)];
@@ -511,14 +506,13 @@ function drawLinks(x) {
   }
   x.globalAlpha = 1;
 }
-// v19: the balls, the one under the pointer forward and the others a step back; opened, the whole soup flat behind the
-// quotation (flatE 0 … 1): every ball the same size (no depth), still, blurred and faint, drawn once to a layer
-let flatK = 0, flatE = 0, stepK = 0;
+// v19: the balls, never fainter; opened, the whole soup flat behind the quotation (flatE 0 … 1): every ball the same
+// size (no depth), still and blurred, drawn once to a layer
+let flatK = 0, flatE = 0;
 const layer = document.createElement("canvas"), lctx = layer.getContext("2d");
 function drawInside(x) {
   const now = performance.now(), dt = Math.min(now - lastDraw, 100) / 1000, TYPE = V.type(), { W, H, MDPR } = V.size(); lastDraw = now;
   cue(now / 1000);
-  stepK = clamp(stepK + ((hovered && !flatE) ? dt : -dt) / .25, 0, 1);
   drawLinks(x);
   const calm = reduce.matches, F = flatE;
   let Rflat = 0;
@@ -533,13 +527,13 @@ function drawInside(x) {
     const bl = FLAT || F > .01 ? 0 : BLUR * smooth(FOCUS, FOCUS + 4, b.d);
     const R0 = b.R;
     if (Rflat) b.R = lerp(R0, Rflat, F);
-    drawBall(to, b, now, dt, TYPE, b === hovered || b.focus ? 1 : 1 - .45 * stepK, bl);
+    drawBall(to, b, now, dt, TYPE, 1, bl);
     b.R = R0;
   }
   to.filter = "none"; to.globalAlpha = 1;
   if (to !== x) {
     x.save(); x.setTransform(1, 0, 0, 1, 0, 0);
-    x.globalAlpha = lerp(1, .15, F); x.filter = calm ? "none" : `blur(${(6 * F * MDPR).toFixed(1)}px)`;
+    x.globalAlpha = 1; x.filter = calm ? "none" : `blur(${(6 * F * MDPR).toFixed(1)}px)`;
     x.drawImage(layer, 0, 0); x.restore();
   }
   x.filter = "none"; x.globalAlpha = 1;
@@ -547,9 +541,8 @@ function drawInside(x) {
 }
 const BLUR = 1.5, FOCUS = 1.6;
 function drawBall(x, b, now, dt, TYPE, k = 1, blur = 0) {
-  const n = b.parent ? 0 : 1 + (replies.get(b.s.id)?.length || 0);
-  volcanoNote.draw(x, b, { rgb: badgeColour(b), alpha: b.seen * k, type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc,
-    sign: { pad: ball.pad / 100, lw: ball.lw / 100 }, badge: ball.badge === "on" ? n : 0, ring: b.ringT || 0, blur });
+  volcanoNote.draw(x, b, { rgb: seenLook === "fill" ? badgeColour(b) : DOT, seen: seenLook, alpha: b.seen, type: TYPE, since: sinceOf(b, now / 1000), dt, imgSrc,
+    sign: { pad: ball.pad / 100, lw: ball.lw / 100 }, ring: b.ringT || 0, blur });
 }
 // who said it, in small type beside the ball under the pointer (or the keyboard)
 function drawWho(x, W, TYPE) {
@@ -1053,19 +1046,17 @@ document.querySelectorAll("[data-vm]").forEach(b => b.addEventListener("click", 
 }));
 $("intensity").addEventListener("input", () => { $("intVal").textContent = $("intensity").value; });
 // the balls (DEV, soup): their size against v17's, the sign's padding in its inner box, its lines' and bars' thickness,
-// and the number of messages as a badge or not
-const ball = { size: 160, pad: 26, lw: 8, badge: "on", ...(store.get(KEY + "ball", {}) || {}) };
+// (no number on them since 19/11/26)
+const ball = { size: 160, pad: 26, lw: 8, ...(store.get(KEY + "ball", {}) || {}) };
 function showBall() {
   $("ballSize").value = ball.size; $("ballSizeV").textContent = ball.size + "% of 1.04";
   $("signPad").value = ball.pad; $("signPadV").textContent = ball.pad + "%";
   $("signLw").value = ball.lw; $("signLwV").textContent = ball.lw + "% of the box";
-  document.querySelectorAll("[data-badge]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.badge === ball.badge)));
   store.set(KEY + "ball", ball);
 }
 $("ballSize").addEventListener("input", e => { ball.size = +e.target.value; showBall(); });
 $("signPad").addEventListener("input", e => { ball.pad = +e.target.value; showBall(); });
 $("signLw").addEventListener("input", e => { ball.lw = +e.target.value; showBall(); });
-document.querySelectorAll("[data-badge]").forEach(b => b.addEventListener("click", () => { ball.badge = b.dataset.badge; showBall(); }));
 showBall();
 function showSat() {
   $("satSize").value = sat.size; $("orbSize").value = sat.orbit;

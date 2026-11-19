@@ -1,6 +1,6 @@
 // A notification: its disc and what is inside it. v19's own copy (../shared/notification.js stays as v09 to v17 use it).
 //   volcanoNote.draw(x, b, { rgb, alpha, type, since, dt, imgSrc, sign, badge, ring })
-// v19 (1.05): what is inside sits inside, still, as a small white sign in one inner box (the same padding on every side,
+// v19 (1.05): what is inside sits inside, still, as a small black sign in one inner box (the same padding on every side,
 // so a text, a voice and a picture weigh the same): a text as a few lines of text, a voice as a sound wave (the same idea
 // turned upright), a picture as a filled landscape rectangle. Replies are words: lines. No breathing: the sign that grows
 // out of the ball (v17) is only played by the cue (since != null), which is off by default.
@@ -155,7 +155,7 @@ window.volcanoNote = (() => {
     const shape = b.still && b.still.id === b.s.id ? b.still : (b.still = { id: b.s.id, ...shapeOf(b.s) });
     const half = R * Math.SQRT1_2 * (1 - sign.pad), x0 = b.sx - half, y0 = b.sy - half, side = 2 * half;   // the inner box: a square in the disc
     const lw = Math.max(1, side * sign.lw);
-    x.fillStyle = "#fff";
+    x.fillStyle = "#000";                        // black, on the red and inside a read ball's ring alike
     if (shape.me === "text") {
       const n = shape.L.length, gap = (side - lw) / (n - 1);
       for (let k = 0; k < n; k++) x.fillRect(x0, y0 + k * gap, side * shape.L[k], lw);
@@ -196,7 +196,6 @@ window.volcanoNote = (() => {
     }
     x.globalAlpha = alpha;
     if (sign) drawStill(x, b, sign);
-    if (badge) drawBadge(x, b, badge, type);
     if (ring > .01) { x.globalAlpha = alpha * ring; x.strokeStyle = ink; x.lineWidth = 1.25; x.beginPath(); x.arc(b.sx, b.sy, R + 4, 0, TAU); x.stroke(); x.globalAlpha = alpha; }
     if (since != null) drawSign(x, b, Math.max(R, 6) / R0, signTime(since), ink, imgSrc);   // the cue only (DEV): what is in it grows out of the ball
     // (v19: the keyboard's ring is the pointer's, drawn above from ring)
