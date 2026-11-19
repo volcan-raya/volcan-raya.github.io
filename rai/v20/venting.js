@@ -1,5 +1,6 @@
 // v20: this version's own copy (../shared/ stays as v11 to v19 use it): the count is still, at the bottom right, there
-// from the start; it no longer comes in as a ball does (19/11/26: "should just be static at the bottom right")
+// from the start; it no longer comes in as a ball does (19/11/26: "should just be static at the bottom right"); and it
+// counts who is really in the soup, the simulated others with the real ones, no longer a fake 2 or 3 (see show())
 // How many people are here right now, "N people in the soup right now", in the page's own sans (--type). Loaded by 1.01
 // (v11) on; 1.00 (v09, ecal) keeps its own. The script tag says where:
 //   data-place="bottom-left"  1.01, 1.02: bottom left, as their title was, the count over NOTIFICATION SOUP (bold),
@@ -33,11 +34,20 @@ body:has(#idPanel:not([hidden])) #venting { opacity: 0; }   /* out of the way wh
   el.innerHTML = '<span class="n" aria-live="off"></span>' + (TOP ? '<span class="t">NOTIFICATION SOUP</span>' : "");
   document.body.append(el);
   const n = el.querySelector(".n");
-  let k = Math.random() < .5 ? 2 : 3;
-  const show = () => { n.textContent = `${k} people in the soup right now`; };
-  const next = () => { k = k === 2 ? 3 : 2; show(); setTimeout(next, 25000 + Math.random() * 45000); };
+  // v20: no longer fake: who is in the soup, as the list over it says (soup.js #people: you, the simulated others, the
+  // real ones), less you. Until that list is there, the number of simulated others the page asked for (index.html)
+  let k = -1;
+  const count = () => {
+    const list = document.getElementById("people");
+    if (list) return list.querySelectorAll("li:not(.me)").length;
+    try { return JSON.parse(localStorage.getItem("volcano-v20-sims")) || 0; } catch { return 0; }
+  };
+  const show = () => {
+    const c = count(); if (c === k) return; k = c;
+    n.textContent = `${c} ${c === 1 ? "person" : "people"} in the soup right now`;
+  };
   show();
-  setTimeout(next, 25000 + Math.random() * 45000);
+  setInterval(show, 1000);
   if (TOP) return;
   return;                                          // v20: still, from the start (what follows is the entrance it had)
 

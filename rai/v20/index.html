@@ -196,6 +196,9 @@ document.getElementById("avatar").addEventListener("click", () => {
 <aside id="dev" aria-label="DEV" data-dev data-ui hidden></aside>
 
 <script src="notification.js"></script>
+<script>   /* v20, the prototype: 2 to 4 simulated others in the soup, drawn again at every load (soup.js reads "volcano-v20-sims"; DEV still changes it for the visit) */
+  try { localStorage.setItem("volcano-v20-sims", String(2 + Math.floor(Math.random() * 3))); } catch {}
+</script>
 <script src="venting.js"></script>
 <script>window.playhtmlReady = new Promise(r => { window.__playhtmlResolve = r; });</script>
 <script type="module">
