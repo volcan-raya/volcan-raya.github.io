@@ -110,14 +110,36 @@ function showStep() {
   phase = "asking";
   field.value = who.name; label.textContent = ""; factsEl.textContent = "";
   step.classList.remove("revealed", "gone"); step.hidden = false;
+  step.style.transition = ""; step.style.transform = ""; step.style.opacity = "";
   if (!matchMedia("(pointer: coarse)").matches) field.focus({ preventScroll: true });   // on a phone, no keyboard before asked
 }
 function hideStep() {
   phase = "gone"; step.classList.add("gone");
   if (document.activeElement === field) field.blur();
-  setTimeout(() => { if (phase === "gone") step.hidden = true; }, 900);
+  setTimeout(() => { if (phase === "gone") { step.hidden = true; step.style.transform = ""; step.style.opacity = ""; } }, 900);
 }
-function dive() { V.camera.dive(set.speed); setTimeout(hideStep, reduce.matches ? 0 : 600); }
+// the name (or what the browser said) falls into the hole as the eye sets off towards it: drawn to where the hole is
+// on the screen this frame, smaller and smaller, gone as it gets there. With reduced motion it only fades
+const FALL = 1.6;
+function fall() {
+  if (reduce.matches) { hideStep(); return; }
+  phase = "falling";
+  if (document.activeElement === field) field.blur();
+  const VOL = V.volcano.VOL, t0 = performance.now(), r0 = step.getBoundingClientRect(), m = V.marks.getBoundingClientRect();
+  const from = { x: r0.left + r0.width / 2, y: r0.top + Math.min(r0.height, 60) / 2 };
+  step.style.transition = "none";
+  (function f() {
+    if (phase !== "falling") return;
+    const u = Math.min(1, (performance.now() - t0) / 1000 / FALL), e = u * u * (3 - 2 * u), k = u * u;
+    const h = V.camera.project(0, VOL.H, 0), to = h ? { x: m.left + h.x, y: m.top + h.y } : from;
+    const x = (to.x - from.x) * e, y = (to.y - from.y) * e;
+    step.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${(1 - .92 * k).toFixed(3)})`;
+    step.style.opacity = (1 - k * k).toFixed(3);
+    if (u < 1) requestAnimationFrame(f);
+    else { step.hidden = true; step.style.transition = ""; step.style.transform = ""; step.style.opacity = ""; phase = "gone"; step.classList.add("gone"); }
+  })();
+}
+function dive() { V.camera.dive(set.speed); fall(); }
 let beatT = [];
 form.addEventListener("submit", e => {
   e.preventDefault();

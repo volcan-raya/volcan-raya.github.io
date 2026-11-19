@@ -57,15 +57,21 @@ button, input, select { font: inherit; color: inherit; }
   color: #000; font: 300 120px/1 var(--type); letter-spacing: .04em; }
 #title > span { position: relative; display: inline-block; transform-origin: 0 0; will-change: transform, opacity; opacity: 0; }
 #title .t { font-weight: inherit; }
+/* in the black, set as an opened note is (soup.css #big .words: the sans, 500, its size, leading and spacing, in its
+   box, its middle on the screen's), left-aligned as a note; camera.js reads #big's settings and shrinks it to fit */
+#title.dive { top: var(--tb, 90px); bottom: var(--tb, 90px); left: var(--side, 40px); right: var(--side, 40px); overflow: visible;
+  display: flex; align-items: center; white-space: normal; font-weight: 500; line-height: var(--lh, .92); letter-spacing: -.035em; }
+#title.dive > span { display: block; max-width: 100%; transform-origin: 50% 50%; will-change: transform, opacity; }
 
 /* reduced motion: the dive is fades through this black (camera.js) */
 #veil { position: fixed; inset: 0; z-index: 2; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
 
-/* the name, asked outside, under the volcano, on its white (intro.js): a small, quiet field, the arrow to go in. With
-   no name it becomes what the browser says you are, and under it, a few things it said, one by one */
-#nameStep { position: fixed; z-index: 3; left: 0; right: 0; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); display: grid; justify-items: center; gap: 10px;
-  padding: 0 16px; color: #000; pointer-events: none; transition: opacity .8s ease, transform .8s ease; }
-#nameStep.gone { opacity: 0; transform: translateY(8px); }
+/* the name, asked outside, above the volcano, in the sky (intro.js): a small, quiet field, the arrow to go in. With
+   no name it becomes what the browser says you are, and under it, a few things it said, one by one. Then it falls
+   into the hole as the eye goes in (intro.js moves it) */
+#nameStep { position: fixed; z-index: 3; left: 0; right: 0; top: 17%; display: grid; justify-items: center; gap: 10px;
+  padding: 0 16px; color: #000; pointer-events: none; transition: opacity .8s ease; transform-origin: 50% 0; }
+#nameStep.gone { opacity: 0; }
 #nameForm { pointer-events: auto; position: relative; display: flex; align-items: center; width: min(260px, 100%); height: 40px; box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, .18); border-radius: 999px; background: rgba(255, 255, 255, .92); transition: border-color .6s ease, background .6s ease; }
 #nameForm:focus-within { border-color: rgba(0, 0, 0, .45); }
@@ -80,7 +86,6 @@ button, input, select { font: inherit; color: inherit; }
 #nameFacts { min-height: 1.4em; max-width: 34em; text-align: center; font-size: 11.5px; letter-spacing: .01em; color: rgba(0, 0, 0, .6); }
 #nameFacts span { animation: factIn .9s ease both; }
 @keyframes factIn { from { opacity: 0; } }
-@media (max-width: 600px) { #nameStep { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); } }   /* over the line that counts who is here */
 @media (prefers-reduced-motion: reduce) { #nameFacts span { animation-duration: .01s; } }
 
 /* DEV: the noisy tools, shown with the "dev" square in the site bar */

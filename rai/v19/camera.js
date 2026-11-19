@@ -140,7 +140,7 @@ function updateTravel(dt) {
 // and comes to rest as a scroll does. Its pace is in s per second, ×speed (DEV, intro). Any wheel, pinch or key takes
 // over at once, where it is: push() and goTo() stop it
 let diving = null;
-const RAMP = 2.4, PACE_OUT = .5, PACE_HOLE = .19;
+const RAMP = 1.6, PACE_OUT = .5, PACE_HOLE = .19;
 const pace = s => lerp(PACE_HOLE, PACE_OUT, smooth(1, 2, s)) * (.22 + .78 * smooth(0, .3, s));
 function diveStep(dt) {
   diving.t += dt;
@@ -332,9 +332,11 @@ const fontsIn = () => { measureInk(); inkReady = true; };
 // v19: in the page's sans, no Mebar (19/11/26: one sans for everything)
 (document.fonts ? Promise.race([document.fonts.load('300 120px "Inter Tight"').then(() => document.fonts.ready), new Promise(r => setTimeout(r, 3000))]) : Promise.resolve()).then(fontsIn);
 document.fonts?.addEventListener?.("loadingdone", () => { if (inkReady) measureInk(); });
-// v19: the title is in the black of the hole instead, flat on the screen, centred: it comes in as the black fills the
-// screen and goes as the soup's colour comes through, a little nearer as you go down (on the way out, the same,
-// backwards). Orange (the soup's) or white (the volcano's), DEV intro. v17's title on the floor: DEV, "on the floor"
+// v19: the title is in the black of the hole instead, flat on the screen: it comes in as the black fills the screen and
+// goes as the soup's colour comes through, a little nearer as you go down (on the way out, the same, backwards).
+// Orange (the soup's) or white (the volcano's), DEV intro. v17's title on the floor: DEV, "on the floor".
+// It is set as an opened note is (soup.css #big .words, the sans): the same box, size, weight, leading and spacing,
+// read off #big, so DEV soup's "messages" settings move it too; shrunk to fit as a note is
 let titleMode = FLOOR ? "floor" : "dive";
 const TITLE_INK = { orange: "#FF4500", white: "#fff" };
 function setTitleMode(mode, color) {
@@ -342,19 +344,39 @@ function setTitleMode(mode, color) {
   if (!titleEl) return;
   titleEl.parentElement.classList.toggle("dive", mode === "dive");
   titleEl.parentElement.style.color = mode === "dive" ? TITLE_INK[color] || TITLE_INK.orange : "";
-  titleEl.style.filter = "none";
+  titleEl.style.filter = "none"; titleEl.style.transform = "";
+  noteLook = ""; if (mode === "floor") requestAnimationFrame(measureInk); else fitDive();
 }
+// the note's look, as #big has it now: --fs (vw), --lh, --side, --tb
+let noteLook = "";
+function fitDive() {
+  const big = document.getElementById("big"), h1 = titleEl.parentElement;
+  if (!big) return;
+  const cs = getComputedStyle(big), v = n => cs.getPropertyValue(n).trim();
+  const look = [v("--fs") || "14vw", v("--lh") || ".92", v("--side") || "40px", v("--tb") || "90px", innerWidth, innerHeight].join("|");
+  if (look === noteLook) return;
+  noteLook = look;
+  for (const n of ["--lh", "--side", "--tb"]) if (v(n)) h1.style.setProperty(n, v(n));
+  // the largest size, up to the note's, at which the title is inside the box (as soup.js's fitWords)
+  const box = h1.getBoundingClientRect(), fits = px => { h1.style.fontSize = px + "px"; return titleEl.scrollWidth <= box.width + 1 && titleEl.offsetHeight <= box.height + 1; };
+  let hi = parseFloat(v("--fs") || "14") * innerWidth / 100, lo = 4;
+  if (fits(hi)) return;
+  for (let i = 0; i < 14; i++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; }
+  fits(lo);
+}
+addEventListener("resize", () => { noteLook = ""; });
 function placeDiveTitle() {
   const s = cam.s, o = inkReady ? smooth(.93, .8, s) * (1 - smooth(.6, .28, s)) : 0;
   titleEl.style.opacity = o.toFixed(3);
   if (o <= 0) return;
-  const { W, H } = V.size(), k = Math.min(W * .8, W - 32) / ink.w * (1 + .07 * smooth(.93, .28, s));   // the scene's middle (#title moves with the scene, as the floor's did)
-  titleEl.style.transform = `translate(${(W / 2).toFixed(1)}px, ${(H / 2).toFixed(1)}px) scale(${k.toFixed(4)}) translate(${(-ink.midX).toFixed(2)}px, ${(-ink.capMid).toFixed(2)}px)`;   // the capitals' middle on the scene's
+  fitDive();
+  titleEl.style.transform = `scale(${(1 + .05 * smooth(.93, .28, s)).toFixed(4)})`;
 }
 function placeTitle() {
   if (!titleEl) return;
   if (!ink) measureInk();
   if (titleMode === "dive") { placeDiveTitle(); return; }
+  if (titleEl.parentElement.classList.contains("dive")) return;
   const a = cam.in ? project(0, FLOOR_Y, 0) : null, b = a && project(1, FLOOR_Y, 0), h = cam.y - FLOOR_Y;
   const o = a && b && inkReady ? 1 - smooth(2.2, 4.8, h) : 0;
   titleEl.style.opacity = o.toFixed(3);
